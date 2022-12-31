@@ -20,8 +20,10 @@ public class ItemRegistry {
     }
 
     private void assembleItems() {
-        for (String key : ConfigUtil.itemsYaml.getKeys(true)) {
-            ConfigurationSection section = ConfigUtil.itemsYaml.getConfigurationSection(key);
+        ConfigurationSection itemSection = ConfigUtil.glyphYaml.getConfigurationSection("items");
+        if (itemSection == null) return;
+        for (String key : itemSection.getKeys(true)) {
+            ConfigurationSection section = itemSection.getConfigurationSection(key);
             if (section != null) {
                 String display = section.getString("display");
                 int custom_model = section.getInt("custom_model");
