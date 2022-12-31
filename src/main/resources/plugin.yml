@@ -1,0 +1,10 @@
+name: GardensFurniture
+version: 1.0.0
+author: Bright_Steel
+main: com.gardensmc.gardensfurniture.GardensFurniture
+api-version: 1.19
+commands:
+  nbt:
+    description: Set items nbt
+    usage: /<command>
+#depend: [NBTApi]

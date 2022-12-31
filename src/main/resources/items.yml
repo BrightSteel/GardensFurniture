@@ -1,0 +1,8 @@
+watering_can:
+  display: "Watering Can"
+  custom_model: 5
+watering_can_full:
+  display: "Watering Can"
+  custom_model: 6
+
+
