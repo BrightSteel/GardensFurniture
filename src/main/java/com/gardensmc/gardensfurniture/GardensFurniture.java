@@ -5,6 +5,7 @@ import com.gardensmc.gardensfurniture.command.GetCommand;
 import com.gardensmc.gardensfurniture.command.NbtCommand;
 import com.gardensmc.gardensfurniture.items.GlyphRegistry;
 import com.gardensmc.gardensfurniture.items.ItemRegistry;
+import com.gardensmc.gardensfurniture.items.Registries;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -15,16 +16,12 @@ public class GardensFurniture extends JavaPlugin {
 
     public static GardensFurniture plugin;
 
-    public static ItemRegistry itemRegistry;
-    public static GlyphRegistry glyphRegistry;
-
     @Override
     public void onEnable() {
         plugin = this;
 
         ConfigUtil.loadConfigs();
-        itemRegistry = new ItemRegistry();
-        glyphRegistry = new GlyphRegistry();
+        Registries.INSTANCE = new Registries();
 
         Objects.requireNonNull(getCommand("nbt")).setExecutor(new NbtCommand());
         Objects.requireNonNull(getCommand("get")).setExecutor(new GetCommand());
