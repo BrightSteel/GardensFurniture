@@ -1,13 +1,13 @@
-package com.gardensmc.gardensfurniture.items;
+package com.gardensmc.gardensfurniture.register;
 
-public class Registries {
+public class CustomRegister {
 
-    public static Registries INSTANCE;
+    public static CustomRegister INSTANCE;
 
     public ItemRegistry itemRegistry;
     public GlyphRegistry glyphRegistry;
 
-    public Registries() {
+    public CustomRegister() {
         registerAll();
     }
 

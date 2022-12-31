@@ -1,4 +1,4 @@
-package com.gardensmc.gardensfurniture.items;
+package com.gardensmc.gardensfurniture.custom;
 
 import org.bukkit.Material;
 

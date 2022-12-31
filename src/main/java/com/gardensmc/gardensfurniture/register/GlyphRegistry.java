@@ -1,4 +1,4 @@
-package com.gardensmc.gardensfurniture.items;
+package com.gardensmc.gardensfurniture.register;
 
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import org.bukkit.configuration.ConfigurationSection;

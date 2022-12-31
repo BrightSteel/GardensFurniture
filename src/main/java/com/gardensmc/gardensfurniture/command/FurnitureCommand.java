@@ -1,8 +1,6 @@
 package com.gardensmc.gardensfurniture.command;
 
-import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.items.ItemRegistry;
-import com.gardensmc.gardensfurniture.items.Registries;
+import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -18,7 +16,7 @@ public class FurnitureCommand implements CommandExecutor {
             switch (args[0]) {
                 case "reload" -> {
                     ConfigUtil.loadConfigs();
-                    Registries.INSTANCE.reload();
+                    CustomRegister.INSTANCE.reload();
                     commandSender.sendMessage(ChatColor.GREEN + "Reloaded Gardens Furniture!");
                 }
             }
