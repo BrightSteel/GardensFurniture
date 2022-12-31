@@ -7,4 +7,10 @@ commands:
   nbt:
     description: Set items nbt
     usage: /<command>
+  get:
+    description: Get a custom item
+    usage: /<command>
+  furniture:
+    description: Furniture command
+    usage: /<command>
 #depend: [NBTApi]

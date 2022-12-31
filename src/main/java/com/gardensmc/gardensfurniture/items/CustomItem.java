@@ -2,24 +2,22 @@ package com.gardensmc.gardensfurniture.items;
 
 import org.bukkit.Material;
 
+import java.util.List;
+
 public class CustomItem {
 
-    private String identifier;
     private String display;
-    private String lore;
+    private List<String> lore;
     private int custom_model;
     private Material material;
 
-    public CustomItem(String identifier, String display, int custom_model) {
-        this.identifier = identifier;
+    public CustomItem(String display, int custom_model, Material material, List<String> lore) {
         this.display = display;
         this.custom_model = custom_model;
-        this.material = Material.PAPER;
+        this.material = material;
+        this.lore = lore;
     }
 
-    public String getIdentifier() {
-        return identifier;
-    }
 
     public int getCustomModel() {
         return custom_model;
@@ -33,7 +31,7 @@ public class CustomItem {
         return display;
     }
 
-    public String getLore() {
+    public List<String> getLore() {
         return lore;
     }
 }
