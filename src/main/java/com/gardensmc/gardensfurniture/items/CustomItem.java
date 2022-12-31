@@ -6,10 +6,10 @@ import java.util.List;
 
 public class CustomItem {
 
-    private String display;
-    private List<String> lore;
-    private int custom_model;
-    private Material material;
+    private final String display;
+    private final List<String> lore;
+    private final int custom_model;
+    private final Material material;
 
     public CustomItem(String display, int custom_model, Material material, List<String> lore) {
         this.display = display;

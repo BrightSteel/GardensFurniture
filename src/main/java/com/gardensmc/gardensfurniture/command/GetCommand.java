@@ -2,6 +2,7 @@ package com.gardensmc.gardensfurniture.command;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.items.ItemRegistry;
+import com.gardensmc.gardensfurniture.items.Registries;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -24,7 +25,7 @@ public class GetCommand implements TabExecutor {
         }
 
         String identifier = args[0];
-        ItemStack itemStack = GardensFurniture.itemRegistry.buildItem(identifier);
+        ItemStack itemStack = Registries.INSTANCE.itemRegistry.buildItem(identifier);
         if (itemStack == null) {
             player.sendMessage(ChatColor.RED + "No item exists by that identifier!");
             return true;
@@ -38,6 +39,6 @@ public class GetCommand implements TabExecutor {
 
     @Override
     public List<String> onTabComplete(CommandSender commandSender, Command command, String s, String[] args) {
-        return GardensFurniture.itemRegistry.getItemIdentifiers();
+        return Registries.INSTANCE.itemRegistry.getItemIdentifiers();
     }
 }
