@@ -19,7 +19,7 @@ public class GlyphRegistry {
         ConfigurationSection glyphSection = ConfigUtil.glyphYaml.getConfigurationSection("glyphs");
         if (glyphSection == null) return;
 
-        for (String key : glyphSection.getKeys(true)) {
+        for (String key : glyphSection.getKeys(false)) {
             ConfigurationSection section = glyphSection.getConfigurationSection(key);
             if (section != null) {
                 String symbol = section.getString("symbol");

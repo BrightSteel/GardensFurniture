@@ -15,6 +15,8 @@ public class GetCommand implements TabExecutor {
     @Override
     public boolean onCommand(CommandSender commandSender, Command command, String s, String[] args) {
 
+        if (!(commandSender.hasPermission("gardens.furniture.all"))) return false;
+
         if (!(commandSender instanceof Player player)) return false;
 
         if (args.length < 1) {

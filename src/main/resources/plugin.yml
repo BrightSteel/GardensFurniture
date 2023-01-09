@@ -13,4 +13,4 @@ commands:
   furniture:
     description: Furniture command
     usage: /<command>
-#depend: [NBTApi]
+depend: [GSit, WorldGuard, NBTAPI]

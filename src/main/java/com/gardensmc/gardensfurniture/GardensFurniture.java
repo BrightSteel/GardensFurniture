@@ -1,6 +1,7 @@
 package com.gardensmc.gardensfurniture;
 
 import com.gardensmc.gardensfurniture.command.CommandRegister;
+import com.gardensmc.gardensfurniture.events.Events;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -15,6 +16,8 @@ public class GardensFurniture extends JavaPlugin {
 
         ConfigUtil.loadConfigs();
         CustomRegister.INSTANCE = new CustomRegister();
+
+        this.getServer().getPluginManager().registerEvents(new Events(), this);
 
         CommandRegister.registerCommands();
     }

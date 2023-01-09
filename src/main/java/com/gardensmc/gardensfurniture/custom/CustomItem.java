@@ -6,12 +6,17 @@ import java.util.List;
 
 public class CustomItem {
 
+    private final String identifier;
+
     private final String display;
     private final List<String> lore;
     private final int custom_model;
     private final Material material;
 
-    public CustomItem(String display, int custom_model, Material material, List<String> lore) {
+    private CustomBlock customBlock = CustomBlock.EMPTY;
+
+    public CustomItem(String identifier, String display, int custom_model, Material material, List<String> lore) {
+        this.identifier = identifier;
         this.display = display;
         this.custom_model = custom_model;
         this.material = material;
@@ -33,6 +38,22 @@ public class CustomItem {
 
     public List<String> getLore() {
         return lore;
+    }
+
+    public boolean isCustomBlock() {
+        return customBlock != CustomBlock.EMPTY;
+    }
+
+    public CustomBlock getCustomBlock() {
+        return customBlock;
+    }
+
+    public void setCustomBlock(CustomBlock customBlock) {
+        this.customBlock = customBlock;
+    }
+
+    public String getIdentifier() {
+        return identifier;
     }
 }
 

@@ -9,9 +9,12 @@ items:
     display: "Watering Can"
     custom_model: 6
     block:
-      type: BLOCK
-      # types are BLOCK, BARRIER?, AIR
-      note_block: "stuff"
+      type: AIR
+      # types are NOTE, SOLID, AIR
+      note_data:
+        note: 1
+        instrument: cow_bell
+        powered: false
   chair:
     display: "Chair"
     custom_model: 7
