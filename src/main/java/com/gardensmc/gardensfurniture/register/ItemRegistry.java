@@ -4,6 +4,7 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlock;
 import com.gardensmc.gardensfurniture.custom.CustomItem;
 import com.gardensmc.gardensfurniture.custom.CustomNoteBlock;
+import com.gardensmc.gardensfurniture.util.ChatUtil;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -16,6 +17,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -111,7 +113,11 @@ public class ItemRegistry {
                 meta.setDisplayName(ChatColor.WHITE + customItem.getDisplay());
 
                 if (customItem.getLore() != null) {
-                    meta.setLore(customItem.getLore());
+                    List<String> hexLore = new ArrayList<>();
+                    for (String lore : customItem.getLore()) {
+                        hexLore.add(ChatUtil.translateHex(lore));
+                    }
+                    meta.setLore(hexLore);
                 }
 
                 itemStack.setItemMeta(meta);

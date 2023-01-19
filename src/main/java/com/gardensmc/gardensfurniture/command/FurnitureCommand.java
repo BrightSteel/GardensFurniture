@@ -3,6 +3,7 @@ package com.gardensmc.gardensfurniture.command;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import de.tr7zw.nbtapi.NBTItem;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -44,6 +45,30 @@ public class FurnitureCommand implements CommandExecutor {
 
                     player.getInventory().addItem(itemStack);
                     player.sendMessage(ChatColor.GREEN + "Received " + identifier);
+                }
+                case "give" -> {
+                   // no feedback, used by console only right now
+                    if (args.length < 3) {
+                        return false;
+                    }
+                    String target = args[1];
+                    String identifier = args[2];
+                    Player player = Bukkit.getServer().getPlayer(target);
+                    if (player != null) {
+                        ItemStack itemStack = CustomRegister.INSTANCE.itemRegistry.buildItem(identifier);
+                        itemStack.getItemMeta().addAttributeModifier(A)
+                        if (itemStack != null) {
+                            if (args.length > 3) {
+                                try {
+                                    int amount = Integer.parseInt(args[3]);
+                                    itemStack.setAmount(amount);
+                                } catch (Exception ex) {
+                                    ex.printStackTrace();
+                                }
+                            }
+                            player.getInventory().addItem(itemStack);
+                        }
+                    }
                 }
                 case "info" -> {
                     if (!(commandSender instanceof Player player)) {

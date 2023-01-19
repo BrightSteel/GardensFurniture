@@ -5,10 +5,20 @@ import com.gardensmc.gardensfurniture.custom.CustomItem;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.util.WorldGuardUtil;
 import dev.geco.gsit.api.GSitAPI;
+import net.minecraft.core.BlockPosition;
+import net.minecraft.core.EnumDirection;
+import net.minecraft.server.level.EntityPlayer;
+import net.minecraft.world.EnumHand;
+import net.minecraft.world.item.context.ItemActionContext;
+import net.minecraft.world.phys.MovingObjectPositionBlock;
+import net.minecraft.world.phys.Vec3D;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.NoteBlock;
+import org.bukkit.craftbukkit.v1_19_R1.entity.CraftItem;
+import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -36,6 +46,30 @@ public class Events implements Listener {
                 e.setCancelled(true);
                 if (!WorldGuardUtil.canBuildInRegion(e.getPlayer())) return;
                 Bukkit.getPluginManager().callEvent(new CustomBlockInteractEvent(e.getPlayer(), customItem, e.getHand(), e.getItem(), e.getClickedBlock()));
+                // if player is holding an item with an action, lets place it if sneaking
+                if (e.getHand() != null && e.getPlayer().isSneaking()) {
+                    ItemStack stack = e.getPlayer().getInventory().getItem(e.getHand());
+                    if (stack == null) return;
+                    net.minecraft.world.item.ItemStack craftItemStack = CraftItemStack.asNMSCopy(stack);
+                    EntityPlayer human = ((CraftPlayer) e.getPlayer()).getHandle();
+                    EnumHand hand = EnumHand.a; // main hand
+                    EnumDirection direction;
+                    switch (e.getBlockFace()) {
+                        case SOUTH -> direction = EnumDirection.d;
+                        case WEST -> direction = EnumDirection.e;
+                        case NORTH -> direction = EnumDirection.c;
+                        case EAST -> direction = EnumDirection.f;
+                        case DOWN -> direction = EnumDirection.a;
+                        default -> direction = EnumDirection.b;
+                    }
+
+                    craftItemStack.useOn(new ItemActionContext(human, hand, new MovingObjectPositionBlock(
+                            new Vec3D(e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ()),
+                            direction,
+                            new BlockPosition(e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ()),
+                            false
+                    )), hand);
+                }
             }
         }
 
@@ -193,12 +227,17 @@ public class Events implements Listener {
     public void updateBlockState(BlockPhysicsEvent e) {
 
         if (e.isCancelled()) return;
+        Block[] possibles = new Block[]{
+                e.getBlock(), e.getSourceBlock(), e.getSourceBlock().getRelative(0, 1, 0)
+        };
 
-        Block block = e.getSourceBlock().getRelative(0, 1, 0);
-        if (block.getType() == Material.NOTE_BLOCK) {
-            CustomItem customItem = CustomBlockManager.getItemFromNoteBlock((NoteBlock) block.getBlockData());
-            if (customItem != null) {
-                e.setCancelled(true);
+        for (Block block : possibles) {
+            if (block.getType() == Material.NOTE_BLOCK) {
+                CustomItem customItem = CustomBlockManager.getItemFromNoteBlock((NoteBlock) block.getBlockData());
+                if (customItem != null) {
+                    e.setCancelled(true);
+                    break;
+                }
             }
         }
 
@@ -245,7 +284,7 @@ public class Events implements Listener {
                     GSitAPI.createSeat(itemFrame.getLocation().getBlock(), e.getPlayer(), true, 0.0, offset, 0.0, e.getPlayer().getLocation().getYaw(), true);
                 }
                 else {
-                    if (!WorldGuardUtil.canBuildInRegion(e.getPlayer())) return;
+//                    if (!WorldGuardUtil.canBuildInRegion(e.getPlayer())) return;
                     Bukkit.getPluginManager().callEvent(new FurnitureInteractEvent(e.getPlayer(), customItem, itemFrame, e.getHand(), heldItem));
                 }
             }
