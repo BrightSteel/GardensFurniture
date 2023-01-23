@@ -1,7 +1,10 @@
 package com.gardensmc.gardensfurniture.command;
 
+import com.gardensmc.gardensfurniture.custom.CustomItem;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
+import com.gardensmc.gardensfurniture.util.CosmeticUtil;
+import com.gardensmc.gardensfurniture.util.PlayerUtil;
 import de.tr7zw.nbtapi.NBTItem;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -10,6 +13,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 public class FurnitureCommand implements CommandExecutor {
 
@@ -56,7 +60,6 @@ public class FurnitureCommand implements CommandExecutor {
                     Player player = Bukkit.getServer().getPlayer(target);
                     if (player != null) {
                         ItemStack itemStack = CustomRegister.INSTANCE.itemRegistry.buildItem(identifier);
-                        itemStack.getItemMeta().addAttributeModifier(A)
                         if (itemStack != null) {
                             if (args.length > 3) {
                                 try {
@@ -78,6 +81,52 @@ public class FurnitureCommand implements CommandExecutor {
                     ItemStack heldItem = player.getInventory().getItemInMainHand();
                     NBTItem nbtItem = new NBTItem(heldItem);
                     player.sendMessage(nbtItem.toString());
+                }
+                case "givetoken" -> {
+                    // no feedback, used by console only right now
+                    if (args.length < 5) {
+                        return false;
+                    }
+                    String target = args[1];
+                    // ie) backpack common cosmetic_name
+                    String type = args[2];
+                    String rarity = args[3];
+                    String cosmetic = args[4];
+
+                    Player player = Bukkit.getServer().getPlayer(target);
+                    if (player != null) {
+                        ItemStack itemStack = CustomRegister.INSTANCE.itemRegistry.buildItem("token_" + type + "_" + rarity);
+                        if (itemStack == null) return false;
+
+                        ItemMeta meta = itemStack.getItemMeta();
+                        if (meta != null) {
+                            meta.setDisplayName(CosmeticUtil.formatName(cosmetic));
+                            itemStack.setItemMeta(meta);
+                        }
+
+                        NBTItem nbtItem = new NBTItem(itemStack);
+                        nbtItem.setString("cosmetic", cosmetic);
+                        player.getInventory().addItem(nbtItem.getItem());
+
+                    }
+                }
+                case "redeemtoken" -> {
+                    if (args.length < 2) return false;
+                    String target = args[1];
+                    Player player = Bukkit.getServer().getPlayer(target);
+                    if (player != null) {
+                        ItemStack token = player.getInventory().getItemInMainHand();
+                        NBTItem nbtItem = new NBTItem(token);
+                        if (nbtItem.hasKey("cosmetic")) {
+                            String cosmetic = nbtItem.getString("cosmetic");
+                            PlayerUtil.addPermission(player, "cosmetics." + cosmetic);
+                            token.setAmount(token.getAmount() - 1);
+                            player.getInventory().setItemInMainHand(token);
+
+                            player.sendMessage(ChatColor.LIGHT_PURPLE + "Redeemed the " + CosmeticUtil.formatName(cosmetic) + "!");
+                        }
+
+                    }
                 }
             }
         }

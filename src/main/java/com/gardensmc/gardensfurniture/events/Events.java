@@ -30,6 +30,8 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Arrays;
+
 public class Events implements Listener {
 
     @EventHandler
@@ -224,6 +226,19 @@ public class Events implements Listener {
     }
 
     @EventHandler
+    public void placeNoteBlock(BlockPlaceEvent e) {
+        if (e.isCancelled()) return;
+
+        if (e.getBlockPlaced().getType() == Material.NOTE_BLOCK) {
+            e.getBlockPlaced().setType(Material.NOTE_BLOCK, false);
+//            CustomItem customItem = CustomBlockManager.getItemFromNoteBlock((NoteBlock) e.getBlockPlaced().getBlockData());
+//            if (customItem == null) {
+//
+//            }
+        }
+    }
+
+    @EventHandler
     public void updateBlockState(BlockPhysicsEvent e) {
 
         if (e.isCancelled()) return;
@@ -232,16 +247,22 @@ public class Events implements Listener {
         };
 
         for (Block block : possibles) {
-            if (block.getType() == Material.NOTE_BLOCK) {
+            String[] redstone_types = new String[]{
+                    "lever", "redstone_torch", "redstone_wall_torch", "redstone_block", "redstone_wire"
+            };
+            if (Arrays.asList(redstone_types).contains(e.getChangedType().name().toLowerCase())) {
                 CustomItem customItem = CustomBlockManager.getItemFromNoteBlock((NoteBlock) block.getBlockData());
                 if (customItem != null) {
                     e.setCancelled(true);
-                    break;
                 }
+            }
+            else if (block.getType() == Material.NOTE_BLOCK) {
+                e.setCancelled(true);
             }
         }
 
     }
+
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent e) {
