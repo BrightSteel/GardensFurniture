@@ -357,15 +357,15 @@ public class Events implements Listener {
         leaveWorld.removeChunk(e.getChunk());
     }
 
-    @EventHandler
-    public void onLeaveDecay(LeavesDecayEvent e) {
-        if (e.isCancelled()) return;
-
-        LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(e.getBlock().getWorld());
-        String leaveId = leaveWorld.getLeaveId(e.getBlock());
-        if (leaveId != null) {
-            e.setCancelled(true);
-        }
-    }
+//    @EventHandler
+//    public void onLeaveDecay(LeavesDecayEvent e) {
+//        if (e.isCancelled()) return;
+//
+//        LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(e.getBlock().getWorld());
+//        String leaveId = leaveWorld.getLeaveId(e.getBlock());
+//        if (leaveId != null) {
+//            e.setCancelled(true);
+//        }
+//    }
 
 }

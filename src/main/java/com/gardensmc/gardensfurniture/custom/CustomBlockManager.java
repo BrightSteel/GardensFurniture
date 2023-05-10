@@ -45,11 +45,10 @@ public class CustomBlockManager {
         Block block = location.getBlock();
         block.setType(Material.SPRUCE_LEAVES);
         LeavesConfig.addLeave(block, customItem.getIdentifier());
-//        if (block.getBlockData() instanceof Leaves leaves) {
-//            leaves.setDistance(customLeavesBlock.getDistance());
-//            leaves.setPersistent(customLeavesBlock.isPersistent());
-//            block.setBlockData(leaves);
-//        }
+        if (block.getBlockData() instanceof Leaves leaves) {
+            leaves.setPersistent(true);
+            block.setBlockData(leaves);
+        }
 
         Bukkit.getPluginManager().callEvent(new CustomBlockPlaceEvent(player, customItem, block));
 

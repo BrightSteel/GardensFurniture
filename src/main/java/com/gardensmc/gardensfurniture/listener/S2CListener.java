@@ -119,17 +119,8 @@ public class S2CListener {
                                                     y + (16 * i) - Math.abs(worldMinHeight), // The sections are from the bottom to the top, so the section 0 is at the world's min height!
                                                     coordinateZ + z
                                             );
-                                            LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(playerWorld);
-                                            org.bukkit.block.Block block = playerWorld.getBlockAt(new Location(playerWorld, position.getX(), position.getY(), position.getZ()));
-                                            String leaveId = leaveWorld.getLeaveId(block);
-                                            if (leaveId != null) System.out.println("leaveId: " + leaveId);
-                                            if ((position.getX() == -441 && position.getZ() == 80) || (position.getX() == -441 && position.getZ() == 82) || (position.getX() == -440 && position.getZ() == 82)) {
-                                                System.out.println("Leave at: " + position.getX() + ", " + position.getY() + ", " + position.getZ());
-                                            }
-
-                                            CustomItem customItem = CustomRegister.INSTANCE.itemRegistry.getItem(leaveId);
+                                            CustomItem customItem = getCustomLeaveItem(playerWorld, position);
                                             if (customItem != null && customItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
-                                                System.out.println("custom Leave at: " + position.getX() + ", " + position.getY() + ", " + position.getZ());
                                                 section.setFlatBlock(x, y, z, Block.o.a(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=" + customLeavesBlock.getDistance() + ",persistent=" + customLeavesBlock.isPersistent() + "]").getState()));
 
                                             }
@@ -184,7 +175,14 @@ public class S2CListener {
                     WrapperPlayServerBlockChange wrapper = new WrapperPlayServerBlockChange(event.getPacket());
 
                     if (wrapper.getBlockData().getType() == Material.SPRUCE_LEAVES) {
-                        wrapper.setBlockData(WrappedBlockData.fromHandle(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=1,persistent=false]").getState()));
+                        BlockPosition position = wrapper.getLocation();
+                        CustomItem customItem = getCustomLeaveItem(event.getPlayer().getWorld(), position);
+                        if (customItem != null && customItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
+                            wrapper.setBlockData(WrappedBlockData.fromHandle(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=" + customLeavesBlock.getDistance() + ",persistent=" + customLeavesBlock.isPersistent() + "]").getState()));
+                        }
+                        else {
+                            wrapper.setBlockData(WrappedBlockData.fromHandle(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=1,persistent=false]").getState()));
+                        }
                     }
                     event.setPacket(wrapper.getHandle());
                 }
@@ -203,7 +201,13 @@ public class S2CListener {
 
                     for (int i = 0; i < changedBlocks.length; i++) {
                         if (changedBlocks[i].getType() == Material.SPRUCE_LEAVES) {
-                            list.add(WrappedBlockData.fromHandle(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=1,persistent=false]").getState()));
+                            CustomItem customItem = getCustomLeaveItem(event.getPlayer().getWorld(), blockPosition);
+                            if (customItem != null && customItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
+                                list.add(WrappedBlockData.fromHandle(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=" + customLeavesBlock.getDistance() + ",persistent=" + customLeavesBlock.isPersistent() + "]").getState()));
+                            }
+                            else {
+                                list.add(WrappedBlockData.fromHandle(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=1,persistent=false]").getState()));
+                            }
                         }
                         else {
                             list.add(changedBlocks[i]);
@@ -216,6 +220,14 @@ public class S2CListener {
         }
 
         );
+    }
+
+    private CustomItem getCustomLeaveItem(World playerWorld, BlockPosition position) {
+        LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(playerWorld);
+        org.bukkit.block.Block block = playerWorld.getBlockAt(new Location(playerWorld, position.getX(), position.getY(), position.getZ()));
+        String leaveId = leaveWorld.getLeaveId(block);
+
+        return CustomRegister.INSTANCE.itemRegistry.getItem(leaveId);
     }
 
 
