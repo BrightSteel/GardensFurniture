@@ -35,6 +35,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Written using these two references:
+ * https://gist.github.com/MrPowerGamerBR/51bf5beb6466d557da2191ed8a3fe0df
+ * https://www.spigotmc.org/threads/protocollib-map_chunk-getblockdata-is-empty.559544/
+ */
 public class S2CListener {
 
     private ProtocolManager protocolManager;
