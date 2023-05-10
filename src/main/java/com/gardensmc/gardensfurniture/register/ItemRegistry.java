@@ -110,7 +110,7 @@ public class ItemRegistry {
             ItemMeta meta = itemStack.getItemMeta();
             if (meta != null) {
                 meta.setCustomModelData(customItem.getCustomModel());
-                meta.setDisplayName(ChatColor.WHITE + customItem.getDisplay());
+                meta.setDisplayName(ChatColor.WHITE + ChatUtil.translateHex(customItem.getDisplay()));
 
                 if (customItem.getLore() != null) {
                     List<String> hexLore = new ArrayList<>();

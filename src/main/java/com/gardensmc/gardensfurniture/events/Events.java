@@ -5,20 +5,10 @@ import com.gardensmc.gardensfurniture.custom.CustomItem;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.util.WorldGuardUtil;
 import dev.geco.gsit.api.GSitAPI;
-import net.minecraft.core.BlockPosition;
-import net.minecraft.core.EnumDirection;
-import net.minecraft.server.level.EntityPlayer;
-import net.minecraft.world.EnumHand;
-import net.minecraft.world.item.context.ItemActionContext;
-import net.minecraft.world.phys.MovingObjectPositionBlock;
-import net.minecraft.world.phys.Vec3D;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.NoteBlock;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftItem;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -31,11 +21,13 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Arrays;
+import java.util.List;
 
 public class Events implements Listener {
 
     @EventHandler
     public void onItemInteract(PlayerInteractEvent e) {
+
 
         if (e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         if (e.isCancelled()) return;
@@ -49,29 +41,32 @@ public class Events implements Listener {
                 if (!WorldGuardUtil.canBuildInRegion(e.getPlayer())) return;
                 Bukkit.getPluginManager().callEvent(new CustomBlockInteractEvent(e.getPlayer(), customItem, e.getHand(), e.getItem(), e.getClickedBlock()));
                 // if player is holding an item with an action, lets place it if sneaking
-                if (e.getHand() != null && e.getPlayer().isSneaking()) {
-                    ItemStack stack = e.getPlayer().getInventory().getItem(e.getHand());
-                    if (stack == null) return;
-                    net.minecraft.world.item.ItemStack craftItemStack = CraftItemStack.asNMSCopy(stack);
-                    EntityPlayer human = ((CraftPlayer) e.getPlayer()).getHandle();
-                    EnumHand hand = EnumHand.a; // main hand
-                    EnumDirection direction;
-                    switch (e.getBlockFace()) {
-                        case SOUTH -> direction = EnumDirection.d;
-                        case WEST -> direction = EnumDirection.e;
-                        case NORTH -> direction = EnumDirection.c;
-                        case EAST -> direction = EnumDirection.f;
-                        case DOWN -> direction = EnumDirection.a;
-                        default -> direction = EnumDirection.b;
-                    }
+//                if (e.getHand() != null && e.getPlayer().isSneaking()) {
+//                    ItemStack stack = e.getPlayer().getInventory().getItem(e.getHand());
+//                    if (stack == null || stack.getType() == Material.AIR) return;
+//                    net.minecraft.world.item.ItemStack craftItemStack = CraftItemStack.asNMSCopy(stack);
+//                    EntityPlayer human = ((CraftPlayer) e.getPlayer()).getHandle();
+//                    EnumHand hand = EnumHand.a; // main hand
+//                    EnumDirection direction;
+//                    switch (e.getBlockFace()) {
+//                        case SOUTH -> direction = EnumDirection.d;
+//                        case WEST -> direction = EnumDirection.e;
+//                        case NORTH -> direction = EnumDirection.c;
+//                        case EAST -> direction = EnumDirection.f;
+//                        case DOWN -> direction = EnumDirection.a;
+//                        default -> direction = EnumDirection.b;
+//                    }
+//
+//                    craftItemStack.useOn(new ItemActionContext(human, hand, new MovingObjectPositionBlock(
+//                            new Vec3D(e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ()),
+//                            direction,
+//                            new BlockPosition(e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ()),
+//                            false
+//                    )), hand);
+//
 
-                    craftItemStack.useOn(new ItemActionContext(human, hand, new MovingObjectPositionBlock(
-                            new Vec3D(e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ()),
-                            direction,
-                            new BlockPosition(e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ()),
-                            false
-                    )), hand);
-                }
+
+//                }
             }
         }
 
@@ -89,13 +84,14 @@ public class Events implements Listener {
         if (customItem != null) {
             if (!WorldGuardUtil.canBuildInRegion(e.getPlayer())) return;
             if (customItem.isCustomBlock()) {
-                boolean placed = CustomBlockManager.attemptPlacement(customItem, location, e.getBlockFace());
+                boolean placed = CustomBlockManager.attemptPlacement(e.getPlayer(), customItem, location, e.getBlockFace());
                 if (placed) {
                     e.setCancelled(true);
                     switch (e.getHand()) {
                         case HAND -> e.getPlayer().swingMainHand();
                         case OFF_HAND -> e.getPlayer().swingOffHand();
                     }
+
                     if (e.getPlayer().getGameMode() == GameMode.SURVIVAL) {
                         ItemStack usedItem = e.getPlayer().getInventory().getItem(e.getHand());
                         if (usedItem != null) {
@@ -239,6 +235,32 @@ public class Events implements Listener {
     }
 
     @EventHandler
+    public void onPistonExtend(BlockPistonExtendEvent e) {
+        if (cancelNoteBlockExtend(e.getBlocks())) {
+            e.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onPistonRetract(BlockPistonRetractEvent e) {
+        if (cancelNoteBlockExtend(e.getBlocks())) {
+            e.setCancelled(true);
+        }
+    }
+
+    private boolean cancelNoteBlockExtend(List<Block> blocks) {
+        for (Block block : blocks) {
+            if (block.getType() == Material.NOTE_BLOCK && block.getBlockData() instanceof NoteBlock noteBlock) {
+                CustomItem customItem = CustomBlockManager.getItemFromNoteBlock(noteBlock);
+                if (customItem != null) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    @EventHandler
     public void updateBlockState(BlockPhysicsEvent e) {
 
         if (e.isCancelled()) return;
@@ -250,7 +272,7 @@ public class Events implements Listener {
             String[] redstone_types = new String[]{
                     "lever", "redstone_torch", "redstone_wall_torch", "redstone_block", "redstone_wire"
             };
-            if (Arrays.asList(redstone_types).contains(e.getChangedType().name().toLowerCase())) {
+            if (Arrays.asList(redstone_types).contains(e.getChangedType().name().toLowerCase()) && block.getType() == Material.NOTE_BLOCK) {
                 CustomItem customItem = CustomBlockManager.getItemFromNoteBlock((NoteBlock) block.getBlockData());
                 if (customItem != null) {
                     e.setCancelled(true);

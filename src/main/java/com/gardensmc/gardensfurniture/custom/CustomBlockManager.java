@@ -1,6 +1,8 @@
 package com.gardensmc.gardensfurniture.custom;
 
+import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
+import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.register.ItemRegistry;
 import org.bukkit.*;
@@ -22,17 +24,18 @@ import java.util.List;
 
 public class CustomBlockManager {
 
-    public static boolean attemptPlacement(CustomItem customItem, Location location, BlockFace blockFace) {
+    public static boolean attemptPlacement(Player player, CustomItem customItem, Location location, BlockFace blockFace) {
         CustomBlock customBlock = customItem.getCustomBlock();
         if (customBlock instanceof CustomNoteBlock customNoteBlock) {
-            return placeNoteBlock(customNoteBlock, location);
+            return placeNoteBlock(player, customItem, customNoteBlock, location);
         }
         else {
             return placeItemFrame(customItem, location, blockFace);
         }
     }
 
-    private static boolean placeNoteBlock(CustomNoteBlock customNoteBlock, Location location) {
+
+    private static boolean placeNoteBlock(Player player, CustomItem customItem, CustomNoteBlock customNoteBlock, Location location) {
         Instrument instrument;
         try {
             instrument = Instrument.valueOf(customNoteBlock.getInstrument().toUpperCase());
@@ -48,6 +51,9 @@ public class CustomBlockManager {
             noteBlock.setPowered(customNoteBlock.isPowered());
             block.setBlockData(noteBlock);
         }
+
+        Bukkit.getPluginManager().callEvent(new CustomBlockPlaceEvent(player, customItem, block));
+
         return true;
     }
 
@@ -70,6 +76,8 @@ public class CustomBlockManager {
             if (customItem.getCustomBlock().hasBarrier()) {
                 location.getBlock().setType(Material.BARRIER);
             }
+
+            Bukkit.getPluginManager().callEvent(new FurniturePlaceEvent(null, customItem, itemFrame));
 
             return true;
         }

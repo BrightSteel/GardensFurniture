@@ -13,4 +13,7 @@ commands:
   furniture:
     description: Furniture command
     usage: /<command>
-depend: [GSit, WorldGuard, NBTAPI]
+  itemsaver:
+    description: Save items
+    usage: /<command>
+depend: [GSit, WorldGuard, NBTAPI, ProtocolLib]

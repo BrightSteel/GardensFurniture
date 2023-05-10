@@ -2,6 +2,7 @@ package com.gardensmc.gardensfurniture.util;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import org.bukkit.configuration.Configuration;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
@@ -12,7 +13,7 @@ public class ConfigUtil {
 
     public static List<Configuration> all_items = new ArrayList<>();
 
-    public static Configuration itemsYaml, glyphYaml;
+    public static FileConfiguration itemsYaml, glyphYaml, itemSaverYaml;
 
     public static void loadConfigs() {
 //        File itemFile = getYMLFile("items.yml");
@@ -22,6 +23,23 @@ public class ConfigUtil {
 
         File glyphFile = getYMLFile("glyphs.yml");
         glyphYaml = YamlConfiguration.loadConfiguration(glyphFile);
+
+        File itemSaverFile = getYMLFile("item_saver.yml");
+        itemSaverYaml = YamlConfiguration.loadConfiguration(itemSaverFile);
+    }
+
+    public static void saveItemSaverYaml() {
+        try {
+            File itemSaverFile = getYMLFile("item_saver.yml");
+            itemSaverYaml.save(itemSaverFile);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public static void reloadSavedItems() {
+        File itemSaverFile = getYMLFile("item_saver.yml");
+        itemSaverYaml = YamlConfiguration.loadConfiguration(itemSaverFile);
     }
 
     public static List<Configuration> getAllConfigs(String directory) {

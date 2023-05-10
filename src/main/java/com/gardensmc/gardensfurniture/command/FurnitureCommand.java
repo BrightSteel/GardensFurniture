@@ -15,6 +15,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class FurnitureCommand implements CommandExecutor {
 
     @Override
@@ -101,6 +104,10 @@ public class FurnitureCommand implements CommandExecutor {
                         ItemMeta meta = itemStack.getItemMeta();
                         if (meta != null) {
                             meta.setDisplayName(CosmeticUtil.formatName(cosmetic));
+                            List<String> lore = new ArrayList<>();
+                            lore.add("&7Visit the Tailor Shop near");
+                            lore.add("&7spawn to redeem me!");
+                            meta.setLore(lore);
                             itemStack.setItemMeta(meta);
                         }
 
