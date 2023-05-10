@@ -1,9 +1,12 @@
 package com.gardensmc.gardensfurniture.listener;
 
+import com.comphenix.packetwrapper.WrapperPlayServerBlockChange;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.*;
 import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.wrappers.BlockPosition;
+import com.comphenix.protocol.wrappers.WrappedBlockData;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.viaversion.viaversion.api.minecraft.chunks.ChunkSection;
 import com.viaversion.viaversion.api.minecraft.chunks.DataPalette;
@@ -27,6 +30,7 @@ import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class S2CListener {
@@ -144,6 +148,37 @@ public class S2CListener {
 //                    ints.read(0); 	 // packet.a;
 //                    ints.read(1); 	 // packet.b;
 //                    byteArray.read(1);  // packet.inflatedBuffer;
+                }
+                else if (event.getPacketType() == PacketType.Play.Server.BLOCK_CHANGE) {
+                    WrapperPlayServerBlockChange wrapper = new WrapperPlayServerBlockChange(event.getPacket());
+
+                    if (wrapper.getBlockData().getType() == Material.SPRUCE_LEAVES) {
+                        wrapper.setBlockData(WrappedBlockData.fromHandle(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=1,persistent=true]").getState()));
+                    }
+                    event.setPacket(wrapper.getHandle());
+                }
+                else if (event.getPacketType() == PacketType.Play.Server.MULTI_BLOCK_CHANGE) {
+                    BlockPosition blockPosition = event.getPacket().getSectionPositions().read(0);
+
+                    short[] shorts = event.getPacket().getShortArrays().read(0);
+
+                    WrappedBlockData[] changedBlocks = event.getPacket().getBlockDataArrays().read(0);
+
+                    if (Arrays.stream(changedBlocks).noneMatch(wrappedBlockData -> wrappedBlockData.getType() == Material.SPRUCE_LEAVES)) {
+                        return;
+                    }
+
+                    List<WrappedBlockData> list = new ArrayList<>();
+
+                    for (int i = 0; i < changedBlocks.length; i++) {
+                        if (changedBlocks[i].getType() == Material.SPRUCE_LEAVES) {
+                            list.add(WrappedBlockData.fromHandle(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=1,persistent=true]").getState()));
+                        }
+                        else {
+                            list.add(changedBlocks[i]);
+                        }
+                    }
+                    event.getPacket().getBlockDataArrays().write(0, list.toArray(new WrappedBlockData[0]));
                 }
 
             }
