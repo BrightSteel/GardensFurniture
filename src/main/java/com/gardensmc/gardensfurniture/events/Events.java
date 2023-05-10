@@ -8,6 +8,7 @@ import dev.geco.gsit.api.GSitAPI;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.type.Leaves;
 import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
@@ -73,8 +74,6 @@ public class Events implements Listener {
         ItemStack itemStack = e.getItem();
         if (itemStack == null) return;
         if (e.getHand() == null) return;
-
-        // todo create spigot block place event to see if it gets cancelled first
 
         // handle placement of custom items
         Location location = getLocationFromBlockFace(e.getClickedBlock().getLocation(), e.getBlockFace());
@@ -293,20 +292,26 @@ public class Events implements Listener {
 
         if (e.getBlock().getType() == Material.NOTE_BLOCK && e.getBlock().getBlockData() instanceof NoteBlock noteBlock) {
             CustomItem customItem = CustomBlockManager.getItemFromNoteBlock(noteBlock);
-            if (customItem != null) {
-//                e.setCancelled(true);
-                e.setDropItems(false);
-//                e.getBlock().setType(Material.AIR);
+            dropCustomItem(e, customItem);
+        }
+        else if (e.getBlock().getType() == Material.SPRUCE_LEAVES) {
+            CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getBlock());
+            dropCustomItem(e, customItem);
+        }
+    }
 
-                if (e.getPlayer().getGameMode() != GameMode.CREATIVE && !customItem.getCustomBlock().cancelDrop()){
-                    ItemStack itemStack = CustomRegister.INSTANCE.itemRegistry.buildItem(customItem);
-                    if (itemStack != null) {
-                        e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), itemStack);
-                    }
+    private void dropCustomItem(BlockBreakEvent e, CustomItem customItem) {
+        if (customItem != null) {
+            e.setDropItems(false);
+
+            if (e.getPlayer().getGameMode() != GameMode.CREATIVE && !customItem.getCustomBlock().cancelDrop()){
+                ItemStack itemStack = CustomRegister.INSTANCE.itemRegistry.buildItem(customItem);
+                if (itemStack != null) {
+                    e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), itemStack);
                 }
-
-                Bukkit.getPluginManager().callEvent(new CustomBlockBreakEvent(e.getPlayer(), customItem, e.getBlock()));
             }
+
+            Bukkit.getPluginManager().callEvent(new CustomBlockBreakEvent(e.getPlayer(), customItem, e.getBlock()));
         }
     }
 

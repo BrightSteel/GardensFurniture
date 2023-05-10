@@ -106,7 +106,7 @@ public class S2CListener {
                                     if (blockData != null) {
                                         Material material = CraftBlockData.fromData(blockData).getMaterial();
                                         if (material == Material.SPRUCE_LEAVES) {
-                                            section.setFlatBlock(x, y, z, Block.o.a(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=1,persistent=true]").getState()));
+                                            section.setFlatBlock(x, y, z, Block.o.a(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=1,persistent=false]").getState()));
                                             requiresEdits = true;
                                         }
 
@@ -153,7 +153,7 @@ public class S2CListener {
                     WrapperPlayServerBlockChange wrapper = new WrapperPlayServerBlockChange(event.getPacket());
 
                     if (wrapper.getBlockData().getType() == Material.SPRUCE_LEAVES) {
-                        wrapper.setBlockData(WrappedBlockData.fromHandle(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=1,persistent=true]").getState()));
+                        wrapper.setBlockData(WrappedBlockData.fromHandle(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=1,persistent=false]").getState()));
                     }
                     event.setPacket(wrapper.getHandle());
                 }
@@ -172,7 +172,7 @@ public class S2CListener {
 
                     for (int i = 0; i < changedBlocks.length; i++) {
                         if (changedBlocks[i].getType() == Material.SPRUCE_LEAVES) {
-                            list.add(WrappedBlockData.fromHandle(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=1,persistent=true]").getState()));
+                            list.add(WrappedBlockData.fromHandle(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=1,persistent=false]").getState()));
                         }
                         else {
                             list.add(changedBlocks[i]);

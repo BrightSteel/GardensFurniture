@@ -3,6 +3,7 @@ package com.gardensmc.gardensfurniture.register;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlock;
 import com.gardensmc.gardensfurniture.custom.CustomItem;
+import com.gardensmc.gardensfurniture.custom.CustomLeavesBlock;
 import com.gardensmc.gardensfurniture.custom.CustomNoteBlock;
 import com.gardensmc.gardensfurniture.util.ChatUtil;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
@@ -25,6 +26,7 @@ public class ItemRegistry {
 
     private final HashMap<String, CustomItem> customItems = new HashMap<>();
 
+    // also can be for leaves too: distance,persistent -> identifier
     // note,instrument,powered -> custom_item_identifier
     private final HashMap<String, String> customNoteBlocks = new HashMap<>();
 
@@ -52,12 +54,18 @@ public class ItemRegistry {
                         boolean cancel_drop = blockSection.getBoolean("cancel_drop");
 
                         ConfigurationSection noteSection = blockSection.getConfigurationSection("note_data");
+                        ConfigurationSection leavesSection = blockSection.getConfigurationSection("leaves_data");
                         if (type != null && type.equals("NOTE") && noteSection != null) {
                             int note = noteSection.getInt("note");
                             String instrument = noteSection.getString("instrument");
                             boolean powered = noteSection.getBoolean("powered");
                             customBlock = new CustomNoteBlock(note, instrument, powered, seated, cancel_drop);
                             customNoteBlocks.put(note + "," + instrument + "," + powered, key);
+                        } else if (type != null && type.equals("LEAVES") && leavesSection != null) {
+                            int distance = leavesSection.getInt("distance");
+                            boolean persistent = leavesSection.getBoolean("persistent");
+                            customBlock = new CustomLeavesBlock(distance, persistent, seated, cancel_drop);
+                            customNoteBlocks.put(distance + "," + persistent, key);
                         } else {
                             boolean barrier = blockSection.getBoolean("barrier");
                             customBlock = new CustomBlock(barrier, seated, cancel_drop);

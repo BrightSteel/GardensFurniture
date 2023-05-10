@@ -9,6 +9,7 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.Leaves;
 import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -29,9 +30,27 @@ public class CustomBlockManager {
         if (customBlock instanceof CustomNoteBlock customNoteBlock) {
             return placeNoteBlock(player, customItem, customNoteBlock, location);
         }
+        else if (customBlock instanceof CustomLeavesBlock customLeavesBlock) {
+            return placeLeavesBlock(player, customItem, customLeavesBlock, location);
+        }
         else {
             return placeItemFrame(customItem, location, blockFace);
         }
+    }
+
+    private static boolean placeLeavesBlock(Player player, CustomItem customItem, CustomLeavesBlock customLeavesBlock, Location location) {
+        Block block = location.getBlock();
+        block.setType(Material.SPRUCE_LEAVES);
+        // todo use block file-cache system to store placement
+//        if (block.getBlockData() instanceof Leaves leaves) {
+//            leaves.setDistance(customLeavesBlock.getDistance());
+//            leaves.setPersistent(customLeavesBlock.isPersistent());
+//            block.setBlockData(leaves);
+//        }
+
+        Bukkit.getPluginManager().callEvent(new CustomBlockPlaceEvent(player, customItem, block));
+
+        return true;
     }
 
 
@@ -82,6 +101,16 @@ public class CustomBlockManager {
             return true;
         }
         return false;
+    }
+
+    @Nullable
+    public static CustomItem getItemFromLeaves(Block block) {
+        // todo use block location and grab data from file-cache
+//        int distance = leaves.getDistance();
+//        boolean persistent = leaves.isPersistent();
+//        String key = distance + "," + persistent;
+//        return CustomRegister.INSTANCE.itemRegistry.getCustomItem(key);
+        return null;
     }
 
     @Nullable
