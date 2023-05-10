@@ -1,8 +1,11 @@
 package com.gardensmc.gardensfurniture.events;
 
+import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.CustomItem;
+import com.gardensmc.gardensfurniture.leaves.LeaveWorld;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
+import com.gardensmc.gardensfurniture.util.LeavesConfig;
 import com.gardensmc.gardensfurniture.util.WorldGuardUtil;
 import dev.geco.gsit.api.GSitAPI;
 import org.bukkit.*;
@@ -19,6 +22,8 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.hanging.HangingBreakEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Arrays;
@@ -312,6 +317,7 @@ public class Events implements Listener {
             }
 
             Bukkit.getPluginManager().callEvent(new CustomBlockBreakEvent(e.getPlayer(), customItem, e.getBlock()));
+            LeavesConfig.removeLeave(e.getBlock());
         }
     }
 
@@ -336,6 +342,29 @@ public class Events implements Listener {
                     Bukkit.getPluginManager().callEvent(new FurnitureInteractEvent(e.getPlayer(), customItem, itemFrame, e.getHand(), heldItem));
                 }
             }
+        }
+    }
+
+    @EventHandler
+    public void onLoadChunk(ChunkLoadEvent e) {
+        LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(e.getWorld());
+        leaveWorld.loadChunk(e.getChunk());
+    }
+
+    @EventHandler
+    public void onChunkUnload(ChunkUnloadEvent e) {
+        LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(e.getWorld());
+        leaveWorld.removeChunk(e.getChunk());
+    }
+
+    @EventHandler
+    public void onLeaveDecay(LeavesDecayEvent e) {
+        if (e.isCancelled()) return;
+
+        LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(e.getBlock().getWorld());
+        String leaveId = leaveWorld.getLeaveId(e.getBlock());
+        if (leaveId != null) {
+            e.setCancelled(true);
         }
     }
 

@@ -1,10 +1,13 @@
 package com.gardensmc.gardensfurniture.custom;
 
+import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
+import com.gardensmc.gardensfurniture.leaves.LeaveWorld;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.register.ItemRegistry;
+import com.gardensmc.gardensfurniture.util.LeavesConfig;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -41,7 +44,7 @@ public class CustomBlockManager {
     private static boolean placeLeavesBlock(Player player, CustomItem customItem, CustomLeavesBlock customLeavesBlock, Location location) {
         Block block = location.getBlock();
         block.setType(Material.SPRUCE_LEAVES);
-        // todo use block file-cache system to store placement
+        LeavesConfig.addLeave(block, customItem.getIdentifier());
 //        if (block.getBlockData() instanceof Leaves leaves) {
 //            leaves.setDistance(customLeavesBlock.getDistance());
 //            leaves.setPersistent(customLeavesBlock.isPersistent());
@@ -105,11 +108,11 @@ public class CustomBlockManager {
 
     @Nullable
     public static CustomItem getItemFromLeaves(Block block) {
-        // todo use block location and grab data from file-cache
-//        int distance = leaves.getDistance();
-//        boolean persistent = leaves.isPersistent();
-//        String key = distance + "," + persistent;
-//        return CustomRegister.INSTANCE.itemRegistry.getCustomItem(key);
+        LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(block.getWorld());
+        String id = leaveWorld.getLeaveId(block);
+        if (id != null) {
+            return CustomRegister.INSTANCE.itemRegistry.getItem(id);
+        }
         return null;
     }
 

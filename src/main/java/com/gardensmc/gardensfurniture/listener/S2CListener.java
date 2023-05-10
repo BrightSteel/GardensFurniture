@@ -8,6 +8,10 @@ import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.BlockPosition;
 import com.comphenix.protocol.wrappers.WrappedBlockData;
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.custom.CustomItem;
+import com.gardensmc.gardensfurniture.custom.CustomLeavesBlock;
+import com.gardensmc.gardensfurniture.leaves.LeaveWorld;
+import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.viaversion.viaversion.api.minecraft.chunks.ChunkSection;
 import com.viaversion.viaversion.api.minecraft.chunks.DataPalette;
 import com.viaversion.viaversion.api.minecraft.chunks.PaletteType;
@@ -22,9 +26,7 @@ import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.IBlockData;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.craftbukkit.v1_19_R1.block.data.CraftBlockData;
 import sun.misc.Unsafe;
 
@@ -72,6 +74,11 @@ public class S2CListener {
                     ClientboundLevelChunkWithLightPacket p = (ClientboundLevelChunkWithLightPacket) event.getPacket().getHandle();
                     ClientboundLevelChunkPacketData chunkData = p.d();
 
+                    var chunkX = p.b();
+                    var chunkZ = p.c();
+                    var coordinateX = chunkX * 16;
+                    var coordinateZ = chunkZ * 16;
+
                     int worldMinHeight = playerWorld.getMinHeight();
                     int worldMaxHeight = playerWorld.getMaxHeight();
                     int worldTrueHeight = (Math.abs(worldMinHeight) + worldMaxHeight);
@@ -93,6 +100,7 @@ public class S2CListener {
                     }
                     boolean requiresEdits = false;
 
+                    int i = 0;
                     for (ChunkSection section : sections) {
                         DataPalette blockPalette = section.palette(PaletteType.BLOCKS);
 
@@ -106,14 +114,37 @@ public class S2CListener {
                                     if (blockData != null) {
                                         Material material = CraftBlockData.fromData(blockData).getMaterial();
                                         if (material == Material.SPRUCE_LEAVES) {
-                                            section.setFlatBlock(x, y, z, Block.o.a(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=1,persistent=false]").getState()));
+                                            var position = new BlockPosition(
+                                                    coordinateX + x,
+                                                    y + (16 * i) - Math.abs(worldMinHeight), // The sections are from the bottom to the top, so the section 0 is at the world's min height!
+                                                    coordinateZ + z
+                                            );
+                                            LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(playerWorld);
+                                            org.bukkit.block.Block block = playerWorld.getBlockAt(new Location(playerWorld, position.getX(), position.getY(), position.getZ()));
+                                            String leaveId = leaveWorld.getLeaveId(block);
+                                            if (leaveId != null) System.out.println("leaveId: " + leaveId);
+                                            if ((position.getX() == -441 && position.getZ() == 80) || (position.getX() == -441 && position.getZ() == 82) || (position.getX() == -440 && position.getZ() == 82)) {
+                                                System.out.println("Leave at: " + position.getX() + ", " + position.getY() + ", " + position.getZ());
+                                            }
+
+                                            CustomItem customItem = CustomRegister.INSTANCE.itemRegistry.getItem(leaveId);
+                                            if (customItem != null && customItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
+                                                System.out.println("custom Leave at: " + position.getX() + ", " + position.getY() + ", " + position.getZ());
+                                                section.setFlatBlock(x, y, z, Block.o.a(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=" + customLeavesBlock.getDistance() + ",persistent=" + customLeavesBlock.isPersistent() + "]").getState()));
+
+                                            }
+                                            else {
+                                                section.setFlatBlock(x, y, z, Block.o.a(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=1,persistent=false]").getState()));
+                                            }
                                             requiresEdits = true;
+
                                         }
 
                                     }
                                 }
                             }
                         }
+                        i++;
 
                         if (requiresEdits) {
                             ByteBuf byteBuf = Unpooled.buffer();
