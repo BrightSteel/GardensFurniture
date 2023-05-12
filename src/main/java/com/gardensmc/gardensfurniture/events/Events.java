@@ -3,9 +3,9 @@ package com.gardensmc.gardensfurniture.events;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.CustomItem;
+import com.gardensmc.gardensfurniture.database.LeavesData;
 import com.gardensmc.gardensfurniture.leaves.LeaveWorld;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
-import com.gardensmc.gardensfurniture.util.LeavesConfig;
 import com.gardensmc.gardensfurniture.util.WorldGuardUtil;
 import dev.geco.gsit.api.GSitAPI;
 import org.bukkit.*;
@@ -317,7 +317,11 @@ public class Events implements Listener {
             }
 
             Bukkit.getPluginManager().callEvent(new CustomBlockBreakEvent(e.getPlayer(), customItem, e.getBlock()));
-            LeavesConfig.removeLeave(e.getBlock());
+            try {
+                LeavesData.INSTANCE.removeLeave(e.getBlock());
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
         }
     }
 
@@ -348,13 +352,15 @@ public class Events implements Listener {
     @EventHandler
     public void onLoadChunk(ChunkLoadEvent e) {
         LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(e.getWorld());
-        leaveWorld.loadChunk(e.getChunk());
+
+//        leaveWorld.loadChunk(e.getChunk());
+        Bukkit.getScheduler().runTaskAsynchronously(GardensFurniture.plugin, () -> leaveWorld.loadChunk(e.getChunk()));
     }
 
     @EventHandler
     public void onChunkUnload(ChunkUnloadEvent e) {
         LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(e.getWorld());
-        leaveWorld.removeChunk(e.getChunk());
+        Bukkit.getScheduler().runTaskAsynchronously(GardensFurniture.plugin, () -> leaveWorld.removeChunk(e.getChunk()));
     }
 
 //    @EventHandler

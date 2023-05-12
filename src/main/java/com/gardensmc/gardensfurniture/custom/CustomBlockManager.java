@@ -1,13 +1,13 @@
 package com.gardensmc.gardensfurniture.custom;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.database.LeavesData;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
 import com.gardensmc.gardensfurniture.leaves.LeaveWorld;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.register.ItemRegistry;
-import com.gardensmc.gardensfurniture.util.LeavesConfig;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -44,7 +44,12 @@ public class CustomBlockManager {
     private static boolean placeLeavesBlock(Player player, CustomItem customItem, CustomLeavesBlock customLeavesBlock, Location location) {
         Block block = location.getBlock();
         block.setType(Material.SPRUCE_LEAVES);
-        LeavesConfig.addLeave(block, customItem.getIdentifier());
+        try {
+            LeavesData.INSTANCE.addLeave(block, customItem.getIdentifier());
+            GardensFurniture.leavesMap.get(block.getWorld().getName()).refreshChunk(block.getChunk());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
         if (block.getBlockData() instanceof Leaves leaves) {
             leaves.setPersistent(true);
             block.setBlockData(leaves);

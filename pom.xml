@@ -89,7 +89,11 @@
             <id>viaversion-repo</id>
             <url>https://repo.viaversion.com</url>
         </repository>
-
+        <repository>
+            <id>CodeMC</id>
+            <name>CodeMC Maven Repository</name>
+            <url>https://repo.codemc.io/repository/maven-public/</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -138,11 +142,33 @@
             <systemPath>${project.basedir}/dependencies/GardensPlayers.jar</systemPath>
         </dependency>
         <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.0.1</version>
+        </dependency>
+        <dependency>
             <groupId>com.comphenix.protocol</groupId>
             <artifactId>ProtocolLib</artifactId>
             <version>4.8.0</version>
         </dependency>
-
+        <dependency>
+            <groupId>com.dfsek.terra</groupId>
+            <artifactId>api</artifactId>
+            <version>6.2.1-BETA+358e09d05</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.dfsek.terra</groupId>
+            <artifactId>manifest-addon-loader</artifactId>
+            <version>1.0.0-BETA+fa0fb3cd1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.dfsek.terra</groupId>
+            <artifactId>terrascript-function-check-noise-3d</artifactId>
+            <version>1.0.0-BETA+fa0fb3cd1</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
 </project>
