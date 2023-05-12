@@ -4,13 +4,11 @@ import com.comphenix.packetwrapper.WrapperPlayServerBlockChange;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.*;
-import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.BlockPosition;
 import com.comphenix.protocol.wrappers.WrappedBlockData;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomItem;
 import com.gardensmc.gardensfurniture.custom.CustomLeavesBlock;
-import com.gardensmc.gardensfurniture.leaves.LeaveWorld;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.viaversion.viaversion.api.minecraft.chunks.ChunkSection;
 import com.viaversion.viaversion.api.minecraft.chunks.DataPalette;
@@ -18,16 +16,14 @@ import com.viaversion.viaversion.api.minecraft.chunks.PaletteType;
 import com.viaversion.viaversion.api.type.types.version.ChunkSectionType1_18;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import net.minecraft.core.Registry;
 import net.minecraft.network.PacketDataSerializer;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.IBlockData;
 import org.bukkit.*;
 import org.bukkit.craftbukkit.v1_19_R1.block.data.CraftBlockData;
+import org.bukkit.persistence.PersistentDataType;
 import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
@@ -228,11 +224,19 @@ public class S2CListener {
     }
 
     private CustomItem getCustomLeaveItem(World playerWorld, BlockPosition position) {
-        LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(playerWorld);
-        org.bukkit.block.Block block = playerWorld.getBlockAt(new Location(playerWorld, position.getX(), position.getY(), position.getZ()));
-        String leaveId = leaveWorld.getLeaveId(block);
+//        LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(playerWorld);
+//        org.bukkit.block.Block block = playerWorld.getBlockAt(new Location(playerWorld, position.getX(), position.getY(), position.getZ()));
+        Location loc = new Location(playerWorld, position.getX(), position.getY(), position.getZ());
+        Chunk c = loc.getChunk();
 
-        return CustomRegister.INSTANCE.itemRegistry.getItem(leaveId);
+            String identifier = c.getPersistentDataContainer().get(new NamespacedKey("gardens", loc.getBlockX() + "." + loc.getBlockY() + "." + loc.getBlockZ()), PersistentDataType.STRING);
+            if (identifier != null) {
+//                System.out.println("passed: " + identifier);
+                return CustomRegister.INSTANCE.itemRegistry.getItem(identifier);
+            }
+
+//        String leaveId = leaveWorld.getLeaveId(block);
+        return null;
     }
 
 

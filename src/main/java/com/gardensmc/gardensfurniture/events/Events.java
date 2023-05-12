@@ -1,18 +1,16 @@
 package com.gardensmc.gardensfurniture.events;
 
-import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.CustomItem;
 import com.gardensmc.gardensfurniture.database.LeavesData;
-import com.gardensmc.gardensfurniture.leaves.LeaveWorld;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.util.WorldGuardUtil;
 import dev.geco.gsit.api.GSitAPI;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.data.type.Leaves;
 import org.bukkit.block.data.type.NoteBlock;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -23,8 +21,9 @@ import org.bukkit.event.hanging.HangingBreakEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
-import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Arrays;
 import java.util.List;
@@ -351,17 +350,37 @@ public class Events implements Listener {
 
     @EventHandler
     public void onLoadChunk(ChunkLoadEvent e) {
-        LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(e.getWorld());
-
-//        leaveWorld.loadChunk(e.getChunk());
-        Bukkit.getScheduler().runTaskAsynchronously(GardensFurniture.plugin, () -> leaveWorld.loadChunk(e.getChunk()));
+        if (e.isNewChunk()) {
+            for (Entity entity : e.getChunk().getEntities()) {
+                if (entity instanceof ItemFrame itemFrame) {
+//                    System.out.println("Removed iframe");
+                    PersistentDataContainer data = itemFrame.getPersistentDataContainer();
+                    if (data.has(new NamespacedKey("gardens", "custom-leaf"), PersistentDataType.STRING)) {
+                        String identifier = data.get(new NamespacedKey("gardens", "custom-leaf"), PersistentDataType.STRING);
+                        PersistentDataContainer cData = itemFrame.getLocation().getChunk().getPersistentDataContainer();
+                        Block b = itemFrame.getLocation().getBlock();
+                        cData.set(new NamespacedKey("gardens", b.getX() + "." + b.getY() + "." + b.getZ()), PersistentDataType.STRING, identifier);
+                        itemFrame.remove();
+                    }
+                }
+            }
+        }
     }
 
-    @EventHandler
-    public void onChunkUnload(ChunkUnloadEvent e) {
-        LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(e.getWorld());
-        Bukkit.getScheduler().runTaskAsynchronously(GardensFurniture.plugin, () -> leaveWorld.removeChunk(e.getChunk()));
-    }
+//    @EventHandler
+//    public void onLoadChunk(ChunkLoadEvent e) {
+////        e.isNewChunk()
+//        LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(e.getWorld());
+//
+////        leaveWorld.loadChunk(e.getChunk());
+//        Bukkit.getScheduler().runTaskAsynchronously(GardensFurniture.plugin, () -> leaveWorld.loadChunk(e.getChunk()));
+//    }
+//
+//    @EventHandler
+//    public void onChunkUnload(ChunkUnloadEvent e) {
+//        LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(e.getWorld());
+//        Bukkit.getScheduler().runTaskAsynchronously(GardensFurniture.plugin, () -> leaveWorld.removeChunk(e.getChunk()));
+//    }
 
 //    @EventHandler
 //    public void onLeaveDecay(LeavesDecayEvent e) {

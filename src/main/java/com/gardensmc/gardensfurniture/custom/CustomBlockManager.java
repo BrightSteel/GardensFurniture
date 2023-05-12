@@ -5,13 +5,11 @@ import com.gardensmc.gardensfurniture.database.LeavesData;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
-import com.gardensmc.gardensfurniture.leaves.LeaveWorld;
+import com.gardensmc.gardensfurniture.listener.S2CListener;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
-import com.gardensmc.gardensfurniture.register.ItemRegistry;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Leaves;
 import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.entity.Entity;
@@ -20,11 +18,10 @@ import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 public class CustomBlockManager {
 
@@ -46,7 +43,7 @@ public class CustomBlockManager {
         block.setType(Material.SPRUCE_LEAVES);
         try {
             LeavesData.INSTANCE.addLeave(block, customItem.getIdentifier());
-            GardensFurniture.leavesMap.get(block.getWorld().getName()).refreshChunk(block.getChunk());
+//            GardensFurniture.leavesMap.get(block.getWorld().getName()).refreshChunk(block.getChunk());
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -111,16 +108,6 @@ public class CustomBlockManager {
     }
 
     @Nullable
-    public static CustomItem getItemFromLeaves(Block block) {
-        LeaveWorld leaveWorld = GardensFurniture.getLeaveWorld(block.getWorld());
-        String id = leaveWorld.getLeaveId(block);
-        if (id != null) {
-            return CustomRegister.INSTANCE.itemRegistry.getItem(id);
-        }
-        return null;
-    }
-
-    @Nullable
     public static CustomItem getItemFromNoteBlock(NoteBlock noteBlock) {
         int note = noteBlock.getNote().getId();
         String instrument = noteBlock.getInstrument().toString().toLowerCase();
@@ -153,6 +140,12 @@ public class CustomBlockManager {
         CustomItem customItem = CustomRegister.INSTANCE.itemRegistry.getCustomItem(itemFrame.getItem());
         if (customItem == null) return;
 
+        FurnitureBreakEvent e = new FurnitureBreakEvent(player, customItem, itemFrame);
+        Bukkit.getPluginManager().callEvent(e);
+        if (e.isCancelled()) {
+            return;
+        }
+
         itemFrame.remove();
         Block block = location.getBlock();
         if (block.getType() == Material.BARRIER) {
@@ -164,7 +157,7 @@ public class CustomBlockManager {
             location.getWorld().dropItemNaturally(location, itemStack);
         }
 
-        Bukkit.getPluginManager().callEvent(new FurnitureBreakEvent(player, customItem, itemFrame));
+
 
     }
 
@@ -175,6 +168,16 @@ public class CustomBlockManager {
             CustomItem customItem = CustomRegister.INSTANCE.itemRegistry.getCustomItem(itemStack);
             return customItem;
         }
+        return null;
+    }
+
+    @Nullable
+    public static CustomItem getItemFromLeaves(Block block) {
+        String identifier = block.getChunk().getPersistentDataContainer().get(new NamespacedKey("gardens", block.getX() + "." + block.getY() + "." + block.getZ()), PersistentDataType.STRING);
+        if (identifier != null) {
+            return CustomRegister.INSTANCE.itemRegistry.getItem(identifier);
+        }
+
         return null;
     }
 
