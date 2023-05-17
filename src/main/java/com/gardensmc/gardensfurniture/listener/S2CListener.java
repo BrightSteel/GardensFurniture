@@ -16,6 +16,7 @@ import com.viaversion.viaversion.api.minecraft.chunks.PaletteType;
 import com.viaversion.viaversion.api.type.types.version.ChunkSectionType1_18;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import net.minecraft.core.Registry;
 import net.minecraft.network.PacketDataSerializer;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
@@ -68,7 +69,7 @@ public class S2CListener {
             public void onPacketSending(PacketEvent event) {
 //                super.onPacketSending(event);
                 World playerWorld = event.getPlayer().getWorld();
-                var chunkSectionType = new ChunkSectionType1_18(Block.o.b(), 0);
+                var chunkSectionType = new ChunkSectionType1_18(Block.o.b(), 15);
 //
                 if (event.getPacketType() == PacketType.Play.Server.MAP_CHUNK) {
 

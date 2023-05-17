@@ -59,6 +59,12 @@ public class CustomBlockManager {
 
 
     private static boolean placeNoteBlock(Player player, CustomItem customItem, CustomNoteBlock customNoteBlock, Location location) {
+
+        Block block = location.getBlock();
+        CustomBlockPlaceEvent event = new CustomBlockPlaceEvent(player, customItem, block);
+        Bukkit.getPluginManager().callEvent(event);
+        if (event.isCancelled()) return false;
+
         Instrument instrument;
         try {
             instrument = Instrument.valueOf(customNoteBlock.getInstrument().toUpperCase());
@@ -66,7 +72,6 @@ public class CustomBlockManager {
             e.printStackTrace();
             return false;
         }
-        Block block = location.getBlock();
         block.setType(Material.NOTE_BLOCK);
         if (block.getBlockData() instanceof NoteBlock noteBlock) {
             noteBlock.setNote(new Note(customNoteBlock.getNote()));
@@ -74,8 +79,6 @@ public class CustomBlockManager {
             noteBlock.setPowered(customNoteBlock.isPowered());
             block.setBlockData(noteBlock);
         }
-
-        Bukkit.getPluginManager().callEvent(new CustomBlockPlaceEvent(player, customItem, block));
 
         return true;
     }
@@ -85,7 +88,7 @@ public class CustomBlockManager {
         if (world != null) {
 
             ItemFrame itemFrame = (ItemFrame) location.getWorld().spawnEntity(location, EntityType.ITEM_FRAME);
-            itemFrame.setFacingDirection(blockFace);
+            itemFrame.setFacingDirection(blockFace, true);
 //            itemFrame.setFacingDirection();
             itemFrame.setVisible(false);
             ItemStack display = CustomRegister.INSTANCE.itemRegistry.buildItem(customItem);
