@@ -68,6 +68,7 @@ public class S2CListener {
             @Override
             public void onPacketSending(PacketEvent event) {
 //                super.onPacketSending(event);
+                System.out.println(event.getPacketType());
                 World playerWorld = event.getPlayer().getWorld();
                 var chunkSectionType = new ChunkSectionType1_18(Block.o.b(), 15);
 //
@@ -83,12 +84,12 @@ public class S2CListener {
 
                     int worldMinHeight = playerWorld.getMinHeight();
                     int worldMaxHeight = playerWorld.getMaxHeight();
+                    if (worldMaxHeight > 319) worldMaxHeight = 319;
                     int worldTrueHeight = (Math.abs(worldMinHeight) + worldMaxHeight);
                     int ySectionCount = worldTrueHeight / 16;
 
                     PacketDataSerializer readBuffer = chunkData.a();
                     byte[] byteArray = readBuffer.array();
-
 
                     ByteBuf buf = Unpooled.copiedBuffer(byteArray);
 
@@ -203,7 +204,12 @@ public class S2CListener {
 
                     for (int i = 0; i < changedBlocks.length; i++) {
                         if (changedBlocks[i].getType() == Material.SPRUCE_LEAVES) {
-                            CustomItem customItem = getCustomLeaveItem(event.getPlayer().getWorld(), blockPosition);
+
+                            short blockPosRelative = shorts[i];
+                            int x = (blockPosRelative >> 8 & 15) + (blockPosition.getX() << 4);
+                            int y = (blockPosRelative >> 0 & 15) + (blockPosition.getY() << 4);
+                            int z = (blockPosRelative >> 4 & 15) + (blockPosition.getZ() << 4);
+                            CustomItem customItem = getCustomLeaveItem(event.getPlayer().getWorld(), new BlockPosition(x, y, z));
                             if (customItem != null && customItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
                                 list.add(WrappedBlockData.fromHandle(CraftBlockData.newData(Material.SPRUCE_LEAVES, "[distance=" + customLeavesBlock.getDistance() + ",persistent=" + customLeavesBlock.isPersistent() + "]").getState()));
                             }
