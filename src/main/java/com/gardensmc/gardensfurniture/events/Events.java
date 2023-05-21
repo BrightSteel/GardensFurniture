@@ -19,6 +19,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
@@ -310,30 +311,41 @@ public class Events implements Listener {
 
         if (e.getBlock().getType() == Material.NOTE_BLOCK && e.getBlock().getBlockData() instanceof NoteBlock noteBlock) {
             CustomItem customItem = CustomBlockManager.getItemFromNoteBlock(noteBlock);
-            dropCustomItem(e, customItem);
+            dropCustomItem(e, customItem, false);
         }
         else if (e.getBlock().getType() == Material.SPRUCE_LEAVES) {
             CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getBlock());
-            dropCustomItem(e, customItem);
+            dropCustomItem(e, customItem, true);
         }
     }
 
-    private void dropCustomItem(BlockBreakEvent e, CustomItem customItem) {
+    private void dropCustomItem(BlockBreakEvent e, CustomItem customItem, boolean leaves) {
         if (customItem != null) {
             e.setDropItems(false);
 
             if (e.getPlayer().getGameMode() != GameMode.CREATIVE && !customItem.getCustomBlock().cancelDrop()){
                 ItemStack itemStack = CustomRegister.INSTANCE.itemRegistry.buildItem(customItem);
                 if (itemStack != null) {
-                    e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), itemStack);
+                    boolean drop;
+                    if (leaves) {
+                        ItemStack held = e.getPlayer().getInventory().getItemInMainHand();
+                        drop = held.getType() == Material.SHEARS || held.containsEnchantment(Enchantment.SILK_TOUCH);
+                    } else {
+                        drop = true;
+                    }
+                    if (drop) {
+                        e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), itemStack);
+                    }
                 }
             }
 
             Bukkit.getPluginManager().callEvent(new CustomBlockBreakEvent(e.getPlayer(), customItem, e.getBlock()));
-            try {
-                LeavesData.INSTANCE.removeLeave(e.getBlock());
-            } catch (Exception ex) {
-                ex.printStackTrace();
+            if (leaves) {
+                try {
+                    LeavesData.INSTANCE.removeLeave(e.getBlock());
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
             }
         }
     }
