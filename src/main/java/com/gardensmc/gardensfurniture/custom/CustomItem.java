@@ -41,7 +41,7 @@ public class CustomItem {
     }
 
     public boolean isCustomBlock() {
-        return customBlock != CustomBlock.EMPTY;
+        return customBlock != CustomBlock.EMPTY || this instanceof CustomDirectionalItem;
     }
 
     public CustomBlock getCustomBlock() {

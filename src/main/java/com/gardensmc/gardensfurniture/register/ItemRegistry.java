@@ -1,10 +1,7 @@
 package com.gardensmc.gardensfurniture.register;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.custom.CustomBlock;
-import com.gardensmc.gardensfurniture.custom.CustomItem;
-import com.gardensmc.gardensfurniture.custom.CustomLeavesBlock;
-import com.gardensmc.gardensfurniture.custom.CustomNoteBlock;
+import com.gardensmc.gardensfurniture.custom.*;
 import com.gardensmc.gardensfurniture.util.ChatUtil;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import org.bukkit.ChatColor;
@@ -35,6 +32,7 @@ public class ItemRegistry {
     }
 
     private void assembleItems() {
+        CustomItemFactory customItemFactory = new CustomItemFactory(customNoteBlocks);
         for (Configuration config : ConfigUtil.all_items) {
             for (String key : config.getKeys(false)) {
                 ConfigurationSection section = config.getConfigurationSection(key);
@@ -44,39 +42,14 @@ public class ItemRegistry {
 
                     Material material = parseMaterial(section.getString("material"));
                     List<String> lore = section.getStringList("lore");
-                    CustomItem customItem = new CustomItem(key, display, custom_model, material, lore);
-
-                    ConfigurationSection blockSection = section.getConfigurationSection("block");
-                    if (blockSection != null) {
-                        CustomBlock customBlock;
-                        String type = blockSection.getString("type");
-                        boolean seated = blockSection.getBoolean("seated");
-                        boolean cancel_drop = blockSection.getBoolean("cancel_drop");
-
-                        ConfigurationSection noteSection = blockSection.getConfigurationSection("note_data");
-                        ConfigurationSection leavesSection = blockSection.getConfigurationSection("leaves_data");
-                        if (type != null && type.equals("NOTE") && noteSection != null) {
-                            int note = noteSection.getInt("note");
-                            String instrument = noteSection.getString("instrument");
-                            boolean powered = noteSection.getBoolean("powered");
-                            customBlock = new CustomNoteBlock(note, instrument, powered, seated, cancel_drop);
-                            customNoteBlocks.put(note + "," + instrument + "," + powered, key);
-                        } else if (type != null && type.equals("LEAVES") && leavesSection != null) {
-                            int distance = leavesSection.getInt("distance");
-                            boolean persistent = leavesSection.getBoolean("persistent");
-                            customBlock = new CustomLeavesBlock(distance, persistent, seated, cancel_drop);
-                            customNoteBlocks.put(distance + "," + persistent, key);
-                        } else {
-                            boolean barrier = blockSection.getBoolean("barrier");
-                            customBlock = new CustomBlock(barrier, seated, cancel_drop);
-                        }
-
-                        if (blockSection.contains("seat_offset")) {
-                            customBlock.setSeatOffset(blockSection.getDouble("seat_offset"));
-                        }
-                        customItem.setCustomBlock(customBlock);
+                    boolean directional = section.getBoolean("directional");
+                    CustomItem customItem;
+                    if (directional) {
+                        customItem = customItemFactory.createDirectionalItem(key, display, custom_model, material, lore, section);
                     }
-
+                    else {
+                       customItem = customItemFactory.createCustomItem(key, display, custom_model, material, lore, section);
+                    }
 
                     customItems.put(key, customItem);
                 }

@@ -68,7 +68,7 @@ public class S2CListener {
             @Override
             public void onPacketSending(PacketEvent event) {
 //                super.onPacketSending(event);
-                System.out.println(event.getPacketType());
+//                System.out.println(event.getPacketType());
                 World playerWorld = event.getPlayer().getWorld();
                 var chunkSectionType = new ChunkSectionType1_18(Block.o.b(), 15);
 //

@@ -27,6 +27,18 @@ public class CustomBlockManager {
 
     public static boolean attemptPlacement(Player player, CustomItem customItem, Location location, BlockFace blockFace) {
         CustomBlock customBlock = customItem.getCustomBlock();
+        if (customItem instanceof CustomDirectionalItem customDirectionalItem) {
+            switch (blockFace) {
+                case UP, DOWN -> customBlock = customDirectionalItem.getY();
+                case EAST, WEST -> customBlock = customDirectionalItem.getX();
+                case NORTH, SOUTH -> customBlock = customDirectionalItem.getZ();
+            }
+        }
+
+        return attemptPlacement(player, customItem, location, blockFace, customBlock);
+    }
+
+    private static boolean attemptPlacement(Player player, CustomItem customItem, Location location, BlockFace blockFace, CustomBlock customBlock) {
         if (customBlock instanceof CustomNoteBlock customNoteBlock) {
             return placeNoteBlock(player, customItem, customNoteBlock, location);
         }
