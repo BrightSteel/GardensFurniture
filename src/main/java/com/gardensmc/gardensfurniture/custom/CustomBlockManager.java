@@ -12,10 +12,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.Leaves;
 import org.bukkit.block.data.type.NoteBlock;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.ItemFrame;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -39,6 +36,10 @@ public class CustomBlockManager {
     }
 
     private static boolean attemptPlacement(Player player, CustomItem customItem, Location location, BlockFace blockFace, CustomBlock customBlock) {
+        if (entityBlocking(location)) {
+            return false;
+        }
+
         if (customBlock instanceof CustomNoteBlock customNoteBlock) {
             return placeNoteBlock(player, customItem, customNoteBlock, location);
         }
@@ -48,6 +49,17 @@ public class CustomBlockManager {
         else {
             return placeItemFrame(customItem, location, blockFace);
         }
+    }
+
+    private static boolean entityBlocking(Location loc) {
+        if (loc.getWorld() == null) {
+            for (Entity entity : loc.getWorld().getNearbyEntities(loc, 1, 1, 1)) {
+                if (entity.getLocation().getBlock().equals(loc.getBlock()) && entity instanceof LivingEntity && !(entity instanceof ItemFrame)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static boolean placeLeavesBlock(Player player, CustomItem customItem, CustomLeavesBlock customLeavesBlock, Location location) {
