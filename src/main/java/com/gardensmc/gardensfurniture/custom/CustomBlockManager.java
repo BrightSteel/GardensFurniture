@@ -7,6 +7,7 @@ import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
 import com.gardensmc.gardensfurniture.listener.S2CListener;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
+import de.tr7zw.nbtapi.NBTEntity;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -118,6 +119,8 @@ public class CustomBlockManager {
             ItemStack display = CustomRegister.INSTANCE.itemRegistry.buildItem(customItem);
             ItemMeta itemMeta = display.getItemMeta();
             if (itemMeta != null) {
+                NBTEntity nbtEntity = new NBTEntity(itemFrame);
+                nbtEntity.setString("display", itemMeta.getDisplayName());
                 itemMeta.setDisplayName(null);
                 display.setItemMeta(itemMeta);
             }
@@ -172,7 +175,11 @@ public class CustomBlockManager {
         if (e.isCancelled()) {
             return;
         }
-
+        NBTEntity nbtEntity = new NBTEntity(itemFrame);
+        String display = null;
+        if (nbtEntity.hasKey("display")) {
+            display = nbtEntity.getString("display");
+        }
         itemFrame.remove();
         Block block = location.getBlock();
         if (block.getType() == Material.BARRIER) {
@@ -181,6 +188,11 @@ public class CustomBlockManager {
 
         ItemStack itemStack = CustomRegister.INSTANCE.itemRegistry.buildItem(customItem);
         if (itemStack != null) {
+            if (display != null && itemStack.getItemMeta() != null) {
+                ItemMeta itemMeta = itemStack.getItemMeta();
+                itemMeta.setDisplayName(display);
+                itemStack.setItemMeta(itemMeta);
+            }
             location.getWorld().dropItemNaturally(location, itemStack);
         }
 

@@ -5,6 +5,7 @@ import com.gardensmc.gardensfurniture.custom.CustomItem;
 import com.gardensmc.gardensfurniture.database.LeavesData;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.util.WorldGuardUtil;
+import de.tr7zw.nbtapi.NBTEntity;
 import dev.geco.gsit.api.GSitAPI;
 import net.minecraft.core.BlockPosition;
 import net.minecraft.core.EnumDirection;
@@ -32,6 +33,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -223,9 +225,18 @@ public class Events implements Listener {
                         if (ev.isCancelled()) {
                             return;
                         }
-
+                        NBTEntity nbtEntity = new NBTEntity(itemFrame);
+                        String display = null;
+                        if (nbtEntity.hasKey("display")) {
+                            display = nbtEntity.getString("display");
+                        }
                         itemFrame.remove();
                         if (!customItem.getCustomBlock().cancelDrop()) {
+                            if (display != null && itemStack.getItemMeta() != null) {
+                                ItemMeta itemMeta = itemStack.getItemMeta();
+                                itemMeta.setDisplayName(display);
+                                itemStack.setItemMeta(itemMeta);
+                            }
                             itemFrame.getWorld().dropItemNaturally(itemFrame.getLocation(), itemStack);
                         }
 
