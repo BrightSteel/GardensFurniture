@@ -7,6 +7,7 @@ import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
 import com.gardensmc.gardensfurniture.listener.S2CListener;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
+import com.gardensmc.gardensfurniture.util.ItemFrameUtil;
 import de.tr7zw.nbtapi.NBTEntity;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -48,7 +49,7 @@ public class CustomBlockManager {
             return placeLeavesBlock(player, customItem, customLeavesBlock, location);
         }
         else {
-            return placeItemFrame(customItem, location, blockFace);
+            return placeItemFrame(player, customItem, location, blockFace);
         }
     }
 
@@ -108,23 +109,27 @@ public class CustomBlockManager {
         return true;
     }
 
-    private static boolean placeItemFrame(CustomItem customItem, Location location, BlockFace blockFace) {
+    private static boolean placeItemFrame(Player player, CustomItem customItem, Location location, BlockFace blockFace) {
         World world = location.getWorld();
         if (world != null) {
 
             ItemFrame itemFrame = (ItemFrame) location.getWorld().spawnEntity(location, EntityType.ITEM_FRAME);
-            itemFrame.setFacingDirection(blockFace, true);
-//            itemFrame.setFacingDirection();
             itemFrame.setVisible(false);
+            itemFrame.setFacingDirection(blockFace, true);
             ItemStack display = CustomRegister.INSTANCE.itemRegistry.buildItem(customItem);
+            String custom_name = null;
             ItemMeta itemMeta = display.getItemMeta();
             if (itemMeta != null) {
-                NBTEntity nbtEntity = new NBTEntity(itemFrame);
-                nbtEntity.setString("display", itemMeta.getDisplayName());
+                custom_name = itemMeta.getDisplayName();
                 itemMeta.setDisplayName(null);
                 display.setItemMeta(itemMeta);
             }
             itemFrame.setItem(display);
+            itemFrame.setRotation(ItemFrameUtil.getRotationFromFacing(player));
+            if (custom_name != null) {
+                NBTEntity nbtEntity = new NBTEntity(itemFrame);
+                nbtEntity.getPersistentDataContainer().setString("custom_name", custom_name);
+            }
 
             if (customItem.getCustomBlock().hasBarrier()) {
                 location.getBlock().setType(Material.BARRIER);
@@ -177,8 +182,8 @@ public class CustomBlockManager {
         }
         NBTEntity nbtEntity = new NBTEntity(itemFrame);
         String display = null;
-        if (nbtEntity.hasKey("display")) {
-            display = nbtEntity.getString("display");
+        if (nbtEntity.getPersistentDataContainer().hasKey("custom_name")) {
+            display = nbtEntity.getPersistentDataContainer().getString("custom_name");
         }
         itemFrame.remove();
         Block block = location.getBlock();

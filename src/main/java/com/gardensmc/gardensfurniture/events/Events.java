@@ -227,8 +227,9 @@ public class Events implements Listener {
                         }
                         NBTEntity nbtEntity = new NBTEntity(itemFrame);
                         String display = null;
-                        if (nbtEntity.hasKey("display")) {
-                            display = nbtEntity.getString("display");
+                        if (nbtEntity.getPersistentDataContainer().hasKey("custom_name")) {
+                            display = nbtEntity.getPersistentDataContainer().getString("custom_name");
+
                         }
                         itemFrame.remove();
                         if (!customItem.getCustomBlock().cancelDrop()) {
