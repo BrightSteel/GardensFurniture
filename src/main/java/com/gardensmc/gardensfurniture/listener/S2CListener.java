@@ -16,13 +16,17 @@ import com.viaversion.viaversion.api.minecraft.chunks.PaletteType;
 import com.viaversion.viaversion.api.type.types.version.ChunkSectionType1_18;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import net.minecraft.core.IRegistry;
 import net.minecraft.core.Registry;
 import net.minecraft.network.PacketDataSerializer;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
+import net.minecraft.server.dedicated.DedicatedServer;
+import net.minecraft.world.level.biome.BiomeBase;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.IBlockData;
 import org.bukkit.*;
+import org.bukkit.craftbukkit.v1_19_R1.CraftServer;
 import org.bukkit.craftbukkit.v1_19_R1.block.data.CraftBlockData;
 import org.bukkit.persistence.PersistentDataType;
 import sun.misc.Unsafe;
@@ -70,8 +74,10 @@ public class S2CListener {
 //                super.onPacketSending(event);
 //                System.out.println(event.getPacketType());
                 World playerWorld = event.getPlayer().getWorld();
-                var chunkSectionType = new ChunkSectionType1_18(Block.o.b(), 15);
-//
+                DedicatedServer dedicatedServer = ((CraftServer) Bukkit.getServer()).getServer();
+                var chunkSectionType = new ChunkSectionType1_18(Block.o.b(), 20);
+//                System.out.println("Sending packet with biome bits: " + registry.b());
+
                 if (event.getPacketType() == PacketType.Play.Server.MAP_CHUNK) {
 
                     ClientboundLevelChunkWithLightPacket p = (ClientboundLevelChunkWithLightPacket) event.getPacket().getHandle();
@@ -235,6 +241,7 @@ public class S2CListener {
 //        org.bukkit.block.Block block = playerWorld.getBlockAt(new Location(playerWorld, position.getX(), position.getY(), position.getZ()));
         Location loc = new Location(playerWorld, position.getX(), position.getY(), position.getZ());
         Chunk c = loc.getChunk();
+
 
             String identifier = c.getPersistentDataContainer().get(new NamespacedKey("gardens", loc.getBlockX() + "." + loc.getBlockY() + "." + loc.getBlockZ()), PersistentDataType.STRING);
             if (identifier != null) {
