@@ -25,6 +25,11 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.List;
 
+/**
+ * Written by referencing HMCLeaves https://github.com/HibiscusMC/HMCLeaves/blob/master/src/main/java/io/github/fisher2911/hmcleaves/packet/BlockListener.java
+ * And by using code from SC2Listener that had to be retired because I couldn't figure out how to initialize the ViaVersion block palette correctly.
+ * Realistic Seasons and other biome-adders basically caused clients to crash with that
+ */
 public class BlockPacketListener {
 
     public void register() {
