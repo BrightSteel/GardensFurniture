@@ -25,6 +25,8 @@ public class CustomBlockFactory {
 
         ConfigurationSection noteSection = blockSection.getConfigurationSection("note_data");
         ConfigurationSection leavesSection = blockSection.getConfigurationSection("leaves_data");
+        ConfigurationSection caveVineSection = blockSection.getConfigurationSection("cave_vine_data");
+
         if (type != null && type.equals("NOTE") && noteSection != null) {
             int note = noteSection.getInt("note");
             String instrument = noteSection.getString("instrument");
@@ -36,6 +38,10 @@ public class CustomBlockFactory {
             boolean persistent = leavesSection.getBoolean("persistent");
             customBlock = new CustomLeavesBlock(distance, persistent, seated, cancel_drop);
             customNoteBlocks.put(distance + "," + persistent, item_identifier);
+        } else if (type != null && type.equals("CAVE_VINE") && caveVineSection != null) {
+            int age = caveVineSection.getInt("age");
+            customBlock = new CustomCaveVineBlock(age, seated, cancel_drop);
+            customNoteBlocks.put(String.valueOf(age), item_identifier); // needed?
         } else {
             boolean barrier = blockSection.getBoolean("barrier");
             customBlock = new CustomBlock(barrier, seated, cancel_drop);

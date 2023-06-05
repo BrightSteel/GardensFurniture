@@ -3,6 +3,7 @@ package com.gardensmc.gardensfurniture;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.gardensmc.gardensfurniture.command.CommandRegister;
+import com.gardensmc.gardensfurniture.events.CaveVineEvents;
 import com.gardensmc.gardensfurniture.events.Events;
 import com.gardensmc.gardensfurniture.listener.BlockPacketListener;
 import com.gardensmc.gardensfurniture.listener.S2CListener;
@@ -38,6 +39,7 @@ public class GardensFurniture extends JavaPlugin {
         CustomRegister.INSTANCE = new CustomRegister();
 
         this.getServer().getPluginManager().registerEvents(new Events(), this);
+        this.getServer().getPluginManager().registerEvents(new CaveVineEvents(), this);
 
         CommandRegister.registerCommands();
         protocolManager = ProtocolLibrary.getProtocolManager();

@@ -39,6 +39,33 @@ public class CustomItemFactory {
         );
     }
 
+    public CustomCaveVineItem createCaveVineItem(String identifier, String display, int custom_model, Material material, List<String> lore, ConfigurationSection section) {
+        ConfigurationSection[] sections = new ConfigurationSection[] {
+                section.getConfigurationSection("plant"),
+                section.getConfigurationSection("vine"),
+                section.getConfigurationSection("vine-25")
+        };
+
+        CustomCaveVineBlock[] customVineBlocks = new CustomCaveVineBlock[3];
+        int i = 0;
+        for (ConfigurationSection block_section : sections) {
+            if (block_section != null) {
+              CustomBlock customBlock = customBlockFactory.createCustomBlock(identifier, block_section);
+              if (customBlock instanceof CustomCaveVineBlock customCaveVineBlock) {
+                  customVineBlocks[i] = customCaveVineBlock;
+              }
+            }
+            i++;
+        }
+
+        // plant and vine are required
+        if (customVineBlocks[0] == null || customVineBlocks[1] == null) return null;
+
+        return new CustomCaveVineItem(
+                identifier, display, custom_model, material, lore, customVineBlocks[0], customVineBlocks[1], customVineBlocks[2]
+        );
+    }
+
     public CustomItem createCustomItem(String identifier, String display, int custom_model, Material material, List<String> lore, ConfigurationSection section) {
         CustomItem customItem = new CustomItem(identifier, display, custom_model, material, lore);
 

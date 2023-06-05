@@ -2,7 +2,7 @@ package com.gardensmc.gardensfurniture.events;
 
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.CustomItem;
-import com.gardensmc.gardensfurniture.database.LeavesData;
+import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.util.WorldGuardUtil;
 import de.tr7zw.nbtapi.NBTEntity;
@@ -19,7 +19,6 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftVex;
 import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
@@ -322,14 +321,21 @@ public class Events implements Listener {
 
         if (e.isCancelled()) return;
 
+        Material[] packetTypes = new Material[] {
+                Material.SPRUCE_LEAVES,
+                Material.CAVE_VINES,
+                Material.CAVE_VINES_PLANT
+        };
+
         if (e.getBlock().getType() == Material.NOTE_BLOCK && e.getBlock().getBlockData() instanceof NoteBlock noteBlock) {
             CustomItem customItem = CustomBlockManager.getItemFromNoteBlock(noteBlock);
             dropCustomItem(e, customItem, false);
         }
-        else if (e.getBlock().getType() == Material.SPRUCE_LEAVES) {
+        else if (Arrays.asList(packetTypes).contains(e.getBlock().getType())) {
             CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getBlock());
             dropCustomItem(e, customItem, true);
         }
+
     }
 
     private void dropCustomItem(BlockBreakEvent e, CustomItem customItem, boolean leaves) {
@@ -355,7 +361,7 @@ public class Events implements Listener {
             Bukkit.getPluginManager().callEvent(new CustomBlockBreakEvent(e.getPlayer(), customItem, e.getBlock()));
             if (leaves) {
                 try {
-                    LeavesData.INSTANCE.removeLeave(e.getBlock());
+                    FurnitureStore.INSTANCE.removeFurnitureStore(e.getBlock());
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }

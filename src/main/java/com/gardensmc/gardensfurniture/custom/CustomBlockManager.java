@@ -1,11 +1,9 @@
 package com.gardensmc.gardensfurniture.custom;
 
-import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.database.LeavesData;
+import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
-import com.gardensmc.gardensfurniture.listener.S2CListener;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.util.ItemFrameUtil;
 import de.tr7zw.nbtapi.NBTEntity;
@@ -48,6 +46,9 @@ public class CustomBlockManager {
         else if (customBlock instanceof CustomLeavesBlock customLeavesBlock) {
             return placeLeavesBlock(player, customItem, customLeavesBlock, location);
         }
+//        else if (customBlock instanceof CustomCaveVineBlock customCaveVineBlock) {
+//            return placeCaveVinesBlock(player, customItem, customCaveVineBlock, location, blockFace);
+//        }
         else {
             return placeItemFrame(player, customItem, location, blockFace);
         }
@@ -64,11 +65,17 @@ public class CustomBlockManager {
         return false;
     }
 
+//    private static boolean placeCaveVinesBlock(Player player, CustomItem customItem, CustomCaveVineBlock customCaveVineBlock, Location location, BlockFace blockFace) {
+//        if (blockFace != BlockFace.DOWN) return false;
+//
+//
+//    }
+
     private static boolean placeLeavesBlock(Player player, CustomItem customItem, CustomLeavesBlock customLeavesBlock, Location location) {
         Block block = location.getBlock();
         block.setType(Material.SPRUCE_LEAVES);
         try {
-            LeavesData.INSTANCE.addLeave(block, customItem.getIdentifier());
+            FurnitureStore.INSTANCE.addFurnitureStore(block, customItem.getIdentifier());
 //            GardensFurniture.leavesMap.get(block.getWorld().getName()).refreshChunk(block.getChunk());
         } catch (Exception ex) {
             ex.printStackTrace();
