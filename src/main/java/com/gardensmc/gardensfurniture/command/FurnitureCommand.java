@@ -2,6 +2,7 @@ package com.gardensmc.gardensfurniture.command;
 
 import com.gardensmc.gardensfurniture.custom.CustomItem;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
+import com.gardensmc.gardensfurniture.structures.MapleTree;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.gardensmc.gardensfurniture.util.CosmeticUtil;
 import com.gardensmc.gardensfurniture.util.PlayerUtil;
@@ -27,6 +28,17 @@ public class FurnitureCommand implements CommandExecutor {
 
         if (args.length > 0) {
             switch (args[0]) {
+                case "structure" -> {
+                    if (args.length > 1 && commandSender instanceof Player player) {
+                        switch (args[1].toLowerCase()) {
+                            // todo make this coherent and support all structures as you add them
+                            case "maple_tree" -> {
+                                new MapleTree(player.getLocation()).generate();
+                                player.sendMessage(ChatColor.GREEN + "Generated maple tree");
+                            }
+                        }
+                    }
+                }
                 case "reload" -> {
                     ConfigUtil.loadConfigs();
                     CustomRegister.INSTANCE.reload();

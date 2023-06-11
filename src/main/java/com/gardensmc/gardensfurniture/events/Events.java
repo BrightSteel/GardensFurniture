@@ -537,7 +537,7 @@ public class Events implements Listener {
     }
 
     private boolean preventDecay(Block leafBlock, Leaves leaf) {
-        int distance = leaf.getDistance()/2 + 1;
+        int distance = leaf.getDistance();
         for (int x = -distance; x < distance; x++) {
             for (int y = -distance; y < distance; y++) {
                 for (int z = -distance; z < distance; z++) {
