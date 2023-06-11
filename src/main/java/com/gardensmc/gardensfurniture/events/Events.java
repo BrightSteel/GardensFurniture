@@ -1,9 +1,9 @@
 package com.gardensmc.gardensfurniture.events;
 
-import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
-import com.gardensmc.gardensfurniture.custom.CustomItem;
+import com.gardensmc.gardensfurniture.custom.*;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
+import com.gardensmc.gardensfurniture.util.ProbabilityUtil;
 import com.gardensmc.gardensfurniture.util.WorldGuardUtil;
 import de.tr7zw.nbtapi.NBTEntity;
 import dev.geco.gsit.api.GSitAPI;
@@ -17,9 +17,10 @@ import net.minecraft.world.phys.Vec3D;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.type.Leaves;
 import org.bukkit.block.data.type.NoteBlock;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_19_R2.inventory.CraftItemStack;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemFrame;
@@ -99,7 +100,7 @@ public class Events implements Listener {
         if (customItem != null) {
             if (!WorldGuardUtil.canBuildInRegion(e.getPlayer())) return;
             if (customItem.isCustomBlock()) {
-                boolean placed = CustomBlockManager.attemptPlacement(e.getPlayer(), customItem, location, e.getBlockFace());
+                boolean placed = CustomBlockManager.attemptPlacement(e.getPlayer(), customItem, location, e.getBlockFace(), true);
                 if (placed) {
                     e.setCancelled(true);
                     switch (e.getHand()) {
@@ -331,6 +332,12 @@ public class Events implements Listener {
             CustomItem customItem = CustomBlockManager.getItemFromNoteBlock(noteBlock);
             dropCustomItem(e, customItem, false);
         }
+        else if (e.getBlock().getType() == Material.TRIPWIRE) {
+            CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getBlock());
+            if (customItem != null && customItem.getCustomBlock() instanceof CustomTripwireBlock customTripwireBlock) {
+                dropCustomItem(e, customItem, customTripwireBlock);
+            }
+        }
         else if (Arrays.asList(packetTypes).contains(e.getBlock().getType())) {
             CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getBlock());
             dropCustomItem(e, customItem, true);
@@ -338,8 +345,45 @@ public class Events implements Listener {
 
     }
 
+    private void dropCustomItem(BlockBreakEvent e, CustomItem customItem, CustomTripwireBlock customTripwireBlock) {
+        e.setDropItems(false);
+        if (customItem.getIdentifier().equals("tripwire_top")) {
+            Block bottom = e.getBlock().getRelative(BlockFace.DOWN);
+            CustomItem tripItem = CustomBlockManager.getItemFromLeaves(bottom);
+
+            // remove top from store
+            FurnitureStore.INSTANCE.removeFurnitureStore(e.getBlock());
+            if (tripItem != null) {
+                // drop item
+                ItemStack drop = CustomRegister.INSTANCE.itemRegistry.buildItem(tripItem);
+                bottom.setType(Material.AIR);
+                if (drop != null) {
+                    e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), drop);
+                }
+                // remove bottom from store
+                FurnitureStore.INSTANCE.removeFurnitureStore(bottom);
+            }
+        }
+        else {
+            if (customTripwireBlock.isLarge()) {
+                // remove top component
+                Block top = e.getBlock().getRelative(BlockFace.UP);
+                top.setType(Material.AIR);
+                FurnitureStore.INSTANCE.removeFurnitureStore(top);
+            }
+
+            ItemStack drop = CustomRegister.INSTANCE.itemRegistry.buildItem(customItem);
+            if (drop != null) {
+                e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), drop);
+            }
+            // remove bottom from store
+            FurnitureStore.INSTANCE.removeFurnitureStore(e.getBlock());
+        }
+    }
+
     private void dropCustomItem(BlockBreakEvent e, CustomItem customItem, boolean leaves) {
         if (customItem != null) {
+            boolean dropAnyway = customItem instanceof CustomCaveVineDirectional;
             e.setDropItems(false);
 
             if (e.getPlayer().getGameMode() != GameMode.CREATIVE && !customItem.getCustomBlock().cancelDrop()){
@@ -352,8 +396,25 @@ public class Events implements Listener {
                     } else {
                         drop = true;
                     }
-                    if (drop) {
+                    if (drop || dropAnyway) {
                         e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), itemStack);
+                    }
+                    else if (e.getBlock().getBlockData() instanceof Leaves leaves1 && customItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
+                        if (!leaves1.isPersistent()) { // need 2 be non-persistent server-side to drop sapling
+                            // chance of dropping sapling
+                            if (ProbabilityUtil.roll(5)) {
+                                String saplingId = customLeavesBlock.getSapling();
+                                if (saplingId != null) {
+                                    CustomItem saplingItem = CustomRegister.INSTANCE.itemRegistry.getItem(saplingId);
+                                    if (saplingItem != null) {
+                                        ItemStack sapling = CustomRegister.INSTANCE.itemRegistry.buildItem(saplingItem);
+                                        if (sapling != null) {
+                                            e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), sapling);
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -437,5 +498,57 @@ public class Events implements Listener {
 //            e.setCancelled(true);
 //        }
 //    }
+
+    /**
+     * Used in terra chunk generation to populate furniture blocks
+     * @param e
+     */
+    @EventHandler
+    public void onChunkLoad(ChunkLoadEvent e) {
+        if (e.isNewChunk()) {
+            Entity[] entities = e.getChunk().getEntities();
+            for (Entity entity : entities) {
+                if (entity instanceof ItemFrame) {
+                    if (entity.getPersistentDataContainer().has(new NamespacedKey("gardens", "furniture-gen"), PersistentDataType.STRING)) {
+                        String identifier = entity.getPersistentDataContainer().get(new NamespacedKey("gardens", "furniture-gen"), PersistentDataType.STRING);
+                        CustomItem customItem = CustomRegister.INSTANCE.itemRegistry.getItem(identifier);
+                        if (customItem != null && customItem.isCustomBlock()) {
+                            CustomBlockManager.attemptPlacement(null, customItem, entity.getLocation(), BlockFace.UP, false);
+                        }
+                        entity.remove();
+                    }
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void leafDecay(LeavesDecayEvent e) {
+        if (e.isCancelled()) return;
+
+        Block leafBlock = e.getBlock();
+        if (leafBlock.getBlockData() instanceof Leaves leaf && leafBlock.getType() == Material.SPRUCE_LEAVES) {
+            CustomItem customItem = CustomBlockManager.getItemFromLeaves(leafBlock);
+            if (customItem == null) return;
+            if (preventDecay(leafBlock, leaf)) {
+                e.setCancelled(true);
+            }
+        }
+    }
+
+    private boolean preventDecay(Block leafBlock, Leaves leaf) {
+        int distance = leaf.getDistance()/2 + 1;
+        for (int x = -distance; x < distance; x++) {
+            for (int y = -distance; y < distance; y++) {
+                for (int z = -distance; z < distance; z++) {
+                    Block b = leafBlock.getRelative(x, y, z);
+                    if (b.getType() == Material.NOTE_BLOCK) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
 
 }

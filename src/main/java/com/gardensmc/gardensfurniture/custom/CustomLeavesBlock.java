@@ -1,14 +1,19 @@
 package com.gardensmc.gardensfurniture.custom;
 
+import javax.annotation.Nullable;
+
 public class CustomLeavesBlock extends CustomBlock {
 
     private int distance;
     private boolean persistent;
 
-    public CustomLeavesBlock(int distance, boolean persistent, boolean seated, boolean cancel_drop) {
+    private String sapling;
+
+    public CustomLeavesBlock(String sapling, int distance, boolean persistent, boolean seated, boolean cancel_drop) {
         super(seated, cancel_drop);
         this.distance = distance;
         this.persistent = persistent;
+        this.sapling = sapling;
     }
 
     public int getDistance() {
@@ -17,5 +22,10 @@ public class CustomLeavesBlock extends CustomBlock {
 
     public boolean isPersistent() {
         return persistent;
+    }
+
+    @Nullable
+    public String getSapling() {
+        return sapling;
     }
 }

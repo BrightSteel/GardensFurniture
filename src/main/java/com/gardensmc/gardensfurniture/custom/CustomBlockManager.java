@@ -5,6 +5,7 @@ import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
+import com.gardensmc.gardensfurniture.util.DirectionUtil;
 import com.gardensmc.gardensfurniture.util.ItemFrameUtil;
 import de.tr7zw.nbtapi.NBTEntity;
 import org.bukkit.*;
@@ -12,6 +13,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.Leaves;
 import org.bukkit.block.data.type.NoteBlock;
+import org.bukkit.block.data.type.Tripwire;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -22,7 +24,7 @@ import java.util.Collection;
 
 public class CustomBlockManager {
 
-    public static boolean attemptPlacement(Player player, CustomItem customItem, Location location, BlockFace blockFace) {
+    public static boolean attemptPlacement(Player player, CustomItem customItem, Location location, BlockFace blockFace, boolean persistent) {
         CustomBlock customBlock = customItem.getCustomBlock();
         if (customItem instanceof CustomDirectionalItem customDirectionalItem) {
             switch (blockFace) {
@@ -32,23 +34,28 @@ public class CustomBlockManager {
             }
         }
 
-        return attemptPlacement(player, customItem, location, blockFace, customBlock);
+        return attemptPlacement(player, customItem, location, blockFace, customBlock, persistent);
     }
 
-    private static boolean attemptPlacement(Player player, CustomItem customItem, Location location, BlockFace blockFace, CustomBlock customBlock) {
+    private static boolean attemptPlacement(Player player, CustomItem customItem, Location location, BlockFace blockFace, CustomBlock customBlock, boolean persistent) {
         if (entityBlocking(location)) {
             return false;
         }
+
+        if (location.getBlock().getType() != Material.AIR) return false; // for terra gen
 
         if (customBlock instanceof CustomNoteBlock customNoteBlock) {
             return placeNoteBlock(player, customItem, customNoteBlock, location);
         }
         else if (customBlock instanceof CustomLeavesBlock customLeavesBlock) {
-            return placeLeavesBlock(player, customItem, customLeavesBlock, location);
+            return placeLeavesBlock(player, customItem, customLeavesBlock, location, persistent);
         }
-//        else if (customBlock instanceof CustomCaveVineBlock customCaveVineBlock) {
-//            return placeCaveVinesBlock(player, customItem, customCaveVineBlock, location, blockFace);
-//        }
+        else if (customBlock instanceof CustomTripwireBlock customTripwireBlock) {
+            return placeTripWireBlock(player, customItem, customTripwireBlock, location, blockFace);
+        }
+        else if (customBlock instanceof CustomCaveVineBlock customCaveVineBlock) {
+            return placeCaveVineBlock(player, customItem, customCaveVineBlock, location, blockFace);
+        }
         else {
             return placeItemFrame(player, customItem, location, blockFace);
         }
@@ -71,17 +78,76 @@ public class CustomBlockManager {
 //
 //    }
 
-    private static boolean placeLeavesBlock(Player player, CustomItem customItem, CustomLeavesBlock customLeavesBlock, Location location) {
+    private static boolean placeCaveVineBlock(Player player, CustomItem customItem, CustomCaveVineBlock customCaveVineBlock, Location location, BlockFace blockFace) {
+        if (customItem.getMaterial() == Material.GLOW_BERRIES) return false; // place naturally
+
+        String identifier = customItem.getIdentifier();
+
+        if (customItem instanceof CustomCaveVineDirectional) {
+            String direction = DirectionUtil.getDirectionFromFacing(player);
+            identifier += "." + direction;
+        }
+
+        Block block = location.getBlock();
+        FurnitureStore.INSTANCE.addFurnitureStore(block, identifier);
+        block.setType(Material.CAVE_VINES, true);
+        return true;
+    }
+
+    private static boolean placeTripWireBlock(Player player, CustomItem customItem, CustomTripwireBlock customTripwireBlock, Location location, BlockFace blockFace) {
+        Block block = location.getBlock();
+        // ensure below block is placeable
+        if (!customTripwireBlock.getPlaceable().isEmpty()) {
+            Block below = block.getRelative(blockFace.getOppositeFace());
+            if (!customTripwireBlock.getPlaceable().contains(below.getType())) {
+                return false;
+            }
+        }
+
+        if (customTripwireBlock.isLarge()) {
+            // fail if not placing on ground since it is easiest to ensure top block is removed this way
+            if (blockFace != BlockFace.UP) {
+                return false;
+            }
+
+            // ensure air block above
+            Block top = block.getRelative(blockFace);
+            if (top.getType() != Material.AIR) return false;
+
+            // ensure tripwire top is registered
+            if (CustomRegister.INSTANCE.itemRegistry.getItem("tripwire_top") == null) {
+                return false;
+            }
+
+            // place blank tripwire as hitbox
+            top.setType(Material.TRIPWIRE);
+            FurnitureStore.INSTANCE.addFurnitureStore(top, "tripwire_top");
+        }
+
+
+        block.setType(Material.TRIPWIRE);
+        FurnitureStore.INSTANCE.addFurnitureStore(block, customItem.getIdentifier());
+
+        Bukkit.getPluginManager().callEvent(new CustomBlockPlaceEvent(player, customItem, block));
+        return true;
+    }
+
+    private static boolean placeLeavesBlock(Player player, CustomItem customItem, CustomLeavesBlock customLeavesBlock, Location location, boolean persistent) {
         Block block = location.getBlock();
         block.setType(Material.SPRUCE_LEAVES);
         try {
             FurnitureStore.INSTANCE.addFurnitureStore(block, customItem.getIdentifier());
-//            GardensFurniture.leavesMap.get(block.getWorld().getName()).refreshChunk(block.getChunk());
         } catch (Exception ex) {
             ex.printStackTrace();
         }
         if (block.getBlockData() instanceof Leaves leaves) {
-            leaves.setPersistent(true);
+            if (persistent) {
+                leaves.setPersistent(true);
+            }
+            else {
+                leaves.setDistance(1);
+                leaves.setPersistent(false);
+            }
             block.setBlockData(leaves);
         }
 
@@ -89,7 +155,6 @@ public class CustomBlockManager {
 
         return true;
     }
-
 
     private static boolean placeNoteBlock(Player player, CustomItem customItem, CustomNoteBlock customNoteBlock, Location location) {
 
@@ -226,7 +291,8 @@ public class CustomBlockManager {
     public static CustomItem getItemFromLeaves(Block block) {
         String identifier = block.getChunk().getPersistentDataContainer().get(new NamespacedKey("gardens", block.getX() + "." + block.getY() + "." + block.getZ()), PersistentDataType.STRING);
         if (identifier != null) {
-            return CustomRegister.INSTANCE.itemRegistry.getItem(identifier);
+            String[] parts = identifier.split("\\.");
+            return CustomRegister.INSTANCE.itemRegistry.getItem(parts[0]);
         }
 
         return null;

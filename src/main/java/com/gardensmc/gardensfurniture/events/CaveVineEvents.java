@@ -1,8 +1,6 @@
 package com.gardensmc.gardensfurniture.events;
 
-import com.gardensmc.gardensfurniture.custom.CustomCaveVineBlock;
-import com.gardensmc.gardensfurniture.custom.CustomCaveVineItem;
-import com.gardensmc.gardensfurniture.custom.CustomItem;
+import com.gardensmc.gardensfurniture.custom.*;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -14,9 +12,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockGrowEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.block.BlockSpreadEvent;
+import org.bukkit.event.block.*;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
@@ -42,16 +38,17 @@ public class CaveVineEvents implements Listener {
         if (e.isCancelled()) return;
         Block nextBlock = e.getNewState().getBlock();
         Block root = e.getSource();
-        Chunk chunk = root.getChunk();
         if (root.getType() != Material.CAVE_VINES && root.getType() != Material.CAVE_VINES_PLANT) return;
 
-        String identifier = chunk.getPersistentDataContainer().get(new NamespacedKey("gardens", root.getX() + "." + root.getY() + "." + root.getZ()), PersistentDataType.STRING);
-        if (identifier != null) {
-            CustomItem customItem = CustomRegister.INSTANCE.itemRegistry.getItem(identifier);
+        CustomItem customItem = CustomBlockManager.getItemFromLeaves(root);
+
             if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
                 nextBlock.getChunk().getPersistentDataContainer().set(new NamespacedKey("gardens", nextBlock.getX() + "." + nextBlock.getY() + "." + nextBlock.getZ()), PersistentDataType.STRING, customCaveVineItem.getIdentifier());
             }
-        }
+            else if (customItem instanceof CustomCaveVineDirectional) {
+                e.setCancelled(true);
+            }
+
     }
 
     @EventHandler(priority = EventPriority.LOW)
@@ -107,6 +104,29 @@ public class CaveVineEvents implements Listener {
                     e.getPlayer().getInventory().setItem(e.getHand(), usedItem);
                 }
             }
+        }
+    }
+
+    @EventHandler
+    public void updateBlockState(BlockPhysicsEvent e) {
+        if (e.isCancelled()) return;
+//        System.out.println("Physics with " + e.getBlock().getType());
+        if (e.getBlock().getType() == Material.AIR || e.getBlock().getType() == Material.CAVE_VINES || e.getBlock().getType() == Material.CAVE_VINES_PLANT) {
+            Block below = e.getBlock().getRelative(BlockFace.DOWN);
+            if (below.getType() == Material.CAVE_VINES) {
+                CustomItem customItem = CustomBlockManager.getItemFromLeaves(below);
+                if (customItem instanceof CustomCaveVineDirectional) {
+                    e.setCancelled(true);
+                    return;
+                }
+            }
+//            Block top = e.getBlock().getRelative(BlockFace.UP);
+//            if (top.getType() == Material.CAVE_VINES) {
+//                CustomItem customItem = CustomBlockManager.getItemFromLeaves(top);
+//                if (customItem instanceof CustomCaveVineDirectional) {
+//                    e.setCancelled(true);
+//                }
+//            }
         }
     }
 }

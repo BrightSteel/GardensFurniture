@@ -44,12 +44,16 @@ public class ItemRegistry {
                     List<String> lore = section.getStringList("lore");
                     boolean directional = section.getBoolean("directional");
                     boolean cave_vine = section.getBoolean("cave_vine");
+                    boolean cave_vine_directional = section.getBoolean("cave_vine_directional");
                     CustomItem customItem;
                     if (directional) {
                         customItem = customItemFactory.createDirectionalItem(key, display, custom_model, material, lore, section);
                     }
                     else if (cave_vine) {
                         customItem = customItemFactory.createCaveVineItem(key, display, custom_model, material, lore, section);
+                    }
+                    else if (cave_vine_directional) {
+                        customItem = customItemFactory.createCaveVineDirectional(key, display, custom_model, material, lore, section);
                     }
                     else {
                        customItem = customItemFactory.createCustomItem(key, display, custom_model, material, lore, section);

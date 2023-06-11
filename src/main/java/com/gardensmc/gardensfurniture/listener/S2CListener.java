@@ -26,8 +26,8 @@ import net.minecraft.world.level.biome.BiomeBase;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.IBlockData;
 import org.bukkit.*;
-import org.bukkit.craftbukkit.v1_19_R1.CraftServer;
-import org.bukkit.craftbukkit.v1_19_R1.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.v1_19_R2.CraftServer;
+import org.bukkit.craftbukkit.v1_19_R2.block.data.CraftBlockData;
 import org.bukkit.persistence.PersistentDataType;
 import sun.misc.Unsafe;
 

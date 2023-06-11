@@ -6,6 +6,7 @@ import org.bukkit.configuration.ConfigurationSection;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
+import java.util.List;
 
 public class CustomBlockFactory {
 
@@ -26,6 +27,7 @@ public class CustomBlockFactory {
         ConfigurationSection noteSection = blockSection.getConfigurationSection("note_data");
         ConfigurationSection leavesSection = blockSection.getConfigurationSection("leaves_data");
         ConfigurationSection caveVineSection = blockSection.getConfigurationSection("cave_vine_data");
+        ConfigurationSection tripWireSection = blockSection.getConfigurationSection("tripwire_data");
 
         if (type != null && type.equals("NOTE") && noteSection != null) {
             int note = noteSection.getInt("note");
@@ -36,12 +38,25 @@ public class CustomBlockFactory {
         } else if (type != null && type.equals("LEAVES") && leavesSection != null) {
             int distance = leavesSection.getInt("distance");
             boolean persistent = leavesSection.getBoolean("persistent");
-            customBlock = new CustomLeavesBlock(distance, persistent, seated, cancel_drop);
+            String sapling = blockSection.getString("sapling");
+            customBlock = new CustomLeavesBlock(sapling, distance, persistent, seated, cancel_drop);
             customNoteBlocks.put(distance + "," + persistent, item_identifier);
         } else if (type != null && type.equals("CAVE_VINE") && caveVineSection != null) {
             int age = caveVineSection.getInt("age");
             customBlock = new CustomCaveVineBlock(age, seated, cancel_drop);
-            customNoteBlocks.put(String.valueOf(age), item_identifier); // needed?
+//            customNoteBlocks.put(String.valueOf(age), item_identifier); // needed?
+        } else if (type != null && type.equals("TRIPWIRE") && tripWireSection != null) {
+            boolean north = tripWireSection.getBoolean("north");
+            boolean south = tripWireSection.getBoolean("south");
+            boolean east = tripWireSection.getBoolean("east");
+            boolean west = tripWireSection.getBoolean("west");
+            boolean disarmed = tripWireSection.getBoolean("disarmed");
+
+            boolean powered = tripWireSection.getBoolean("powered");
+            boolean attached = tripWireSection.getBoolean("attached");
+            boolean large = blockSection.getBoolean("large");
+            List<String> placeable = blockSection.getStringList("placeable");
+            customBlock = new CustomTripwireBlock(north, south, east, west, disarmed, powered, attached, large, placeable, seated, cancel_drop);
         } else {
             boolean barrier = blockSection.getBoolean("barrier");
             customBlock = new CustomBlock(barrier, seated, cancel_drop);
