@@ -8,13 +8,15 @@ import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 /**
  * Utility class for easy implementation of structure gen from terra files (.tesf)
  * Provides useful block and furniture functions
  */
 public abstract class TStructure {
 
-    private final Location origin;
+    protected final Location origin;
 
     public TStructure(Location origin) {
         this.origin = origin;
@@ -33,5 +35,9 @@ public abstract class TStructure {
         CustomItem customItem = CustomRegister.INSTANCE.itemRegistry.getItem(identifier);
         if (customItem == null) return;
         CustomBlockManager.attemptPlacement(null, customItem, loc, BlockFace.UP, false);
+    }
+
+    protected int randomInt(int bound) {
+        return ThreadLocalRandom.current().nextInt(bound);
     }
 }

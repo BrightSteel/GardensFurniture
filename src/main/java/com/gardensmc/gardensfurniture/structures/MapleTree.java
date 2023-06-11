@@ -88,7 +88,7 @@ public class MapleTree extends TStructure {
 
         int beeNestRoll = ThreadLocalRandom.current().nextInt(30); // 1 in 30 chance
         if (beeNestRoll == 0) {
-            block(0, leafBottomHeight, 0, "minecraft:bee_nest");
+            new BeeNest(origin.clone().add(0, leafBottomHeight, 0)).generate();
         }
 
         block(0, -1, 0, "minecraft:dirt");
