@@ -1,11 +1,18 @@
 package com.gardensmc.gardensfurniture.util;
 
+import org.bukkit.ChatColor;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.bukkit.ChatColor.COLOR_CHAR;
 
 public class ChatUtil {
+
+    public static String translateAll(String text) {
+        String color = ChatColor.translateAlternateColorCodes('&', text);
+        return translateHex(color);
+    }
 
     public static String translateHex(String text) {
         return translateHexColorCodes("&#", "", text);

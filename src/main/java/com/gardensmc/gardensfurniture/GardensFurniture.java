@@ -6,7 +6,7 @@ import com.gardensmc.gardensfurniture.command.CommandRegister;
 import com.gardensmc.gardensfurniture.events.CaveVineEvents;
 import com.gardensmc.gardensfurniture.events.Events;
 import com.gardensmc.gardensfurniture.listener.BlockPacketListener;
-import com.gardensmc.gardensfurniture.listener.S2CListener;
+import com.gardensmc.gardensfurniture.listener.TestPacketListener;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -21,6 +21,8 @@ import java.util.HashMap;
 public class GardensFurniture extends JavaPlugin {
 
     public static GardensFurniture plugin;
+
+    public static Plugin gardensPlayers;
     private ProtocolManager protocolManager;
 
     @Override
@@ -47,6 +49,9 @@ public class GardensFurniture extends JavaPlugin {
 
         PacketEvents.getAPI().init();
         new BlockPacketListener().register();
+//        new TestPacketListener().register();
+
+        gardensPlayers = this.getServer().getPluginManager().getPlugin("GardensPlayers");
     }
 
 

@@ -1,10 +1,11 @@
 package com.gardensmc.gardensfurniture.events;
 
+import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.*;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.util.ProbabilityUtil;
-import com.gardensmc.gardensfurniture.util.WorldGuardUtil;
+import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import de.tr7zw.nbtapi.NBTEntity;
 import dev.geco.gsit.api.GSitAPI;
 import net.minecraft.core.BlockPosition;
@@ -19,8 +20,8 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.Leaves;
 import org.bukkit.block.data.type.NoteBlock;
-import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_19_R2.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R1.inventory.CraftItemStack;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemFrame;
@@ -29,6 +30,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.hanging.HangingBreakEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -39,6 +42,7 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 public class Events implements Listener {
@@ -56,7 +60,7 @@ public class Events implements Listener {
             CustomItem customItem = CustomBlockManager.getItemFromNoteBlock(noteBlock);
             if (customItem != null) {
                 e.setCancelled(true);
-                if (!WorldGuardUtil.canBuildInRegion(e.getPlayer())) return;
+                if (!ProtectionUtil.canBuild(e.getClickedBlock().getLocation(), e.getPlayer())) return;
                 Bukkit.getPluginManager().callEvent(new CustomBlockInteractEvent(e.getPlayer(), customItem, e.getHand(), e.getItem(), e.getClickedBlock()));
                 // if player is holding an item with an action, lets place it
                 if (e.getHand() != null) {
@@ -75,12 +79,12 @@ public class Events implements Listener {
                         default -> direction = EnumDirection.b;
                     }
 
-                    craftItemStack.useOn(new ItemActionContext(human, hand, new MovingObjectPositionBlock(
+                    craftItemStack.a(new ItemActionContext(human, hand, new MovingObjectPositionBlock(
                             new Vec3D(e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ()),
                             direction,
                             new BlockPosition(e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ()),
                             false
-                    )), hand);
+                    )));
 //
 
 
@@ -98,7 +102,7 @@ public class Events implements Listener {
 
         CustomItem customItem = CustomRegister.INSTANCE.itemRegistry.getCustomItem(itemStack);
         if (customItem != null) {
-            if (!WorldGuardUtil.canBuildInRegion(e.getPlayer())) return;
+            if (!ProtectionUtil.canBuild(location, e.getPlayer())) return;
             if (customItem.isCustomBlock()) {
                 boolean placed = CustomBlockManager.attemptPlacement(e.getPlayer(), customItem, location, e.getBlockFace(), true);
                 if (placed) {
@@ -127,7 +131,7 @@ public class Events implements Listener {
         if (e.getClickedBlock() == null) return;
 
         if (e.getClickedBlock().getType() == Material.BARRIER) {
-            if (!WorldGuardUtil.canBuildInRegion(e.getPlayer())) return;
+            if (!ProtectionUtil.canBuild(e.getClickedBlock().getLocation(), e.getPlayer())) return;
             CustomBlockManager.breakBlock(e.getPlayer(), e.getClickedBlock().getLocation());
         }
     }
@@ -220,7 +224,7 @@ public class Events implements Listener {
                     if (customItem != null && customItem.isCustomBlock()) {
                         e.setCancelled(true);
 
-                        if (!WorldGuardUtil.canBuildInRegion(player)) return;
+                        if (!ProtectionUtil.canBuild(e.getEntity().getLocation(), player)) return;
                         FurnitureBreakEvent ev = new FurnitureBreakEvent(player, customItem, itemFrame);
                         Bukkit.getPluginManager().callEvent(ev);
                         if (ev.isCancelled()) {
@@ -296,7 +300,7 @@ public class Events implements Listener {
 
         if (e.isCancelled()) return;
         Block[] possibles = new Block[]{
-                e.getBlock(), e.getSourceBlock(), e.getSourceBlock().getRelative(0, 1, 0)
+                e.getBlock(), e.getSourceBlock(), e.getSourceBlock().getRelative(0, 1, 0), e.getSourceBlock().getRelative(0, -1, 0)
         };
 
         for (Block block : possibles) {
@@ -321,6 +325,10 @@ public class Events implements Listener {
     public void onBlockBreak(BlockBreakEvent e) {
 
         if (e.isCancelled()) return;
+
+        if (!ProtectionUtil.canBuild(e.getBlock().getLocation(), e.getPlayer())) {
+            return;
+        }
 
         Material[] packetTypes = new Material[] {
                 Material.SPRUCE_LEAVES,
@@ -457,7 +465,39 @@ public class Events implements Listener {
     @EventHandler
     public void onLoadChunk(ChunkLoadEvent e) {
         if (e.isNewChunk()) {
-            for (Entity entity : e.getChunk().getEntities()) {
+            for (int x = 0; x < 16; x++) {
+                for (int y = -45; y < 200; y++) {
+                    for (int z = 0; z < 16; z++) {
+                        Block block = e.getChunk().getBlock(x, y, z);
+                        if (block.getBlockData() instanceof NoteBlock noteBlock) {
+                            if (noteBlock.getInstrument() == Instrument.BANJO) {
+                                String identifier = null;
+                                switch (noteBlock.getNote().getId()) {
+                                    case 2 -> identifier = "maple_leaves_green";
+                                    case 3 -> identifier = "maple_leaves_red";
+                                    case 4 -> identifier = "maple_leaves_gold";
+                                    case 5 -> identifier = "maple_leaves_orange";
+                                    case 6 -> identifier = "palm_leaves";
+                                    case 7 -> identifier = "redwood_leaves";
+                                }
+
+                                if (identifier != null) {
+                                    block.setType(Material.SPRUCE_LEAVES);
+                                    if (block.getBlockData() instanceof Leaves leaves) {
+                                        leaves.setDistance(7);
+                                        leaves.setPersistent(false);
+                                    }
+                                    e.getChunk().getPersistentDataContainer().set(new NamespacedKey("gardens", block.getX() + "." + block.getY() + "." + block.getZ()), PersistentDataType.STRING, identifier);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+            /*for (Entity entity : e.getChunk().getEntities()) {
                 if (entity instanceof ItemFrame itemFrame) {
 //                    System.out.println("Removed iframe");
                     PersistentDataContainer data = itemFrame.getPersistentDataContainer();
@@ -466,12 +506,32 @@ public class Events implements Listener {
                         PersistentDataContainer cData = itemFrame.getLocation().getChunk().getPersistentDataContainer();
                         Block b = itemFrame.getLocation().getBlock();
                         cData.set(new NamespacedKey("gardens", b.getX() + "." + b.getY() + "." + b.getZ()), PersistentDataType.STRING, identifier);
-                        itemFrame.remove();
+//                        itemFrame.remove();
                     }
-                }
-            }
-        }
-    }
+                }*/
+//            }
+
+//    @EventHandler
+//    public void onLoadChunk(ChunkLoadEvent e) {
+////        if (e.isNewChunk()) {
+//        Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> {
+//            for (Entity entity : e.getChunk().getEntities()) {
+//                if (entity instanceof ItemFrame itemFrame) {
+////                    System.out.println("Removed iframe");
+//                    PersistentDataContainer data = itemFrame.getPersistentDataContainer();
+//                    if (data.has(new NamespacedKey("gardens", "custom-leaf"), PersistentDataType.STRING)) {
+//                        String identifier = data.get(new NamespacedKey("gardens", "custom-leaf"), PersistentDataType.STRING);
+//                        PersistentDataContainer cData = itemFrame.getLocation().getChunk().getPersistentDataContainer();
+//                        Block b = itemFrame.getLocation().getBlock();
+//                        cData.set(new NamespacedKey("gardens", b.getX() + "." + b.getY() + "." + b.getZ()), PersistentDataType.STRING, identifier);
+////                        itemFrame.remove();
+//                    }
+//                }
+//            }
+//        }, 20);
+
+//        }
+//    }
 
 //    @EventHandler
 //    public void onLoadChunk(ChunkLoadEvent e) {
@@ -503,24 +563,24 @@ public class Events implements Listener {
      * Used in terra chunk generation to populate furniture blocks
      * @param e
      */
-    @EventHandler
-    public void onChunkLoad(ChunkLoadEvent e) {
-        if (e.isNewChunk()) {
-            Entity[] entities = e.getChunk().getEntities();
-            for (Entity entity : entities) {
-                if (entity instanceof ItemFrame) {
-                    if (entity.getPersistentDataContainer().has(new NamespacedKey("gardens", "furniture-gen"), PersistentDataType.STRING)) {
-                        String identifier = entity.getPersistentDataContainer().get(new NamespacedKey("gardens", "furniture-gen"), PersistentDataType.STRING);
-                        CustomItem customItem = CustomRegister.INSTANCE.itemRegistry.getItem(identifier);
-                        if (customItem != null && customItem.isCustomBlock()) {
-                            CustomBlockManager.attemptPlacement(null, customItem, entity.getLocation(), BlockFace.UP, false);
-                        }
-                        entity.remove();
-                    }
-                }
-            }
-        }
-    }
+//    @EventHandler
+//    public void onChunkLoad(ChunkLoadEvent e) {
+//        if (e.isNewChunk()) {
+//            Entity[] entities = e.getChunk().getEntities();
+//            for (Entity entity : entities) {
+//                if (entity instanceof ItemFrame) {
+//                    if (entity.getPersistentDataContainer().has(new NamespacedKey("gardens", "furniture-gen"), PersistentDataType.STRING)) {
+//                        String identifier = entity.getPersistentDataContainer().get(new NamespacedKey("gardens", "furniture-gen"), PersistentDataType.STRING);
+//                        CustomItem customItem = CustomRegister.INSTANCE.itemRegistry.getItem(identifier);
+//                        if (customItem != null && customItem.isCustomBlock()) {
+//                            CustomBlockManager.attemptPlacement(null, customItem, entity.getLocation(), BlockFace.UP, false);
+//                        }
+//                        entity.remove();
+//                    }
+//                }
+//            }
+//        }
+//    }
 
     @EventHandler
     public void leafDecay(LeavesDecayEvent e) {
@@ -538,6 +598,7 @@ public class Events implements Listener {
 
     private boolean preventDecay(Block leafBlock, Leaves leaf) {
         int distance = leaf.getDistance();
+//        int distance = 14;
         for (int x = -distance; x < distance; x++) {
             for (int y = -distance; y < distance; y++) {
                 for (int z = -distance; z < distance; z++) {

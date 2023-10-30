@@ -18,6 +18,7 @@ import static java.lang.Math.round;
  */
 public class MapleTree extends TStructure {
 
+
     public MapleTree(Location location) {
         super(location);
     }

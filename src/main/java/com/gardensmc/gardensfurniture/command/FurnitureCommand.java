@@ -3,6 +3,7 @@ package com.gardensmc.gardensfurniture.command;
 import com.gardensmc.gardensfurniture.custom.CustomItem;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.structures.MapleTree;
+import com.gardensmc.gardensfurniture.util.ChatUtil;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.gardensmc.gardensfurniture.util.CosmeticUtil;
 import com.gardensmc.gardensfurniture.util.PlayerUtil;
@@ -117,8 +118,8 @@ public class FurnitureCommand implements CommandExecutor {
                         if (meta != null) {
                             meta.setDisplayName(CosmeticUtil.formatName(cosmetic));
                             List<String> lore = new ArrayList<>();
-                            lore.add("&7Visit the Tailor Shop near");
-                            lore.add("&7spawn to redeem me!");
+                            lore.add(ChatUtil.translateAll("&7Visit the Tailor Shop near"));
+                            lore.add(ChatUtil.translateAll("&7spawn to redeem me!"));
                             meta.setLore(lore);
                             itemStack.setItemMeta(meta);
                         }

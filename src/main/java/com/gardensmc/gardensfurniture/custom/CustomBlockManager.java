@@ -7,6 +7,7 @@ import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.util.DirectionUtil;
 import com.gardensmc.gardensfurniture.util.ItemFrameUtil;
+import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import de.tr7zw.nbtapi.NBTEntity;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -15,6 +16,8 @@ import org.bukkit.block.data.type.Leaves;
 import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.block.data.type.Tripwire;
 import org.bukkit.entity.*;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -25,6 +28,11 @@ import java.util.Collection;
 public class CustomBlockManager {
 
     public static boolean attemptPlacement(Player player, CustomItem customItem, Location location, BlockFace blockFace, boolean persistent) {
+        if (player != null) {
+            if (!ProtectionUtil.canBuild(location, player)) {
+                return false;
+            }
+        }
         CustomBlock customBlock = customItem.getCustomBlock();
         if (customItem instanceof CustomDirectionalItem customDirectionalItem) {
             switch (blockFace) {
@@ -197,7 +205,9 @@ public class CustomBlockManager {
                 display.setItemMeta(itemMeta);
             }
             itemFrame.setItem(display);
-            itemFrame.setRotation(ItemFrameUtil.getRotationFromFacing(player));
+            if (blockFace == BlockFace.UP || blockFace == BlockFace.DOWN) {
+                itemFrame.setRotation(ItemFrameUtil.getRotationFromFacing(player));
+            }
             if (custom_name != null) {
                 NBTEntity nbtEntity = new NBTEntity(itemFrame);
                 nbtEntity.getPersistentDataContainer().setString("custom_name", custom_name);
@@ -241,6 +251,10 @@ public class CustomBlockManager {
     }
 
     public static void breakBlock(Player player, Location location) {
+       if (!ProtectionUtil.canBuild(location, player)) {
+           return;
+       }
+
         ItemFrame itemFrame = getBlock(location);
         if (itemFrame == null) return;
 

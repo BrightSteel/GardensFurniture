@@ -16,4 +16,6 @@ commands:
   itemsaver:
     description: Save items
     usage: /<command>
-depend: [GSit, WorldGuard, NBTAPI, ProtocolLib]
+depend: [GSit, NBTAPI, ProtocolLib, packetevents]
+softdepend:
+  - GardensPlayers

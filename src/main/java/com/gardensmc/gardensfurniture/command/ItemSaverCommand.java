@@ -1,5 +1,6 @@
 package com.gardensmc.gardensfurniture.command;
 
+import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.gardensmc.gardensplayers.redis.RedisSender;
 import org.bukkit.Bukkit;
@@ -19,6 +20,11 @@ public class ItemSaverCommand implements CommandExecutor {
     public boolean onCommand(CommandSender commandSender, Command command, String s, String[] args) {
 
         if (!commandSender.hasPermission("itemsaver.all")) return false;
+
+        if (GardensFurniture.gardensPlayers == null) {
+            commandSender.sendMessage(ChatColor.RED + "GardensPlayers plugin needs to be installed!");
+            return true;
+        }
 
         if (args.length > 1) {
             String arg = args[0];
