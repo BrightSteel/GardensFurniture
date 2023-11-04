@@ -1,5 +1,6 @@
 package com.gardensmc.gardensfurniture.listener;
 
+import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.*;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -144,7 +145,7 @@ public class BlockPacketListener {
         if (identifier != null) {
             // remove hidden parts
             String[] parts = identifier.split("\\.");
-            return CustomRegister.INSTANCE.itemRegistry.getItem(parts[0]);
+            return GardensFurniture.customRegister.itemRegistry.getItem(parts[0]);
         }
         return null;
     }

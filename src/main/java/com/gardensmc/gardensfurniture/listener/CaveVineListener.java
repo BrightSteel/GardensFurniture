@@ -1,5 +1,6 @@
 package com.gardensmc.gardensfurniture.events;
 
+import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.*;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import org.bukkit.*;
@@ -25,7 +26,7 @@ public class CaveVineEvents implements Listener {
 
         ItemStack itemStack = e.getItemInHand();
         if (itemStack.getType() == Material.GLOW_BERRIES) {
-            CustomItem customItem = CustomRegister.INSTANCE.itemRegistry.getCustomItem(itemStack);
+            CustomItem customItem = GardensFurniture.customRegister.itemRegistry.getCustomItem(itemStack);
             if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
                 Chunk chunk = e.getBlockPlaced().getChunk();
                 chunk.getPersistentDataContainer().set(new NamespacedKey("gardens", e.getBlockPlaced().getX() + "." + e.getBlockPlaced().getY() + "." + e.getBlockPlaced().getZ()), PersistentDataType.STRING, customCaveVineItem.getIdentifier());
@@ -70,7 +71,7 @@ public class CaveVineEvents implements Listener {
         ItemStack itemStack = player.getInventory().getItem(e.getHand());
         if (itemStack == null || itemStack.getType() != Material.GLOW_BERRIES) return;
 
-        CustomItem customItem = CustomRegister.INSTANCE.itemRegistry.getCustomItem(itemStack);
+        CustomItem customItem = GardensFurniture.customRegister.itemRegistry.getCustomItem(itemStack);
         if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
 
             // fire preliminary block place event to make sure itll go through

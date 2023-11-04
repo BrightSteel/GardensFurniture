@@ -1,57 +1,53 @@
 package com.gardensmc.gardensfurniture;
 
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.ProtocolManager;
 import com.gardensmc.gardensfurniture.command.CommandRegister;
 import com.gardensmc.gardensfurniture.events.CaveVineEvents;
 import com.gardensmc.gardensfurniture.events.Events;
 import com.gardensmc.gardensfurniture.listener.BlockPacketListener;
-import com.gardensmc.gardensfurniture.listener.TestPacketListener;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.PacketEventsAPI;
+import com.github.retrooper.packetevents.settings.PacketEventsSettings;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
-import org.bukkit.World;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import java.util.HashMap;
 
 public class GardensFurniture extends JavaPlugin {
 
     public static GardensFurniture plugin;
-
     public static Plugin gardensPlayers;
-    private ProtocolManager protocolManager;
+
+    public static CustomRegister customRegister;
 
     @Override
     public void onLoad() {
-        PacketEventsAPI<Plugin> api = SpigotPacketEventsBuilder.build(this);
-        api.getSettings().debug(false).checkForUpdates(false);
-        PacketEvents.setAPI(api);
+        loadPacketEvents();
+    }
+
+    private void loadPacketEvents() {
+        PacketEvents.setAPI(SpigotPacketEventsBuilder
+                .build(this, new PacketEventsSettings().checkForUpdates(false)));
         PacketEvents.getAPI().load();
     }
 
     @Override
     public void onEnable() {
         plugin = this;
+        gardensPlayers = getServer().getPluginManager().getPlugin("GardensPlayers");
 
         ConfigUtil.loadConfigs();
-        CustomRegister.INSTANCE = new CustomRegister();
-
-        this.getServer().getPluginManager().registerEvents(new Events(), this);
-        this.getServer().getPluginManager().registerEvents(new CaveVineEvents(), this);
+        customRegister = new CustomRegister();
 
         CommandRegister.registerCommands();
-        protocolManager = ProtocolLibrary.getProtocolManager();
-//        new S2CListener(protocolManager);
+        registerListeners();
 
         PacketEvents.getAPI().init();
-        new BlockPacketListener().register();
-//        new TestPacketListener().register();
+    }
 
-        gardensPlayers = this.getServer().getPluginManager().getPlugin("GardensPlayers");
+    private void registerListeners() {
+        new BlockPacketListener().register();
+        getServer().getPluginManager().registerEvents(new Events(), this);
+        getServer().getPluginManager().registerEvents(new CaveVineEvents(), this);
     }
 
 

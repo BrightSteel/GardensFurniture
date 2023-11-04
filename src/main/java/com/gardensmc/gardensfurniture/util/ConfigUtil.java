@@ -13,16 +13,13 @@ public class ConfigUtil {
 
     public static List<Configuration> all_items = new ArrayList<>();
 
-    public static FileConfiguration itemsYaml, glyphYaml, itemSaverYaml;
+    public static FileConfiguration itemsYaml, itemSaverYaml;
 
     public static void loadConfigs() {
 //        File itemFile = getYMLFile("items.yml");
 //        itemsYaml = YamlConfiguration.loadConfiguration(itemFile);
         all_items.clear();
         all_items = getAllConfigs("items");
-
-        File glyphFile = getYMLFile("glyphs.yml");
-        glyphYaml = YamlConfiguration.loadConfiguration(glyphFile);
 
         File itemSaverFile = getYMLFile("item_saver.yml");
         itemSaverYaml = YamlConfiguration.loadConfiguration(itemSaverFile);

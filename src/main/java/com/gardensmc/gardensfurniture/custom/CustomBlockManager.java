@@ -1,5 +1,6 @@
 package com.gardensmc.gardensfurniture.custom;
 
+import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
@@ -123,7 +124,7 @@ public class CustomBlockManager {
             if (top.getType() != Material.AIR) return false;
 
             // ensure tripwire top is registered
-            if (CustomRegister.INSTANCE.itemRegistry.getItem("tripwire_top") == null) {
+            if (GardensFurniture.customRegister.itemRegistry.getItem("tripwire_top") == null) {
                 return false;
             }
 
@@ -196,7 +197,7 @@ public class CustomBlockManager {
             ItemFrame itemFrame = (ItemFrame) location.getWorld().spawnEntity(location, EntityType.ITEM_FRAME);
             itemFrame.setVisible(false);
             itemFrame.setFacingDirection(blockFace, true);
-            ItemStack display = CustomRegister.INSTANCE.itemRegistry.buildItem(customItem);
+            ItemStack display = GardensFurniture.customRegister.itemRegistry.buildItem(customItem);
             String custom_name = null;
             ItemMeta itemMeta = display.getItemMeta();
             if (itemMeta != null) {
@@ -232,7 +233,7 @@ public class CustomBlockManager {
         String key = note + "," + instrument + "," + powered;
 //        System.out.println("looking up " + note);
 
-        return CustomRegister.INSTANCE.itemRegistry.getCustomItem(key);
+        return GardensFurniture.customRegister.itemRegistry.getCustomItem(key);
     }
 
     @Nullable
@@ -258,7 +259,7 @@ public class CustomBlockManager {
         ItemFrame itemFrame = getBlock(location);
         if (itemFrame == null) return;
 
-        CustomItem customItem = CustomRegister.INSTANCE.itemRegistry.getCustomItem(itemFrame.getItem());
+        CustomItem customItem = GardensFurniture.customRegister.itemRegistry.getCustomItem(itemFrame.getItem());
         if (customItem == null) return;
 
         FurnitureBreakEvent e = new FurnitureBreakEvent(player, customItem, itemFrame);
@@ -277,7 +278,7 @@ public class CustomBlockManager {
             block.setType(Material.AIR);
         }
 
-        ItemStack itemStack = CustomRegister.INSTANCE.itemRegistry.buildItem(customItem);
+        ItemStack itemStack = GardensFurniture.customRegister.itemRegistry.buildItem(customItem);
         if (itemStack != null) {
             if (display != null && itemStack.getItemMeta() != null) {
                 ItemMeta itemMeta = itemStack.getItemMeta();
@@ -295,7 +296,7 @@ public class CustomBlockManager {
     public static CustomItem getFurniture(Entity entity) {
         if (entity instanceof ItemFrame itemFrame) {
             ItemStack itemStack = itemFrame.getItem();
-            CustomItem customItem = CustomRegister.INSTANCE.itemRegistry.getCustomItem(itemStack);
+            CustomItem customItem = GardensFurniture.customRegister.itemRegistry.getCustomItem(itemStack);
             return customItem;
         }
         return null;
@@ -306,7 +307,7 @@ public class CustomBlockManager {
         String identifier = block.getChunk().getPersistentDataContainer().get(new NamespacedKey("gardens", block.getX() + "." + block.getY() + "." + block.getZ()), PersistentDataType.STRING);
         if (identifier != null) {
             String[] parts = identifier.split("\\.");
-            return CustomRegister.INSTANCE.itemRegistry.getItem(parts[0]);
+            return GardensFurniture.customRegister.itemRegistry.getItem(parts[0]);
         }
 
         return null;

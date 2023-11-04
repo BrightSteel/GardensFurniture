@@ -2,8 +2,6 @@ package com.gardensmc.gardensfurniture.register;
 
 public class CustomRegister {
 
-    public static CustomRegister INSTANCE;
-
     public ItemRegistry itemRegistry;
     public GlyphRegistry glyphRegistry;
 

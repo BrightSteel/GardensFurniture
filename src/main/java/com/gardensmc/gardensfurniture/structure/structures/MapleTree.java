@@ -1,12 +1,7 @@
-package com.gardensmc.gardensfurniture.structures;
+package com.gardensmc.gardensfurniture.structure.structures;
 
-import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
-import com.gardensmc.gardensfurniture.custom.CustomItem;
-import com.gardensmc.gardensfurniture.register.CustomRegister;
-import org.bukkit.Bukkit;
+import com.gardensmc.gardensfurniture.structure.TStructure;
 import org.bukkit.Location;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.data.BlockData;
 
 import java.util.concurrent.ThreadLocalRandom;
 
