@@ -2,14 +2,14 @@ package com.gardensmc.gardensfurniture.structure;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
-import com.gardensmc.gardensfurniture.custom.CustomItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.logging.Level;
 
 /**
  * Utility class for easy implementation of structure gen from terra files (.tesf)
@@ -40,9 +40,10 @@ public abstract class TStructure {
             throwOriginException();
         }
         Location loc = origin.clone().add(x, y, z);
-        CustomItem customItem = GardensFurniture.customRegister.itemRegistry.getItem(identifier);
-        if (customItem == null) return;
-        CustomBlockManager.attemptPlacement(null, customItem, loc, BlockFace.UP, false);
+        CustomItem customItem = GardensFurniture.itemRegistry.getItem(identifier);
+        if (customItem instanceof CustomBlockItem customBlockItem) {
+            CustomBlockManager.attemptPlacement(null, customBlockItem, loc, BlockFace.UP, false);
+        }
     }
 
     protected int randomInt(int bound) {

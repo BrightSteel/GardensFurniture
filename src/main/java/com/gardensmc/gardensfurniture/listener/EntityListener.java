@@ -1,7 +1,8 @@
 package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.custom.CustomItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import de.tr7zw.nbtapi.NBTEntity;
@@ -27,7 +28,7 @@ public class EntityListener implements Listener {
             if (e.getEntity() instanceof ItemFrame itemFrame) {
                 ItemStack itemStack = itemFrame.getItem();
                 if (itemStack.getType() != Material.AIR) {
-                    CustomItem customItem = GardensFurniture.customRegister.itemRegistry.getCustomItem(itemStack);
+                    CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
                     if (customItem != null) {
                         e.setCancelled(true);
                     }
@@ -45,8 +46,8 @@ public class EntityListener implements Listener {
 
                 ItemStack itemStack = itemFrame.getItem();
                 if (itemStack.getType() != Material.AIR) {
-                    CustomItem customItem = GardensFurniture.customRegister.itemRegistry.getCustomItem(itemStack);
-                    if (customItem != null && customItem.isCustomBlock()) {
+                    CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
+                    if (customItem instanceof CustomBlockItem customBlockItem) {
                         e.setCancelled(true);
 
                         if (!ProtectionUtil.canBuild(e.getEntity().getLocation(), player)) return;
@@ -62,7 +63,7 @@ public class EntityListener implements Listener {
 
                         }
                         itemFrame.remove();
-                        if (!customItem.getCustomBlock().cancelDrop()) {
+                        if (!customBlockItem.getCustomBlock().cancelDrop()) {
                             if (display != null && itemStack.getItemMeta() != null) {
                                 ItemMeta itemMeta = itemStack.getItemMeta();
                                 itemMeta.setDisplayName(display);

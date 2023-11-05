@@ -1,7 +1,13 @@
 package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.custom.*;
+import com.gardensmc.gardensfurniture.custom.block.CustomCaveVineBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomLeavesBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomTripwireBlock;
+import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineDirectional;
+import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerAbstract;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
@@ -74,7 +80,7 @@ public class BlockPacketListener {
 
                         if (blockState.getType() == StateTypes.SPRUCE_LEAVES) {
                             CustomItem customItem = getCustomItemFromPos(world, realX, realY, realZ);
-                            if (customItem != null && customItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
+                            if (customItem instanceof CustomBlockItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
                                 baseChunk.set(x, y, z, getBlockStateFromLeaves(customLeavesBlock));
                             }
                             else {
@@ -113,7 +119,7 @@ public class BlockPacketListener {
                         }
                         else if (blockState.getType() == StateTypes.TRIPWIRE) {
                             CustomItem customItem = getCustomItemFromPos(world, realX, realY, realZ);
-                            if (customItem != null && customItem.getCustomBlock() instanceof CustomTripwireBlock customTripwireBlock) {
+                            if (customItem instanceof CustomBlockItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomTripwireBlock customTripwireBlock) {
                                 baseChunk.set(x, y, z, getBlockStateFromTripwire(customTripwireBlock));
                             }
                             else {
@@ -144,7 +150,7 @@ public class BlockPacketListener {
         if (identifier != null) {
             // remove hidden parts
             String[] parts = identifier.split("\\.");
-            return GardensFurniture.customRegister.itemRegistry.getItem(parts[0]);
+            return GardensFurniture.itemRegistry.getItem(parts[0]);
         }
         return null;
     }
@@ -159,7 +165,7 @@ public class BlockPacketListener {
         WrappedBlockState blockState = packet.getBlockState();
         if (blockState.getType() == StateTypes.SPRUCE_LEAVES) {
             CustomItem customItem = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
-            if (customItem != null && customItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
+            if (customItem instanceof CustomBlockItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
                 WrappedBlockState blockState1 = getBlockStateFromLeaves(customLeavesBlock);
                 PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
                         player,
@@ -178,7 +184,7 @@ public class BlockPacketListener {
         }
         else if (blockState.getType() == StateTypes.TRIPWIRE) {
             CustomItem customItem = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
-            if (customItem != null && customItem.getCustomBlock() instanceof CustomTripwireBlock customTripwireBlock) {
+            if (customItem instanceof CustomBlockItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomTripwireBlock customTripwireBlock) {
                 WrappedBlockState blockState1 = getBlockStateFromTripwire(customTripwireBlock);
                 PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
                         player,
@@ -252,7 +258,7 @@ public class BlockPacketListener {
             WrappedBlockState blockState1 = block.getBlockState(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion());
             if (blockState1.getType() == StateTypes.SPRUCE_LEAVES) {
                 CustomItem customItem = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
-                if (customItem != null && customItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
+                if (customItem instanceof CustomBlockItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
                     WrappedBlockState blockState = getBlockStateFromLeaves(customLeavesBlock);
                     block.setBlockState(blockState);
                 }
@@ -262,7 +268,7 @@ public class BlockPacketListener {
             }
             else if (blockState1.getType() == StateTypes.TRIPWIRE) {
                 CustomItem customItem = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
-                if (customItem != null && customItem.getCustomBlock() instanceof CustomTripwireBlock customTripwireBlock) {
+                if (customItem instanceof CustomBlockItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomTripwireBlock customTripwireBlock) {
                     WrappedBlockState blockState = getBlockStateFromTripwire(customTripwireBlock);
                     block.setBlockState(blockState);
                 }

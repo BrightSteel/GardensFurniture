@@ -1,10 +1,10 @@
 package com.gardensmc.gardensfurniture;
 
 import com.gardensmc.gardensfurniture.command.CommandHandler;
-import com.gardensmc.gardensfurniture.listener.CaveVineListener;
-import com.gardensmc.gardensfurniture.listener.BlockPacketListener;
+import com.gardensmc.gardensfurniture.custom.CustomBlockFactory;
+import com.gardensmc.gardensfurniture.custom.CustomItemFactory;
 import com.gardensmc.gardensfurniture.listener.ListenerHandler;
-import com.gardensmc.gardensfurniture.register.CustomRegister;
+import com.gardensmc.gardensfurniture.register.ItemRegistry;
 import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -18,8 +18,11 @@ public class GardensFurniture extends JavaPlugin {
     public static GardensFurniture plugin;
     public static Plugin gardensPlayers;
 
+    public static CustomBlockFactory customBlockFactory;
+    public static CustomItemFactory customItemFactory;
+
     public static StructureHandler structureHandler;
-    public static CustomRegister customRegister;
+    public static ItemRegistry itemRegistry;
 
     @Override
     public void onLoad() {
@@ -37,9 +40,14 @@ public class GardensFurniture extends JavaPlugin {
         plugin = this;
         gardensPlayers = getServer().getPluginManager().getPlugin("GardensPlayers");
 
+        // load factories
+        customBlockFactory = new CustomBlockFactory();
+        customItemFactory = new CustomItemFactory();
+
         // load custom items
         ConfigUtil.loadConfigs();
-        customRegister = new CustomRegister();
+        itemRegistry = new ItemRegistry();
+
 
         // register handlers
         CommandHandler.registerCommands();

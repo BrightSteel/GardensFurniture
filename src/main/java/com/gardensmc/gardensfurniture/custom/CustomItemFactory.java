@@ -1,7 +1,8 @@
 package com.gardensmc.gardensfurniture.custom;
 
-import com.gardensmc.gardensfurniture.register.CustomRegister;
-import com.gardensmc.gardensfurniture.register.ItemRegistry;
+import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomCaveVineBlock;
+import com.gardensmc.gardensfurniture.custom.item.*;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -10,98 +11,26 @@ import java.util.List;
 
 public class CustomItemFactory {
 
-    private CustomBlockFactory customBlockFactory;
-
-    public CustomItemFactory (HashMap<String, String> customNoteBlocks) {
-        customBlockFactory = new CustomBlockFactory(customNoteBlocks);
-    }
-
-    public CustomDirectionalItem createDirectionalItem(String identifier, String display, int custom_model, Material material, List<String> lore, ConfigurationSection section) {
-        ConfigurationSection[] sections = new ConfigurationSection[] {
-                section.getConfigurationSection("block-x"),
-                section.getConfigurationSection("block-y"),
-                section.getConfigurationSection("block-z")
-        };
-
-        CustomBlock[] customBlocks = new CustomBlock[3];
-        int i = 0;
-        for (ConfigurationSection block_section : sections) {
-            if (block_section == null) {
-                return null;
-            }
-
-            customBlocks[i] = customBlockFactory.createCustomBlock(identifier, block_section);
-            i++;
-        }
-
-        return new CustomDirectionalItem(
-                identifier, display, custom_model, material, lore, customBlocks[0], customBlocks[1], customBlocks[2]
-        );
-    }
-
-    public CustomCaveVineDirectional createCaveVineDirectional(String identifier, String display, int custom_model, Material material, List<String> lore, ConfigurationSection section) {
-        ConfigurationSection[] sections = new ConfigurationSection[] {
-                section.getConfigurationSection("vine-north"),
-                section.getConfigurationSection("vine-south"),
-                section.getConfigurationSection("vine-east"),
-                section.getConfigurationSection("vine-west")
-        };
-
-        CustomCaveVineBlock[] customVineBlocks = new CustomCaveVineBlock[4];
-        int i = 0;
-        for (ConfigurationSection block_section : sections) {
-            if (block_section == null) { return null; }
-                CustomBlock customBlock = customBlockFactory.createCustomBlock(identifier, block_section);
-                if (customBlock instanceof CustomCaveVineBlock customCaveVineBlock) {
-                    customVineBlocks[i] = customCaveVineBlock;
-                }
-
-            i++;
-        }
-
-
-        return new CustomCaveVineDirectional(
-                identifier, display, custom_model, material, lore, customVineBlocks[0], customVineBlocks[1], customVineBlocks[2], customVineBlocks[3]
-        );
-    }
-
-    public CustomCaveVineItem createCaveVineItem(String identifier, String display, int custom_model, Material material, List<String> lore, ConfigurationSection section) {
-        ConfigurationSection[] sections = new ConfigurationSection[] {
-                section.getConfigurationSection("plant"),
-                section.getConfigurationSection("vine"),
-                section.getConfigurationSection("vine-25")
-        };
-
-        CustomCaveVineBlock[] customVineBlocks = new CustomCaveVineBlock[3];
-        int i = 0;
-        for (ConfigurationSection block_section : sections) {
-            if (block_section != null) {
-              CustomBlock customBlock = customBlockFactory.createCustomBlock(identifier, block_section);
-              if (customBlock instanceof CustomCaveVineBlock customCaveVineBlock) {
-                  customVineBlocks[i] = customCaveVineBlock;
-              }
-            }
-            i++;
-        }
-
-        // plant and vine are required
-        if (customVineBlocks[0] == null || customVineBlocks[1] == null) return null;
-
-        return new CustomCaveVineItem(
-                identifier, display, custom_model, material, lore, customVineBlocks[0], customVineBlocks[1], customVineBlocks[2]
-        );
-    }
-
-    public CustomItem createCustomItem(String identifier, String display, int custom_model, Material material, List<String> lore, ConfigurationSection section) {
-        CustomItem customItem = new CustomItem(identifier, display, custom_model, material, lore);
-
-        ConfigurationSection blockSection = section.getConfigurationSection("block");
-        if (blockSection != null) {
-            CustomBlock customBlock = customBlockFactory.createCustomBlock(identifier, blockSection);
-            customItem.setCustomBlock(customBlock);
+    public CustomItem createCustomItem(String identifier, ConfigurationSection itemSection) {
+        CustomItem customItem;
+        switch (getCustomItemType(itemSection)) {
+            case BLOCK -> customItem = new CustomBlockItem(identifier, itemSection);
+            case DIRECTIONAL_BLOCK -> customItem = new CustomDirectionalItem(identifier, itemSection);
+            case CAVE_VINE_BLOCK -> customItem = new CustomCaveVineItem(identifier, itemSection);
+            case CAVE_VINE_DIRECTIONAL_BLOCK -> customItem = new CustomCaveVineDirectional(identifier, itemSection);
+            default -> customItem = new CustomItem(identifier, itemSection);
         }
         return customItem;
     }
 
-
+    private CustomItemType getCustomItemType(ConfigurationSection blockSection) {
+        if (blockSection != null) {
+            String blockType = blockSection.getString("type");
+            if (blockType != null) {
+                return CustomItemType.valueOf(blockType.toUpperCase());
+            }
+            return CustomItemType.BLOCK;
+        }
+        return CustomItemType.ITEM;
+    }
 }

@@ -58,7 +58,7 @@ public class FurnitureCommand implements TabExecutor {
             CommandSenderUtil.sendPermissionError(commandSender);
         } else {
             ConfigUtil.loadConfigs();
-            GardensFurniture.customRegister.reload();
+            GardensFurniture.itemRegistry.reload();
             CommandSenderUtil.sendSuccess(commandSender, "Reloaded Gardens Furniture!");
         }
     }
@@ -72,7 +72,7 @@ public class FurnitureCommand implements TabExecutor {
             PlayerUtil.sendError(player, "Missing item name");
         } else {
             String itemName = arguments[1];
-            ItemStack itemStack = GardensFurniture.customRegister.itemRegistry.buildItem(itemName);
+            ItemStack itemStack = GardensFurniture.itemRegistry.buildItem(itemName);
             if (itemStack == null) {
                 PlayerUtil.sendError(player, "No item named " + itemName);
             } else {
@@ -94,7 +94,7 @@ public class FurnitureCommand implements TabExecutor {
             if (player == null) {
                 CommandSenderUtil.sendError(commandSender, "Unable to find user: " + target);
             } else {
-                ItemStack itemStack = GardensFurniture.customRegister.itemRegistry.buildItem(itemName);
+                ItemStack itemStack = GardensFurniture.itemRegistry.buildItem(itemName);
                 if (itemStack == null) {
                     CommandSenderUtil.sendError(commandSender, "No item named " + itemName);
                 } else {
@@ -131,7 +131,7 @@ public class FurnitureCommand implements TabExecutor {
         List<String> suggestions = new ArrayList<>();
         if (arguments.length > 0) {
             switch (arguments[0]) {
-                case "GET" -> suggestions = GardensFurniture.customRegister.itemRegistry.getItemIdentifiers();
+                case "GET" -> suggestions = GardensFurniture.itemRegistry.getItemIdentifiers();
             }
         }
         return suggestions;

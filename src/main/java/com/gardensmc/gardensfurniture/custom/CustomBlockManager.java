@@ -1,6 +1,11 @@
 package com.gardensmc.gardensfurniture.custom;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.custom.block.*;
+import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineDirectional;
+import com.gardensmc.gardensfurniture.custom.item.CustomDirectionalItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
@@ -24,14 +29,14 @@ import java.util.Collection;
 
 public class CustomBlockManager {
 
-    public static boolean attemptPlacement(Player player, CustomItem customItem, Location location, BlockFace blockFace, boolean persistent) {
+    public static boolean attemptPlacement(Player player, CustomBlockItem customBlockItem, Location location, BlockFace blockFace, boolean persistent) {
         if (player != null) {
             if (!ProtectionUtil.canBuild(location, player)) {
                 return false;
             }
         }
-        CustomBlock customBlock = customItem.getCustomBlock();
-        if (customItem instanceof CustomDirectionalItem customDirectionalItem) {
+        CustomBlock customBlock = customBlockItem.getCustomBlock();
+        if (customBlockItem instanceof CustomDirectionalItem customDirectionalItem) {
             switch (blockFace) {
                 case UP, DOWN -> customBlock = customDirectionalItem.getY();
                 case EAST, WEST -> customBlock = customDirectionalItem.getX();
@@ -39,30 +44,30 @@ public class CustomBlockManager {
             }
         }
 
-        return attemptPlacement(player, customItem, location, blockFace, customBlock, persistent);
+        return attemptPlacement(player, customBlockItem, location, blockFace, customBlock, persistent);
     }
 
-    private static boolean attemptPlacement(Player player, CustomItem customItem, Location location, BlockFace blockFace, CustomBlock customBlock, boolean persistent) {
+    private static boolean attemptPlacement(Player player, CustomBlockItem customBlockItem, Location location, BlockFace blockFace, CustomBlock customBlock, boolean persistent) {
         if (entityBlocking(location)) {
             return false;
         }
 
         if (location.getBlock().getType() != Material.AIR) return false; // for terra gen
-
+        // todo refactor these into their CustomBlockItem classes
         if (customBlock instanceof CustomNoteBlock customNoteBlock) {
-            return placeNoteBlock(player, customItem, customNoteBlock, location);
+            return placeNoteBlock(player, customBlockItem, customNoteBlock, location);
         }
         else if (customBlock instanceof CustomLeavesBlock customLeavesBlock) {
-            return placeLeavesBlock(player, customItem, customLeavesBlock, location, persistent);
+            return placeLeavesBlock(player, customBlockItem, customLeavesBlock, location, persistent);
         }
         else if (customBlock instanceof CustomTripwireBlock customTripwireBlock) {
-            return placeTripWireBlock(player, customItem, customTripwireBlock, location, blockFace);
+            return placeTripWireBlock(player, customBlockItem, customTripwireBlock, location, blockFace);
         }
         else if (customBlock instanceof CustomCaveVineBlock customCaveVineBlock) {
-            return placeCaveVineBlock(player, customItem, customCaveVineBlock, location, blockFace);
+            return placeCaveVineBlock(player, customBlockItem, customCaveVineBlock, location, blockFace);
         }
         else {
-            return placeItemFrame(player, customItem, location, blockFace);
+            return placeItemFrame(player, customBlockItem, location, blockFace);
         }
     }
 
@@ -120,7 +125,7 @@ public class CustomBlockManager {
             if (top.getType() != Material.AIR) return false;
 
             // ensure tripwire top is registered
-            if (GardensFurniture.customRegister.itemRegistry.getItem("tripwire_top") == null) {
+            if (GardensFurniture.itemRegistry.getItem("tripwire_top") == null) {
                 return false;
             }
 
@@ -186,14 +191,14 @@ public class CustomBlockManager {
         return true;
     }
 
-    private static boolean placeItemFrame(Player player, CustomItem customItem, Location location, BlockFace blockFace) {
+    private static boolean placeItemFrame(Player player, CustomBlockItem customBlockItem, Location location, BlockFace blockFace) {
         World world = location.getWorld();
         if (world != null) {
 
             ItemFrame itemFrame = (ItemFrame) location.getWorld().spawnEntity(location, EntityType.ITEM_FRAME);
             itemFrame.setVisible(false);
             itemFrame.setFacingDirection(blockFace, true);
-            ItemStack display = GardensFurniture.customRegister.itemRegistry.buildItem(customItem);
+            ItemStack display = GardensFurniture.itemRegistry.buildItem(customBlockItem);
             String custom_name = null;
             ItemMeta itemMeta = display.getItemMeta();
             if (itemMeta != null) {
@@ -210,11 +215,11 @@ public class CustomBlockManager {
                 nbtEntity.getPersistentDataContainer().setString("custom_name", custom_name);
             }
 
-            if (customItem.getCustomBlock().hasBarrier()) {
+            if (customBlockItem.getCustomBlock().hasBarrier()) {
                 location.getBlock().setType(Material.BARRIER);
             }
 
-            Bukkit.getPluginManager().callEvent(new FurniturePlaceEvent(null, customItem, itemFrame));
+            Bukkit.getPluginManager().callEvent(new FurniturePlaceEvent(null, customBlockItem, itemFrame));
 
             return true;
         }
@@ -229,7 +234,7 @@ public class CustomBlockManager {
         String key = note + "," + instrument + "," + powered;
 //        System.out.println("looking up " + note);
 
-        return GardensFurniture.customRegister.itemRegistry.getCustomItem(key);
+        return GardensFurniture.itemRegistry.getCustomItem(key);
     }
 
     @Nullable
@@ -255,7 +260,7 @@ public class CustomBlockManager {
         ItemFrame itemFrame = getBlock(location);
         if (itemFrame == null) return;
 
-        CustomItem customItem = GardensFurniture.customRegister.itemRegistry.getCustomItem(itemFrame.getItem());
+        CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemFrame.getItem());
         if (customItem == null) return;
 
         FurnitureBreakEvent e = new FurnitureBreakEvent(player, customItem, itemFrame);
@@ -274,7 +279,7 @@ public class CustomBlockManager {
             block.setType(Material.AIR);
         }
 
-        ItemStack itemStack = GardensFurniture.customRegister.itemRegistry.buildItem(customItem);
+        ItemStack itemStack = GardensFurniture.itemRegistry.buildItem(customItem);
         if (itemStack != null) {
             if (display != null && itemStack.getItemMeta() != null) {
                 ItemMeta itemMeta = itemStack.getItemMeta();
@@ -292,7 +297,7 @@ public class CustomBlockManager {
     public static CustomItem getFurniture(Entity entity) {
         if (entity instanceof ItemFrame itemFrame) {
             ItemStack itemStack = itemFrame.getItem();
-            CustomItem customItem = GardensFurniture.customRegister.itemRegistry.getCustomItem(itemStack);
+            CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
             return customItem;
         }
         return null;
@@ -303,7 +308,7 @@ public class CustomBlockManager {
         String identifier = block.getChunk().getPersistentDataContainer().get(new NamespacedKey("gardens", block.getX() + "." + block.getY() + "." + block.getZ()), PersistentDataType.STRING);
         if (identifier != null) {
             String[] parts = identifier.split("\\.");
-            return GardensFurniture.customRegister.itemRegistry.getItem(parts[0]);
+            return GardensFurniture.itemRegistry.getItem(parts[0]);
         }
 
         return null;

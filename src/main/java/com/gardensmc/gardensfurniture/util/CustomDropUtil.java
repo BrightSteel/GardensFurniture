@@ -2,6 +2,11 @@ package com.gardensmc.gardensfurniture.util;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.*;
+import com.gardensmc.gardensfurniture.custom.block.CustomLeavesBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomTripwireBlock;
+import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineDirectional;
+import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.events.CustomBlockBreakEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import org.bukkit.Bukkit;
@@ -26,7 +31,7 @@ public class CustomDropUtil {
             FurnitureStore.INSTANCE.removeFurnitureStore(e.getBlock());
             if (tripItem != null) {
                 // drop item
-                ItemStack drop = GardensFurniture.customRegister.itemRegistry.buildItem(tripItem);
+                ItemStack drop = GardensFurniture.itemRegistry.buildItem(tripItem);
                 bottom.setType(Material.AIR);
                 if (drop != null) {
                     e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), drop);
@@ -43,7 +48,7 @@ public class CustomDropUtil {
                 FurnitureStore.INSTANCE.removeFurnitureStore(top);
             }
 
-            ItemStack drop = GardensFurniture.customRegister.itemRegistry.buildItem(customItem);
+            ItemStack drop = GardensFurniture.itemRegistry.buildItem(customItem);
             if (drop != null) {
                 e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), drop);
             }
@@ -53,12 +58,12 @@ public class CustomDropUtil {
     }
 
     public static void dropCustomItem(BlockBreakEvent e, CustomItem customItem, boolean leaves) {
-        if (customItem != null) {
+        if (customItem instanceof CustomBlockItem customBlockItem) {
             boolean dropAnyway = customItem instanceof CustomCaveVineDirectional;
             e.setDropItems(false);
 
-            if (e.getPlayer().getGameMode() != GameMode.CREATIVE && !customItem.getCustomBlock().cancelDrop()){
-                ItemStack itemStack = GardensFurniture.customRegister.itemRegistry.buildItem(customItem);
+            if (e.getPlayer().getGameMode() != GameMode.CREATIVE && !customBlockItem.getCustomBlock().cancelDrop()){
+                ItemStack itemStack = GardensFurniture.itemRegistry.buildItem(customItem);
                 if (itemStack != null) {
                     boolean drop;
                     if (leaves) {
@@ -70,15 +75,15 @@ public class CustomDropUtil {
                     if (drop || dropAnyway) {
                         e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), itemStack);
                     }
-                    else if (e.getBlock().getBlockData() instanceof Leaves leaves1 && customItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
+                    else if (e.getBlock().getBlockData() instanceof Leaves leaves1 && customBlockItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
                         if (!leaves1.isPersistent()) { // need 2 be non-persistent server-side to drop sapling
                             // chance of dropping sapling
                             if (ProbabilityUtil.roll(5)) {
                                 String saplingId = customLeavesBlock.getSapling();
                                 if (saplingId != null) {
-                                    CustomItem saplingItem = GardensFurniture.customRegister.itemRegistry.getItem(saplingId);
+                                    CustomItem saplingItem = GardensFurniture.itemRegistry.getItem(saplingId);
                                     if (saplingItem != null) {
-                                        ItemStack sapling = GardensFurniture.customRegister.itemRegistry.buildItem(saplingItem);
+                                        ItemStack sapling = GardensFurniture.itemRegistry.buildItem(saplingItem);
                                         if (sapling != null) {
                                             e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), sapling);
                                         }

@@ -2,7 +2,8 @@ package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
-import com.gardensmc.gardensfurniture.custom.CustomItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.events.CustomBlockInteractEvent;
 import com.gardensmc.gardensfurniture.events.FurnitureInteractEvent;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
@@ -85,11 +86,11 @@ public class PlayerListener implements Listener {
         Location location = getLocationFromBlockFace(e.getClickedBlock().getLocation(), e.getBlockFace());
         if (location.getBlock().getType() != Material.AIR) return;
 
-        CustomItem customItem = GardensFurniture.customRegister.itemRegistry.getCustomItem(itemStack);
+        CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
         if (customItem != null) {
             if (!ProtectionUtil.canBuild(location, e.getPlayer())) return;
-            if (customItem.isCustomBlock()) {
-                boolean placed = CustomBlockManager.attemptPlacement(e.getPlayer(), customItem, location, e.getBlockFace(), true);
+            if (customItem instanceof CustomBlockItem customBlockItem) {
+                boolean placed = CustomBlockManager.attemptPlacement(e.getPlayer(), customBlockItem, location, e.getBlockFace(), true);
                 if (placed) {
                     e.setCancelled(true);
                     switch (e.getHand()) {
@@ -142,12 +143,11 @@ public class PlayerListener implements Listener {
 
         if (e.getRightClicked() instanceof ItemFrame itemFrame) {
             CustomItem customItem = CustomBlockManager.getFurniture(itemFrame);
-            if (customItem != null && customItem.isCustomBlock()) {
-
+            if (customItem instanceof CustomBlockItem customBlockItem) {
                 e.setCancelled(true);
 
-                if (customItem.getCustomBlock().isSeated()) {
-                    double offset = customItem.getCustomBlock().getSeatOffset();
+                if (customBlockItem.getCustomBlock().isSeated()) {
+                    double offset = customBlockItem.getCustomBlock().getSeatOffset();
                     GSitAPI.createSeat(itemFrame.getLocation().getBlock(), e.getPlayer(), true, 0.0, offset, 0.0, e.getPlayer().getLocation().getYaw(), true);
                 }
                 else {

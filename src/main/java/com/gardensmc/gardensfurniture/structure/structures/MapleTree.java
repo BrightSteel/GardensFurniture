@@ -14,9 +14,9 @@ import static java.lang.Math.round;
 public class MapleTree extends TStructure {
 
 
-    public MapleTree(Location location) {
-        super(location);
-    }
+//    public MapleTree(Location location) {
+//        super(location);
+//    }
 
     @Override
     public void generate() {
@@ -84,7 +84,7 @@ public class MapleTree extends TStructure {
 
         int beeNestRoll = ThreadLocalRandom.current().nextInt(30); // 1 in 30 chance
         if (beeNestRoll == 0) {
-            new BeeNest(origin.clone().add(0, leafBottomHeight, 0)).generate();
+            new BeeNest().setOrigin(origin.clone().add(0, leafBottomHeight, 0)).generate();
         }
 
         block(0, -1, 0, "minecraft:dirt");

@@ -1,23 +1,22 @@
 package com.gardensmc.gardensfurniture.register;
 
-import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.*;
+import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.util.ChatUtil;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
-import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
+import static com.gardensmc.gardensfurniture.GardensFurniture.customItemFactory;
 
 public class ItemRegistry {
 
@@ -25,57 +24,25 @@ public class ItemRegistry {
 
     // also can be for leaves too: distance,persistent -> identifier
     // note,instrument,powered -> custom_item_identifier
-    private final HashMap<String, String> customNoteBlocks = new HashMap<>();
+    public final HashMap<String, String> customNoteBlocks = new HashMap<>();
 
     public ItemRegistry() {
         assembleItems();
     }
 
     private void assembleItems() {
-        CustomItemFactory customItemFactory = new CustomItemFactory(customNoteBlocks);
         for (Configuration config : ConfigUtil.all_items) {
             for (String key : config.getKeys(false)) {
                 ConfigurationSection section = config.getConfigurationSection(key);
                 if (section != null) {
-                    String display = section.getString("display");
-                    int custom_model = section.getInt("custom_model");
-
-                    Material material = parseMaterial(section.getString("material"));
-                    List<String> lore = section.getStringList("lore");
-                    boolean directional = section.getBoolean("directional");
-                    boolean cave_vine = section.getBoolean("cave_vine");
-                    boolean cave_vine_directional = section.getBoolean("cave_vine_directional");
-                    CustomItem customItem;
-                    if (directional) {
-                        customItem = customItemFactory.createDirectionalItem(key, display, custom_model, material, lore, section);
-                    }
-                    else if (cave_vine) {
-                        customItem = customItemFactory.createCaveVineItem(key, display, custom_model, material, lore, section);
-                    }
-                    else if (cave_vine_directional) {
-                        customItem = customItemFactory.createCaveVineDirectional(key, display, custom_model, material, lore, section);
-                    }
-                    else {
-                       customItem = customItemFactory.createCustomItem(key, display, custom_model, material, lore, section);
-                    }
-
+                    CustomItem customItem = customItemFactory.createCustomItem(key, section);
                     customItems.put(key, customItem);
                 }
             }
         }
     }
 
-    private Material parseMaterial(String material_str) {
-        Material material = Material.PAPER;
-        if (material_str != null) {
-            try {
-                material = Material.valueOf(material_str.toUpperCase());
-            } catch (Exception e) {
-                return material;
-            }
-        }
-        return material;
-    }
+
 
     public List<String> getItemIdentifiers() {
         return customItems.keySet().stream().toList();
