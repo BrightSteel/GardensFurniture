@@ -1,8 +1,7 @@
-package com.gardensmc.gardensfurniture.events;
+package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.*;
-import com.gardensmc.gardensfurniture.register.CustomRegister;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -18,7 +17,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
-public class CaveVineEvents implements Listener {
+public class CaveVineListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOW)
     public void blockPlaceEvent(BlockPlaceEvent e) {

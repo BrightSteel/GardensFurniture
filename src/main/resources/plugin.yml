@@ -2,19 +2,10 @@ name: GardensFurniture
 version: 1.0.0
 author: Bright_Steel
 main: com.gardensmc.gardensfurniture.GardensFurniture
-api-version: 1.19
+api-version: 1.20
 commands:
-  nbt:
-    description: Set items nbt
-    usage: /<command>
-  get:
-    description: Get a custom item
-    usage: /<command>
   furniture:
     description: Furniture command
-    usage: /<command>
-  itemsaver:
-    description: Save items
     usage: /<command>
 depend: [GSit, NBTAPI, ProtocolLib, packetevents]
 softdepend:

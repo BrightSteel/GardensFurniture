@@ -1,95 +1,139 @@
 package com.gardensmc.gardensfurniture.command;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.structure.structures.MapleTree;
+import com.gardensmc.gardensfurniture.permission.Permissions;
+import com.gardensmc.gardensfurniture.util.CommandSenderUtil;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
+import com.gardensmc.gardensfurniture.util.PlayerUtil;
 import de.tr7zw.nbtapi.NBTItem;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public class FurnitureCommand implements CommandExecutor {
+import java.util.ArrayList;
+import java.util.List;
+
+public class FurnitureCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender commandSender, Command command, String s, String[] args) {
         if (args.length > 0) {
-            switch (args[0]) {
-                case "structure" -> {
-                    if (args.length > 1 && commandSender instanceof Player player) {
-                        switch (args[1].toLowerCase()) {
-                            // todo make this coherent and support all structures as you add them
-                            case "maple_tree" -> {
-                                new MapleTree(player.getLocation()).generate();
-                                player.sendMessage(ChatColor.GREEN + "Generated maple tree");
-                            }
-                        }
-                    }
-                }
-                case "reload" -> {
-                    ConfigUtil.loadConfigs();
-                    GardensFurniture.customRegister.reload();
-                    commandSender.sendMessage(ChatColor.GREEN + "Reloaded Gardens Furniture!");
-                }
-                case "get" -> {
-                    if (!(commandSender instanceof Player player)) {
-                        return false;
-                    }
+            switch (args[0].toUpperCase()) {
+                case "STRUCTURE" -> executeSpawnStructure(commandSender, args);
+                case "RELOAD" -> executeReload(commandSender);
+                case "GET" -> executeGet(commandSender, args);
+                case "GIVE" -> executeGive(commandSender, args);
+                case "INFO" -> executeInfo(commandSender);
+            }
+        } else {
+            return false;
+        }
+        return true;
+    }
 
-                    if (args.length < 2) {
-                        player.sendMessage(ChatColor.RED + "Please enter the item identifier");
-                        return true;
-                    }
-
-                    String identifier = args[1];
-                    ItemStack itemStack = GardensFurniture.customRegister.itemRegistry.buildItem(identifier);
-                    if (itemStack == null) {
-                        player.sendMessage(ChatColor.RED + "No item exists by that identifier!");
-                        return true;
-                    }
-
-                    player.getInventory().addItem(itemStack);
-                    player.sendMessage(ChatColor.GREEN + "Received " + identifier);
-                }
-                case "give" -> {
-                   // no feedback, used by console only right now
-                    if (args.length < 3) {
-                        return false;
-                    }
-                    String target = args[1];
-                    String identifier = args[2];
-                    Player player = Bukkit.getServer().getPlayer(target);
-                    if (player != null) {
-                        ItemStack itemStack = GardensFurniture.customRegister.itemRegistry.buildItem(identifier);
-                        if (itemStack != null) {
-                            if (args.length > 3) {
-                                try {
-                                    int amount = Integer.parseInt(args[3]);
-                                    itemStack.setAmount(amount);
-                                } catch (Exception ex) {
-                                    ex.printStackTrace();
-                                }
-                            }
-                            player.getInventory().addItem(itemStack);
-                        }
-                    }
-                }
-                case "info" -> {
-                    if (!(commandSender instanceof Player player)) {
-                        return false;
-                    }
-
-                    ItemStack heldItem = player.getInventory().getItemInMainHand();
-                    NBTItem nbtItem = new NBTItem(heldItem);
-                    player.sendMessage(nbtItem.toString());
-                }
-
+    private void executeSpawnStructure(CommandSender commandSender, String[] arguments) {
+        if (!commandSender.hasPermission(Permissions.SPAWN_STRUCTURE)) {
+           CommandSenderUtil.sendPermissionError(commandSender);
+        } else if (!(commandSender instanceof Player player)) {
+            CommandSenderUtil.sendPlayerOnly(commandSender);
+        } else if (arguments.length == 1) {
+            PlayerUtil.sendError(player, "Please specify the name of the desired structure");
+        } else {
+            String structureName = arguments[1].toUpperCase();
+            if (GardensFurniture.structureHandler.spawnStructure(structureName, player.getLocation())) {
+                PlayerUtil.sendSuccess(player, "Spawned " + structureName + " successfully!");
+            } else {
+                PlayerUtil.sendError(player, "Failed to spawn " + structureName + ". Check console for details");
             }
         }
+    }
 
-        return true;
+    private void executeReload(CommandSender commandSender) {
+        if (!commandSender.hasPermission(Permissions.RELOAD)) {
+            CommandSenderUtil.sendPermissionError(commandSender);
+        } else {
+            ConfigUtil.loadConfigs();
+            GardensFurniture.customRegister.reload();
+            CommandSenderUtil.sendSuccess(commandSender, "Reloaded Gardens Furniture!");
+        }
+    }
+
+    private void executeGet(CommandSender commandSender, String[] arguments) {
+        if (!commandSender.hasPermission(Permissions.FURNITURE_GIVE)) {
+            CommandSenderUtil.sendPermissionError(commandSender);
+        } else if (!(commandSender instanceof Player player)) {
+            CommandSenderUtil.sendPlayerOnly(commandSender);
+        } else if (arguments.length < 2) {
+            PlayerUtil.sendError(player, "Missing item name");
+        } else {
+            String itemName = arguments[1];
+            ItemStack itemStack = GardensFurniture.customRegister.itemRegistry.buildItem(itemName);
+            if (itemStack == null) {
+                PlayerUtil.sendError(player, "No item named " + itemName);
+            } else {
+                player.getInventory().addItem(itemStack);
+                PlayerUtil.sendSuccess(player, "Received " + itemName);
+            }
+        }
+    }
+
+    private void executeGive(CommandSender commandSender, String[] arguments) {
+        if (!commandSender.hasPermission(Permissions.FURNITURE_GIVE)) {
+            CommandSenderUtil.sendPermissionError(commandSender);
+        } else if (arguments.length < 3) {
+            CommandSenderUtil.sendError(commandSender, "/furniture give <user> <itemName> [amount]");
+        } else {
+            String target = arguments[1];
+            String itemName = arguments[2];
+            Player player = Bukkit.getServer().getPlayer(target);
+            if (player == null) {
+                CommandSenderUtil.sendError(commandSender, "Unable to find user: " + target);
+            } else {
+                ItemStack itemStack = GardensFurniture.customRegister.itemRegistry.buildItem(itemName);
+                if (itemStack == null) {
+                    CommandSenderUtil.sendError(commandSender, "No item named " + itemName);
+                } else {
+                    if (arguments.length > 3) {
+                        try {
+                            itemStack.setAmount(Integer.parseInt(arguments[3]));
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                            CommandSenderUtil.sendError(commandSender, "Unable to parse given amount: " + arguments[3] + ". Defaulting to 1 item");
+                        }
+                    }
+                    player.getInventory().addItem(itemStack);
+                    CommandSenderUtil.sendSuccess(commandSender, String.format("Gave %s %s %s", player.getName(), itemStack.getAmount(), itemName));
+                }
+            }
+        }
+    }
+
+    private void executeInfo(CommandSender commandSender) {
+        if (!commandSender.hasPermission(Permissions.FURNITURE_INFO)) {
+            CommandSenderUtil.sendPermissionError(commandSender);
+        } else if (!(commandSender instanceof Player player)) {
+            CommandSenderUtil.sendPlayerOnly(commandSender);
+        } else {
+            ItemStack heldItem = player.getInventory().getItemInMainHand();
+            NBTItem nbtItem = new NBTItem(heldItem);
+            player.sendMessage(nbtItem.toString());
+        }
+    }
+
+    @Nullable
+    @Override
+    public List<String> onTabComplete(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String s, @NotNull String[] arguments) {
+        List<String> suggestions = new ArrayList<>();
+        if (arguments.length > 0) {
+            switch (arguments[0]) {
+                case "GET" -> suggestions = GardensFurniture.customRegister.itemRegistry.getItemIdentifiers();
+            }
+        }
+        return suggestions;
     }
 }

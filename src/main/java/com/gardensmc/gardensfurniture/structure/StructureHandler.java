@@ -3,14 +3,20 @@ package com.gardensmc.gardensfurniture.structure;
 import com.gardensmc.gardensfurniture.structure.structures.BeeNest;
 import org.bukkit.Location;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class StructureHandler {
 
     // structure_name -> structure
-    public static Map<String, TStructure> structureMap;
+    private final Map<String, TStructure> structureMap;
 
-    public static boolean spawnStructure(String structureName, Location location) {
+    public StructureHandler() {
+        structureMap = new HashMap<>();
+        mapStructures();
+    }
+
+    public boolean spawnStructure(String structureName, Location location) {
         if (structureMap.containsKey(structureName)) {
             structureMap.get(structureName)
                     .setOrigin(location)
@@ -21,6 +27,6 @@ public class StructureHandler {
     }
 
     private void mapStructures() {
-        structureMap.put("BeeNest", new BeeNest());
+        structureMap.put("BEE_NEST", new BeeNest());
     }
 }

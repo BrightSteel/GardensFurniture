@@ -16,7 +16,4 @@ public class ProtectionUtil {
         }
         return ProtectionEvents.isTrusted(player.getWorld(), player);
     }
-
-
-
 }

@@ -1,10 +1,11 @@
 package com.gardensmc.gardensfurniture;
 
-import com.gardensmc.gardensfurniture.command.CommandRegister;
-import com.gardensmc.gardensfurniture.events.CaveVineEvents;
-import com.gardensmc.gardensfurniture.events.Events;
+import com.gardensmc.gardensfurniture.command.CommandHandler;
+import com.gardensmc.gardensfurniture.listener.CaveVineListener;
 import com.gardensmc.gardensfurniture.listener.BlockPacketListener;
+import com.gardensmc.gardensfurniture.listener.ListenerHandler;
 import com.gardensmc.gardensfurniture.register.CustomRegister;
+import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.settings.PacketEventsSettings;
@@ -17,6 +18,7 @@ public class GardensFurniture extends JavaPlugin {
     public static GardensFurniture plugin;
     public static Plugin gardensPlayers;
 
+    public static StructureHandler structureHandler;
     public static CustomRegister customRegister;
 
     @Override
@@ -35,20 +37,16 @@ public class GardensFurniture extends JavaPlugin {
         plugin = this;
         gardensPlayers = getServer().getPluginManager().getPlugin("GardensPlayers");
 
+        // load custom items
         ConfigUtil.loadConfigs();
         customRegister = new CustomRegister();
 
-        CommandRegister.registerCommands();
-        registerListeners();
+        // register handlers
+        CommandHandler.registerCommands();
+        ListenerHandler.registerListeners();
+        structureHandler = new StructureHandler();
 
+        // init packet events
         PacketEvents.getAPI().init();
     }
-
-    private void registerListeners() {
-        new BlockPacketListener().register();
-        getServer().getPluginManager().registerEvents(new Events(), this);
-        getServer().getPluginManager().registerEvents(new CaveVineEvents(), this);
-    }
-
-
 }

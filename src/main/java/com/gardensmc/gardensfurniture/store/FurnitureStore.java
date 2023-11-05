@@ -17,7 +17,6 @@ public class FurnitureStore {
     }
 
     public void removeFurnitureStore(Block block) {
-
         Chunk chunk = block.getChunk();
         PersistentDataContainer data = chunk.getPersistentDataContainer();
         data.remove(new NamespacedKey("gardens", block.getX() + "." + block.getY() + "." + block.getZ()));

@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class CommandRegister {
+public class CommandHandler {
 
     private static final HashMap<String, CommandExecutor> commands = new HashMap<>();
 
@@ -19,7 +19,6 @@ public class CommandRegister {
     }
 
     private static void createCommands() {
-        commands.put("get", new GetCommand());
         commands.put("furniture", new FurnitureCommand());
     }
 }
