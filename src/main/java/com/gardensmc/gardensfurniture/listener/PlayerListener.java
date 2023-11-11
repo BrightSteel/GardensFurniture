@@ -89,13 +89,10 @@ public class PlayerListener implements Listener {
 
         CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
         if (customItem != null) {
-            System.out.println("Found customItem: " + customItem.getIdentifier());
             if (!ProtectionUtil.canBuild(location, e.getPlayer())) return;
             if (customItem instanceof CustomPlaceableItem placeableItem) {
-                System.out.println("Is custom block item");
                 boolean placed = CustomBlockManager.attemptPlacement(e.getPlayer(), placeableItem, location, e.getBlockFace(), true);
                 if (placed) {
-                    System.out.println("placed");
                     e.setCancelled(true);
                     switch (e.getHand()) {
                         case HAND -> e.getPlayer().swingMainHand();
@@ -147,7 +144,7 @@ public class PlayerListener implements Listener {
 
         if (e.getRightClicked() instanceof ItemFrame itemFrame) {
             CustomItem customItem = CustomBlockManager.getFurniture(itemFrame);
-            if (customItem instanceof CustomBlockItem customBlockItem) {
+            if (customItem instanceof CustomPlaceableItem customBlockItem) {
                 e.setCancelled(true);
 
                 if (customBlockItem.getCustomBlock().isSeated()) {

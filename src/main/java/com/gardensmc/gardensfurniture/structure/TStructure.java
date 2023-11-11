@@ -4,6 +4,7 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
@@ -41,8 +42,8 @@ public abstract class TStructure {
         }
         Location loc = origin.clone().add(x, y, z);
         CustomItem customItem = GardensFurniture.itemRegistry.getItem(identifier);
-        if (customItem instanceof CustomBlockItem customBlockItem) {
-            CustomBlockManager.attemptPlacement(null, customBlockItem, loc, BlockFace.UP, false);
+        if (customItem instanceof CustomPlaceableItem placeableItem) {
+            CustomBlockManager.attemptPlacement(null, placeableItem, loc, BlockFace.UP, false);
         }
     }
 

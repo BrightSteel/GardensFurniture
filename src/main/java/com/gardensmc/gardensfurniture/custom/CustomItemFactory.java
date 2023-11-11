@@ -1,6 +1,7 @@
 package com.gardensmc.gardensfurniture.custom;
 
 import com.gardensmc.gardensfurniture.custom.item.*;
+import com.gardensmc.gardensfurniture.custom.type.CustomItemType;
 import org.bukkit.configuration.ConfigurationSection;
 
 public class CustomItemFactory {

@@ -1,4 +1,4 @@
-package com.gardensmc.gardensfurniture.custom;
+package com.gardensmc.gardensfurniture.custom.type;
 
 public enum CustomBlockType {
     NOTE,

@@ -4,6 +4,7 @@ import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.block.CustomTripwireBlock;
+import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import org.bukkit.Instrument;
 import org.bukkit.Material;
@@ -41,7 +42,7 @@ public class BlockListener implements Listener {
         }
         else if (e.getBlock().getType() == Material.TRIPWIRE) {
             CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getBlock());
-            if (customItem instanceof CustomBlockItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomTripwireBlock customTripwireBlock) {
+            if (customItem instanceof CustomPlaceableItem placeableItem && placeableItem.getCustomBlock() instanceof CustomTripwireBlock customTripwireBlock) {
                 dropCustomItem(e, customItem, customTripwireBlock);
             }
         }

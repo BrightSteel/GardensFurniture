@@ -38,14 +38,11 @@ public class ItemRegistry {
                 ConfigurationSection section = config.getConfigurationSection(key);
                 if (section != null) {
                     CustomItem customItem = customItemFactory.createCustomItem(key, section);
-                    System.out.println("creating item: " + customItem.getIdentifier());
                     customItems.put(key, customItem);
                 }
             }
         }
     }
-
-
 
     public List<String> getItemIdentifiers() {
         return customItems.keySet().stream().toList();

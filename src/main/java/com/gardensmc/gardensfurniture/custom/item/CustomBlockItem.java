@@ -19,6 +19,7 @@ public class CustomBlockItem extends CustomPlaceableItem {
         this.customBlock = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection);
     }
 
+    @Override
     public CustomBlock getCustomBlock() {
         return customBlock;
     }

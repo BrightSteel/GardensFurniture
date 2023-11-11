@@ -29,6 +29,11 @@ public class CustomCaveVineItem extends CustomPlaceableItem {
         return plant.placeBlock(this, player, location, blockFace, persistent);
     }
 
+    @Override
+    public CustomBlock getCustomBlock() {
+        return plant;
+    }
+
     public CustomCaveVineBlock getVine() {
         return vine;
     }

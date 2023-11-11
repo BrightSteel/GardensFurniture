@@ -3,6 +3,7 @@ package com.gardensmc.gardensfurniture.listener;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import de.tr7zw.nbtapi.NBTEntity;
@@ -47,7 +48,7 @@ public class EntityListener implements Listener {
                 ItemStack itemStack = itemFrame.getItem();
                 if (itemStack.getType() != Material.AIR) {
                     CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
-                    if (customItem instanceof CustomBlockItem customBlockItem) {
+                    if (customItem instanceof CustomPlaceableItem customBlockItem) {
                         e.setCancelled(true);
 
                         if (!ProtectionUtil.canBuild(e.getEntity().getLocation(), player)) return;

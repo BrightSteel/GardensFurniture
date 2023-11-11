@@ -36,6 +36,11 @@ public class CustomDirectionalItem extends CustomPlaceableItem {
         return customBlock.placeBlock(this, player, location, blockFace, persistent);
     }
 
+    @Override
+    public CustomBlock getCustomBlock() {
+        return getX();
+    }
+
     public CustomBlock getX() {
         return x;
     }

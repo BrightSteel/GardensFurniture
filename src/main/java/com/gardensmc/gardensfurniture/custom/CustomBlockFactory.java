@@ -2,6 +2,7 @@ package com.gardensmc.gardensfurniture.custom;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.*;
+import com.gardensmc.gardensfurniture.custom.type.CustomBlockType;
 import org.bukkit.configuration.ConfigurationSection;
 
 public class CustomBlockFactory {

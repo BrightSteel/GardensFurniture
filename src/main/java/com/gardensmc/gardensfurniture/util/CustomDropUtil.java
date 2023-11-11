@@ -7,6 +7,7 @@ import com.gardensmc.gardensfurniture.custom.block.CustomTripwireBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineDirectional;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.events.CustomBlockBreakEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import org.bukkit.Bukkit;
@@ -58,7 +59,7 @@ public class CustomDropUtil {
     }
 
     public static void dropCustomItem(BlockBreakEvent e, CustomItem customItem, boolean leaves) {
-        if (customItem instanceof CustomBlockItem customBlockItem) {
+        if (customItem instanceof CustomPlaceableItem customBlockItem) {
             boolean dropAnyway = customItem instanceof CustomCaveVineDirectional;
             e.setDropItems(false);
 

@@ -45,4 +45,9 @@ public class CustomCaveVineDirectional extends CustomPlaceableItem {
     public CustomCaveVineBlock getVine_west() {
         return vine_west;
     }
+
+    @Override
+    public CustomBlock getCustomBlock() {
+        return vine_north;
+    }
 }
