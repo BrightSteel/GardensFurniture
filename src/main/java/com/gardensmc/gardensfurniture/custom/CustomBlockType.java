@@ -4,5 +4,6 @@ public enum CustomBlockType {
     NOTE,
     LEAVES,
     CAVE_VINE,
-    TRIPWIRE
+    TRIPWIRE,
+    ITEM_FRAME
 }

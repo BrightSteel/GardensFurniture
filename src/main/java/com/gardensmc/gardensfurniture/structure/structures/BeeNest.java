@@ -1,13 +1,8 @@
 package com.gardensmc.gardensfurniture.structure.structures;
 
 import com.gardensmc.gardensfurniture.structure.TStructure;
-import org.bukkit.Location;
 
 public class BeeNest extends TStructure {
-
-//    public BeeNest(Location origin) {
-//        super(origin);
-//    }
 
     @Override
     public void generate() {

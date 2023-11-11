@@ -1,9 +1,13 @@
 package com.gardensmc.gardensfurniture.custom.block;
 
+import com.gardensmc.gardensfurniture.custom.item.CustomItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import org.bukkit.Location;
+import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
 
-public class CustomBlock {
-    public static CustomBlock EMPTY = null;
+public abstract class CustomBlock {
 
     private final boolean barrier;
     private final boolean seated;
@@ -47,4 +51,6 @@ public class CustomBlock {
         }
         return config.getConfigurationSection(sectionName);
     }
+
+    public abstract boolean placeBlock(CustomPlaceableItem placeableItem, Player player, Location location, BlockFace blockFace, boolean persistent);
 }

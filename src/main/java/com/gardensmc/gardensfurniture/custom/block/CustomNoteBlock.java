@@ -1,6 +1,14 @@
 package com.gardensmc.gardensfurniture.custom.block;
 
+import com.gardensmc.gardensfurniture.custom.item.CustomItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
+import org.bukkit.*;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
 
 public class CustomNoteBlock extends CustomBlock {
 
@@ -29,4 +37,28 @@ public class CustomNoteBlock extends CustomBlock {
     }
 
 
+    @Override
+    public boolean placeBlock(CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
+        Block block = location.getBlock();
+        CustomBlockPlaceEvent event = new CustomBlockPlaceEvent(player, customItem, block);
+        Bukkit.getPluginManager().callEvent(event);
+        if (event.isCancelled()) return false;
+
+        Instrument instrument;
+        try {
+            instrument = Instrument.valueOf(getInstrument().toUpperCase());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+        block.setType(Material.NOTE_BLOCK);
+        if (block.getBlockData() instanceof NoteBlock noteBlock) {
+            noteBlock.setNote(new Note(getNote()));
+            noteBlock.setInstrument(instrument);
+            noteBlock.setPowered(isPowered());
+            block.setBlockData(noteBlock);
+        }
+
+        return true;
+    }
 }

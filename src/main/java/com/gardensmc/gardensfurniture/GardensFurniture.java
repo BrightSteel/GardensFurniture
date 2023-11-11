@@ -18,9 +18,6 @@ public class GardensFurniture extends JavaPlugin {
     public static GardensFurniture plugin;
     public static Plugin gardensPlayers;
 
-    public static CustomBlockFactory customBlockFactory;
-    public static CustomItemFactory customItemFactory;
-
     public static StructureHandler structureHandler;
     public static ItemRegistry itemRegistry;
 
@@ -40,14 +37,12 @@ public class GardensFurniture extends JavaPlugin {
         plugin = this;
         gardensPlayers = getServer().getPluginManager().getPlugin("GardensPlayers");
 
-        // load factories
-        customBlockFactory = new CustomBlockFactory();
-        customItemFactory = new CustomItemFactory();
-
-        // load custom items
+        // load custom item configs
         ConfigUtil.loadConfigs();
-        itemRegistry = new ItemRegistry();
 
+        // load registry
+        itemRegistry = new ItemRegistry();
+        itemRegistry.assembleItems();
 
         // register handlers
         CommandHandler.registerCommands();

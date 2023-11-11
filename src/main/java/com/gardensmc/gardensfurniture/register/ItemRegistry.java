@@ -16,9 +16,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import static com.gardensmc.gardensfurniture.GardensFurniture.customItemFactory;
-
 public class ItemRegistry {
+
+    public CustomItemFactory customItemFactory;
+    public CustomBlockFactory customBlockFactory;
 
     private final HashMap<String, CustomItem> customItems = new HashMap<>();
 
@@ -27,15 +28,17 @@ public class ItemRegistry {
     public final HashMap<String, String> customNoteBlocks = new HashMap<>();
 
     public ItemRegistry() {
-        assembleItems();
+        customItemFactory = new CustomItemFactory();
+        customBlockFactory = new CustomBlockFactory();
     }
 
-    private void assembleItems() {
+    public void assembleItems() {
         for (Configuration config : ConfigUtil.all_items) {
             for (String key : config.getKeys(false)) {
                 ConfigurationSection section = config.getConfigurationSection(key);
                 if (section != null) {
                     CustomItem customItem = customItemFactory.createCustomItem(key, section);
+                    System.out.println("creating item: " + customItem.getIdentifier());
                     customItems.put(key, customItem);
                 }
             }

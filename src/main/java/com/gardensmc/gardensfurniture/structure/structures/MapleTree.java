@@ -1,7 +1,6 @@
 package com.gardensmc.gardensfurniture.structure.structures;
 
 import com.gardensmc.gardensfurniture.structure.TStructure;
-import org.bukkit.Location;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -12,11 +11,6 @@ import static java.lang.Math.round;
  * Mirrors autumnal_birch_tree_procedural.tesf
  */
 public class MapleTree extends TStructure {
-
-
-//    public MapleTree(Location location) {
-//        super(location);
-//    }
 
     @Override
     public void generate() {

@@ -1,7 +1,17 @@
 package com.gardensmc.gardensfurniture.custom.block;
 
+import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.custom.item.CustomItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
+import com.gardensmc.gardensfurniture.store.FurnitureStore;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -80,5 +90,44 @@ public class CustomTripwireBlock extends CustomBlock {
 
     public boolean isLarge() {
         return large;
+    }
+
+    @Override
+    public boolean placeBlock(CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
+        Block block = location.getBlock();
+        // ensure below block is placeable
+        if (!getPlaceable().isEmpty()) {
+            Block below = block.getRelative(blockFace.getOppositeFace());
+            if (!getPlaceable().contains(below.getType())) {
+                return false;
+            }
+        }
+
+        if (isLarge()) {
+            // fail if not placing on ground since it is easiest to ensure top block is removed this way
+            if (blockFace != BlockFace.UP) {
+                return false;
+            }
+
+            // ensure air block above
+            Block top = block.getRelative(blockFace);
+            if (top.getType() != Material.AIR) return false;
+
+            // ensure tripwire top is registered
+            if (GardensFurniture.itemRegistry.getItem("tripwire_top") == null) {
+                return false;
+            }
+
+            // place blank tripwire as hitbox
+            top.setType(Material.TRIPWIRE);
+            FurnitureStore.INSTANCE.addFurnitureStore(top, "tripwire_top");
+        }
+
+
+        block.setType(Material.TRIPWIRE);
+        FurnitureStore.INSTANCE.addFurnitureStore(block, customItem.getIdentifier());
+
+        Bukkit.getPluginManager().callEvent(new CustomBlockPlaceEvent(player, customItem, block));
+        return true;
     }
 }

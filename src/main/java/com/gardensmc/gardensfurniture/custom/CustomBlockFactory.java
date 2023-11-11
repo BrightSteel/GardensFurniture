@@ -4,8 +4,6 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.*;
 import org.bukkit.configuration.ConfigurationSection;
 
-import java.util.HashMap;
-
 public class CustomBlockFactory {
 
     public CustomBlock createCustomBlock(String item_identifier, ConfigurationSection blockSection) {
@@ -28,7 +26,8 @@ public class CustomBlockFactory {
                 GardensFurniture.itemRegistry.customNoteBlocks.put(customLeavesBlock.getDistance() + "," + customLeavesBlock.isPersistent(), item_identifier);
                 customBlock = customLeavesBlock;
             }
-            default -> customBlock = new CustomBlock(blockSection);
+            case ITEM_FRAME -> customBlock = new CustomItemFrameBlock(blockSection);
+            default -> throw new RuntimeException("Unknown customBlockType: " + type);
         }
         return customBlock;
     }
