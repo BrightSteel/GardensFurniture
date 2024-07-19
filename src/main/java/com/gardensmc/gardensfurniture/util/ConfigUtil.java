@@ -7,11 +7,14 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ConfigUtil {
 
-    public static List<Configuration> all_items = new ArrayList<>();
+    public static Map<String, Configuration> all_items = new HashMap<>();
+    public static Configuration generationMappings;
 
     public static FileConfiguration itemsYaml, itemSaverYaml;
 
@@ -23,6 +26,9 @@ public class ConfigUtil {
 
         File itemSaverFile = getYMLFile("item_saver.yml");
         itemSaverYaml = YamlConfiguration.loadConfiguration(itemSaverFile);
+
+        File generationMappingFile = getYMLFile("generation_mappings.yml");
+        generationMappings = YamlConfiguration.loadConfiguration(generationMappingFile);
     }
 
     public static void saveItemSaverYaml() {
@@ -39,13 +45,15 @@ public class ConfigUtil {
         itemSaverYaml = YamlConfiguration.loadConfiguration(itemSaverFile);
     }
 
-    public static List<Configuration> getAllConfigs(String directory) {
+    public static Map<String, Configuration> getAllConfigs(String directory) {
         File file = new File(GardensFurniture.plugin.getDataFolder(), directory);
         File[] sub_files = file.listFiles();
 
-        List<Configuration> configs = new ArrayList<>();
+        Map<String, Configuration> configs = new HashMap<>();
         for (File sub : sub_files) {
-            configs.add(YamlConfiguration.loadConfiguration(sub));
+            if (!sub.getName().contains(".DS_Store")) {
+                configs.put(sub.getName(), YamlConfiguration.loadConfiguration(sub));
+            }
         }
 
         return configs;

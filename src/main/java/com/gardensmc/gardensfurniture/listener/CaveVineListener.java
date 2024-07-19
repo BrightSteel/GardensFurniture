@@ -6,6 +6,8 @@ import com.gardensmc.gardensfurniture.custom.block.CustomCaveVineBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineDirectional;
 import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
+import com.gardensmc.gardensfurniture.store.FurnitureStore;
+import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -21,6 +23,8 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 public class CaveVineListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOW)
@@ -31,8 +35,7 @@ public class CaveVineListener implements Listener {
         if (itemStack.getType() == Material.GLOW_BERRIES) {
             CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
             if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
-                Chunk chunk = e.getBlockPlaced().getChunk();
-                chunk.getPersistentDataContainer().set(new NamespacedKey("gardens", e.getBlockPlaced().getX() + "." + e.getBlockPlaced().getY() + "." + e.getBlockPlaced().getZ()), PersistentDataType.STRING, customCaveVineItem.getIdentifier());
+                FurnitureStoreHandler.INSTANCE.addFurnitureStore(e.getBlockPlaced(), new FurnitureStore(customCaveVineItem.getIdentifier()));
             }
         }
     }
@@ -40,14 +43,26 @@ public class CaveVineListener implements Listener {
     @EventHandler(priority = EventPriority.LOW)
     public void onVineGrowth(BlockSpreadEvent e) {
         if (e.isCancelled()) return;
-        Block nextBlock = e.getNewState().getBlock();
         Block root = e.getSource();
         if (root.getType() != Material.CAVE_VINES && root.getType() != Material.CAVE_VINES_PLANT) return;
 
         CustomItem customItem = CustomBlockManager.getItemFromLeaves(root);
 
             if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
-                nextBlock.getChunk().getPersistentDataContainer().set(new NamespacedKey("gardens", nextBlock.getX() + "." + nextBlock.getY() + "." + nextBlock.getZ()), PersistentDataType.STRING, customCaveVineItem.getIdentifier());
+                Block nextBlock = e.getNewState().getBlock();
+                // state change of current vine
+                if (nextBlock.getLocation().equals(root.getLocation())) {
+                    if (e.getNewState().getBlockData() instanceof CaveVines caveVines) {
+                        // prevent glowing server-side - actual issue it seems like...
+                        if (!customCaveVineItem.getPlant().allowGlow() && caveVines.isBerries()) {
+                            e.setCancelled(true);
+                        }
+                    }
+                } else if (customItem.getIdentifier().equalsIgnoreCase("willow_vines") && ThreadLocalRandom.current().nextInt(10) != 0) { // lower growth rate to 1/10 chance
+                    e.setCancelled(true);
+                } else {
+                    FurnitureStoreHandler.INSTANCE.addFurnitureStore(nextBlock, new FurnitureStore(customCaveVineItem.getIdentifier()));
+                }
             }
             else if (customItem instanceof CustomCaveVineDirectional) {
                 e.setCancelled(true);
@@ -83,8 +98,7 @@ public class CaveVineListener implements Listener {
             if (blockPlaceEvent.isCancelled()) return;
 
             // update chunk nbt
-            Chunk chunk = target.getChunk();
-            chunk.getPersistentDataContainer().set(new NamespacedKey("gardens", target.getX() + "." + target.getY() + "." + target.getZ()), PersistentDataType.STRING, customCaveVineItem.getIdentifier());
+            FurnitureStoreHandler.INSTANCE.addFurnitureStore(target, new FurnitureStore(customCaveVineItem.getIdentifier()));
 
             // swing hand
             switch (e.getHand()) {
@@ -95,10 +109,10 @@ public class CaveVineListener implements Listener {
             // place item
             CustomCaveVineBlock b = customCaveVineItem.getPlant();
             target.setType(Material.CAVE_VINES);
-            BlockData blockData = target.getBlockData();
-            if (blockData instanceof CaveVines caveVines) {
-                caveVines.setAge(b.getAge());
-            }
+//            BlockData blockData = target.getBlockData();
+//            if (blockData instanceof CaveVines caveVines) {
+//                caveVines.setAge(b.getAge());
+//            }
 
             // use up item
             if (e.getPlayer().getGameMode() == GameMode.SURVIVAL) {

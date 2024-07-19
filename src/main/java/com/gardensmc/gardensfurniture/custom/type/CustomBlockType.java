@@ -5,5 +5,7 @@ public enum CustomBlockType {
     LEAVES,
     CAVE_VINE,
     TRIPWIRE,
-    ITEM_FRAME
+    ITEM_FRAME,
+    CRYSTAL,
+    BUDDING
 }

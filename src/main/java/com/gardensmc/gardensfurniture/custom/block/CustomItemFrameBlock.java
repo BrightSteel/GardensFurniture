@@ -4,19 +4,23 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
+import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.util.ItemFrameUtil;
 import de.tr7zw.nbtapi.NBTEntity;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CustomItemFrameBlock extends CustomBlock {
 
@@ -25,24 +29,38 @@ public class CustomItemFrameBlock extends CustomBlock {
     }
 
     @Override
-    public boolean placeBlock(CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
+    public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
         World world = location.getWorld();
         if (world != null) {
 
             ItemFrame itemFrame = (ItemFrame) location.getWorld().spawnEntity(location, EntityType.ITEM_FRAME);
             itemFrame.setVisible(false);
-            itemFrame.setFacingDirection(blockFace, true);
+            itemFrame.setFacingDirection(getFacingDirection(location, blockFace), true);
             ItemStack display = GardensFurniture.itemRegistry.buildItem(customItem);
             String custom_name = null;
             ItemMeta itemMeta = display.getItemMeta();
             if (itemMeta != null) {
+                // remove name
                 custom_name = itemMeta.getDisplayName();
                 itemMeta.setDisplayName(null);
+
+                // conserve color
+                Color leatherColor = getColor(customItem, location, heldItem);
+                if (leatherColor != null && itemMeta instanceof LeatherArmorMeta leatherArmorMeta) {
+                    leatherArmorMeta.setColor(leatherColor);
+                }
+
                 display.setItemMeta(itemMeta);
             }
             itemFrame.setItem(display);
             if (blockFace == BlockFace.UP || blockFace == BlockFace.DOWN) {
-                itemFrame.setRotation(ItemFrameUtil.getRotationFromFacing(player));
+                if (player != null) {
+                    itemFrame.setRotation(ItemFrameUtil.getRotationFromFacing(player));
+                } else {
+                    var rotations = Rotation.values();
+                    int rand = ThreadLocalRandom.current().nextInt(rotations.length);
+                    itemFrame.setRotation(rotations[rand]);
+                }
             }
             if (custom_name != null) {
                 NBTEntity nbtEntity = new NBTEntity(itemFrame);
@@ -58,5 +76,47 @@ public class CustomItemFrameBlock extends CustomBlock {
             return true;
         }
         return false;
+    }
+
+    private BlockFace getFacingDirection(Location location, BlockFace givenFace) {
+        if (givenFace != null) {
+            return givenFace;
+        }
+        // place on solid blockFace
+        var block = location.getBlock();
+        var facePriority = List.of(BlockFace.DOWN, BlockFace.UP, BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST);
+        for (BlockFace face : facePriority) {
+            var relative = block.getRelative(face);
+            if (!relative.getType().isAir() && relative.getType().isBlock() && relative.getType() != Material.ARMOR_STAND && relative.getType() != Material.ITEM_FRAME) {
+                return face.getOppositeFace();
+            }
+        }
+        return BlockFace.UP; // maybe fail instead ?
+    }
+
+    private Color getColor(CustomPlaceableItem customPlaceableItem, Location location, ItemStack heldItem) {
+        // placing via terra - try to get item as nearest one of that type if in a patch
+        if (heldItem == null) {
+            ItemStack nearestItem = location.getWorld().getNearbyEntities(location, 2, 3, 2, e -> e instanceof ItemFrame)
+                    .stream()
+                    .map(entity -> ((ItemFrame) entity).getItem())
+                    .filter(item -> {
+                        var customItem = GardensFurniture.itemRegistry.getCustomItem(item);
+                        return customItem != null && (
+                                // ie crystal_large should work with crystal
+                                customItem.getIdentifier().contains(customPlaceableItem.getIdentifier())
+                                || customPlaceableItem.getIdentifier().contains(customItem.getIdentifier())
+                        );
+                    })
+                    .findFirst().orElse(null);
+            heldItem = nearestItem;
+        }
+
+        if (heldItem != null && heldItem.getItemMeta() instanceof LeatherArmorMeta originalLeather) {
+            return originalLeather.getColor();
+        } else {
+            // random color
+            return Color.fromRGB(ThreadLocalRandom.current().nextInt(0xFFFFFF));
+        }
     }
 }

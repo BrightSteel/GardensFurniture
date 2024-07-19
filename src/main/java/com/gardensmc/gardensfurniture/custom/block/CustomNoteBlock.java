@@ -3,12 +3,15 @@ package com.gardensmc.gardensfurniture.custom.block;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
+import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 public class CustomNoteBlock extends CustomBlock {
 
@@ -38,7 +41,7 @@ public class CustomNoteBlock extends CustomBlock {
 
 
     @Override
-    public boolean placeBlock(CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
+    public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
         Block block = location.getBlock();
         CustomBlockPlaceEvent event = new CustomBlockPlaceEvent(player, customItem, block);
         Bukkit.getPluginManager().callEvent(event);

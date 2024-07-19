@@ -1,26 +1,66 @@
 package com.gardensmc.gardensfurniture.store;
 
-import org.bukkit.Chunk;
-import org.bukkit.NamespacedKey;
-import org.bukkit.block.Block;
-import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
-
 public class FurnitureStore {
 
-    public static FurnitureStore INSTANCE = new FurnitureStore();
+    private final String itemIdentifier;
 
-    public void addFurnitureStore(Block block, String identifier) {
-        Chunk chunk = block.getChunk();
-        PersistentDataContainer data = chunk.getPersistentDataContainer();
-        data.set(new NamespacedKey("gardens", block.getX() + "." + block.getY() + "." + block.getZ()),  PersistentDataType.STRING, identifier);
+    // optionally stored variables
+    private int multiplier;
+    private String facing;
+
+    public FurnitureStore(String itemIdentifier) {
+        this.itemIdentifier = itemIdentifier;
     }
 
-    public void removeFurnitureStore(Block block) {
-        Chunk chunk = block.getChunk();
-        PersistentDataContainer data = chunk.getPersistentDataContainer();
-        data.remove(new NamespacedKey("gardens", block.getX() + "." + block.getY() + "." + block.getZ()));
+    public FurnitureStore(
+            String itemIdentifier,
+            int multiplier,
+            String facing
+    ) {
+        this.itemIdentifier = itemIdentifier;
+        this.multiplier = multiplier;
+        this.facing = facing;
     }
 
+    public String getItemIdentifier() {
+        return itemIdentifier;
+    }
 
+    public String getFacing() {
+        return facing;
+    }
+
+    public int getMultiplier() {
+        return multiplier;
+    }
+
+    public static class FurnitureStoreBuilder {
+
+        private final String itemIdentifier;
+
+        private int multiplier;
+        private String facing;
+
+        public FurnitureStoreBuilder(String itemIdentifier) {
+            this.itemIdentifier = itemIdentifier;
+        }
+
+        public FurnitureStoreBuilder withFacing(String facing) {
+            this.facing = facing;
+            return this;
+        }
+
+        public FurnitureStoreBuilder withMultiplier(int multiplier) {
+            this.multiplier = multiplier;
+            return this;
+        }
+
+        public FurnitureStore build() {
+            return new FurnitureStore(
+                    itemIdentifier,
+                    multiplier,
+                    facing
+            );
+        }
+    }
 }

@@ -4,12 +4,12 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.*;
 import com.gardensmc.gardensfurniture.custom.block.CustomLeavesBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomTripwireBlock;
-import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineDirectional;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomMultiplierItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.events.CustomBlockBreakEvent;
-import com.gardensmc.gardensfurniture.store.FurnitureStore;
+import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -22,14 +22,18 @@ import org.bukkit.inventory.ItemStack;
 
 public class CustomDropUtil {
 
+    // I guess this is a custom handler for tripwire? Why is it hidden in this util, there should be a factory or something
     public static void dropCustomItem(BlockBreakEvent e, CustomItem customItem, CustomTripwireBlock customTripwireBlock) {
         e.setDropItems(false);
         if (customItem.getIdentifier().equals("tripwire_top")) {
             Block bottom = e.getBlock().getRelative(BlockFace.DOWN);
+//            var furnitureStore = FurnitureStoreHandler.INSTANCE.getFurnitureStore(bottom);
+//            var tripItem = GardensFurniture.itemRegistry.getItem(furnitureStore.itemIdentifier());
+            // wait are we going to support multiplier big ones ?
             CustomItem tripItem = CustomBlockManager.getItemFromLeaves(bottom);
 
             // remove top from store
-            FurnitureStore.INSTANCE.removeFurnitureStore(e.getBlock());
+            FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
             if (tripItem != null) {
                 // drop item
                 ItemStack drop = GardensFurniture.itemRegistry.buildItem(tripItem);
@@ -38,7 +42,7 @@ public class CustomDropUtil {
                     e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), drop);
                 }
                 // remove bottom from store
-                FurnitureStore.INSTANCE.removeFurnitureStore(bottom);
+                FurnitureStoreHandler.INSTANCE.removeFurnitureStore(bottom);
             }
         }
         else {
@@ -46,15 +50,22 @@ public class CustomDropUtil {
                 // remove top component
                 Block top = e.getBlock().getRelative(BlockFace.UP);
                 top.setType(Material.AIR);
-                FurnitureStore.INSTANCE.removeFurnitureStore(top);
+                FurnitureStoreHandler.INSTANCE.removeFurnitureStore(top);
             }
 
             ItemStack drop = GardensFurniture.itemRegistry.buildItem(customItem);
+            int amountToDrop = 1;
+            if (customItem instanceof CustomMultiplierItem) {
+                // bottom's store
+                var furnitureStore = FurnitureStoreHandler.INSTANCE.getFurnitureStore(e.getBlock());
+                amountToDrop = furnitureStore.getMultiplier();
+            }
             if (drop != null) {
+                drop.setAmount(amountToDrop);
                 e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), drop);
             }
             // remove bottom from store
-            FurnitureStore.INSTANCE.removeFurnitureStore(e.getBlock());
+            FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
         }
     }
 
@@ -99,7 +110,7 @@ public class CustomDropUtil {
             Bukkit.getPluginManager().callEvent(new CustomBlockBreakEvent(e.getPlayer(), customItem, e.getBlock()));
             if (leaves) {
                 try {
-                    FurnitureStore.INSTANCE.removeFurnitureStore(e.getBlock());
+                    FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }

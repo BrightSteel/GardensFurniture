@@ -3,6 +3,7 @@ package com.gardensmc.gardensfurniture.custom;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
+import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import de.tr7zw.nbtapi.NBTEntity;
 import org.bukkit.*;
@@ -19,7 +20,7 @@ import java.util.Collection;
 
 public class CustomBlockManager {
 
-    public static boolean attemptPlacement(Player player, CustomPlaceableItem placeableItem, Location location, BlockFace blockFace, boolean persistent) {
+    public static boolean attemptPlacement(ItemStack heldItem, Player player, CustomPlaceableItem placeableItem, Location location, BlockFace blockFace, boolean persistent) {
         if (player != null) {
             if (!ProtectionUtil.canBuild(location, player)) {
                 return false;
@@ -32,7 +33,7 @@ public class CustomBlockManager {
 
         if (location.getBlock().getType() != Material.AIR) return false; // for terra gen
 
-        return placeableItem.placeBlock(player, location, blockFace, persistent);
+        return placeableItem.placeBlock(heldItem, player, location, blockFace, persistent);
     }
 
     private static boolean entityBlocking(Location loc) {
@@ -125,13 +126,8 @@ public class CustomBlockManager {
 
     @Nullable
     public static CustomItem getItemFromLeaves(Block block) {
-        String identifier = block.getChunk().getPersistentDataContainer().get(new NamespacedKey("gardens", block.getX() + "." + block.getY() + "." + block.getZ()), PersistentDataType.STRING);
-        if (identifier != null) {
-            String[] parts = identifier.split("\\.");
-            return GardensFurniture.itemRegistry.getItem(parts[0]);
-        }
-
-        return null;
+        var furnitureStore = FurnitureStoreHandler.INSTANCE.getFurnitureStore(block);
+        return GardensFurniture.itemRegistry.getItem(furnitureStore.getItemIdentifier());
     }
 
 }

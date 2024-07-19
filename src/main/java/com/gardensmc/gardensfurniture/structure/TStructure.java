@@ -43,7 +43,7 @@ public abstract class TStructure {
         Location loc = origin.clone().add(x, y, z);
         CustomItem customItem = GardensFurniture.itemRegistry.getItem(identifier);
         if (customItem instanceof CustomPlaceableItem placeableItem) {
-            CustomBlockManager.attemptPlacement(null, placeableItem, loc, BlockFace.UP, false);
+            CustomBlockManager.attemptPlacement(null, null, placeableItem, loc, BlockFace.UP, false);
         }
     }
 

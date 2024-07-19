@@ -1,9 +1,9 @@
 package com.gardensmc.gardensfurniture.custom.block;
 
-import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
+import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -12,6 +12,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.Leaves;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import javax.annotation.Nullable;
 
@@ -44,11 +45,11 @@ public class CustomLeavesBlock extends CustomBlock {
     }
 
     @Override
-    public boolean placeBlock(CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
+    public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
         Block block = location.getBlock();
         block.setType(Material.SPRUCE_LEAVES);
         try {
-            FurnitureStore.INSTANCE.addFurnitureStore(block, customItem.getIdentifier());
+            FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, furnitureStore);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -57,7 +58,7 @@ public class CustomLeavesBlock extends CustomBlock {
                 leaves.setPersistent(true);
             }
             else {
-                leaves.setDistance(1);
+                leaves.setDistance(7); // max for our decay detection
                 leaves.setPersistent(false);
             }
             block.setBlockData(leaves);

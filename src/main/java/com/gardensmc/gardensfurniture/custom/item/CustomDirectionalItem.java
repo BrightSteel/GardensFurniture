@@ -3,11 +3,13 @@ package com.gardensmc.gardensfurniture.custom.item;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockFactory;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
+import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
 
@@ -25,7 +27,7 @@ public class CustomDirectionalItem extends CustomPlaceableItem {
     }
 
     @Override
-    public boolean placeBlock(Player player, Location location, BlockFace blockFace, boolean persistent) {
+    public boolean placeBlock(ItemStack heldItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
        CustomBlock customBlock;
         switch (blockFace) {
                 case UP, DOWN -> customBlock = getY();
@@ -33,7 +35,7 @@ public class CustomDirectionalItem extends CustomPlaceableItem {
                 case NORTH, SOUTH -> customBlock = getZ();
                 default -> throw new RuntimeException("Unknown block face: " + blockFace);
             }
-        return customBlock.placeBlock(this, player, location, blockFace, persistent);
+        return customBlock.placeBlock(heldItem, this, player, location, blockFace, persistent, new FurnitureStore(getIdentifier()));
     }
 
     @Override

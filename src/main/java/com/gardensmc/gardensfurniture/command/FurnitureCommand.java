@@ -1,6 +1,7 @@
 package com.gardensmc.gardensfurniture.command;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.menu.FurnitureMenu;
 import com.gardensmc.gardensfurniture.permission.Permissions;
 import com.gardensmc.gardensfurniture.util.CommandSenderUtil;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
@@ -30,6 +31,8 @@ public class FurnitureCommand implements TabExecutor {
                 case "GIVE" -> executeGive(commandSender, args);
                 case "INFO" -> executeInfo(commandSender);
             }
+        } else if (commandSender instanceof Player player) {
+            new FurnitureMenu(player).open();
         } else {
             return false;
         }

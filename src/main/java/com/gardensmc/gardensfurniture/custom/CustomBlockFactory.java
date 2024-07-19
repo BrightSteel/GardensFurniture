@@ -28,6 +28,8 @@ public class CustomBlockFactory {
                 customBlock = customLeavesBlock;
             }
             case ITEM_FRAME -> customBlock = new CustomItemFrameBlock(blockSection);
+            case CRYSTAL -> customBlock = new CustomCrystalBlock(blockSection, item_identifier);
+            case BUDDING -> customBlock = new CustomBuddingBlock(blockSection, item_identifier);
             default -> throw new RuntimeException("Unknown customBlockType: " + type);
         }
         return customBlock;

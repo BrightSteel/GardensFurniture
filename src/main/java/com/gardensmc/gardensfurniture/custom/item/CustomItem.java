@@ -1,6 +1,5 @@
 package com.gardensmc.gardensfurniture.custom.item;
 
-import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -13,6 +12,8 @@ public class CustomItem {
     private final List<String> lore;
     private final int custom_model;
     private final Material material;
+    private final boolean dyeable;
+    private final String color;
 
     public CustomItem(String identifier, ConfigurationSection itemSection) {
         this.identifier = identifier;
@@ -20,6 +21,8 @@ public class CustomItem {
         this.custom_model = itemSection.getInt("custom_model");
         this.material = parseMaterial(itemSection.getString("material"));
         this.lore = itemSection.getStringList("lore");
+        this.dyeable = itemSection.getBoolean("dyeable");
+        this.color = itemSection.getString("color");
     }
 
     public int getCustomModel() {
@@ -42,6 +45,14 @@ public class CustomItem {
         return identifier;
     }
 
+    public boolean isDyeable() {
+        return dyeable;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
     protected Material parseMaterial(String material_str) {
         Material material = Material.PAPER;
         if (material_str != null) {
@@ -52,6 +63,11 @@ public class CustomItem {
             }
         }
         return material;
+    }
+
+    @Override
+    public int hashCode() {
+        return identifier.hashCode();
     }
 }
 

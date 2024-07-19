@@ -1,10 +1,11 @@
 package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.custom.block.CustomCaveVineBlock;
-import com.gardensmc.gardensfurniture.custom.block.CustomLeavesBlock;
-import com.gardensmc.gardensfurniture.custom.block.CustomTripwireBlock;
+import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
+import com.gardensmc.gardensfurniture.custom.block.*;
 import com.gardensmc.gardensfurniture.custom.item.*;
+import com.gardensmc.gardensfurniture.store.FurnitureStore;
+import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerAbstract;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
@@ -13,22 +14,23 @@ import com.github.retrooper.packetevents.protocol.world.chunk.BaseChunk;
 import com.github.retrooper.packetevents.protocol.world.chunk.Column;
 import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
 import com.github.retrooper.packetevents.protocol.world.states.enums.East;
+import com.github.retrooper.packetevents.protocol.world.states.enums.Instrument;
 import com.github.retrooper.packetevents.protocol.world.states.enums.North;
 import com.github.retrooper.packetevents.protocol.world.states.enums.South;
 import com.github.retrooper.packetevents.protocol.world.states.enums.West;
+import com.github.retrooper.packetevents.protocol.world.states.type.StateType;
 import com.github.retrooper.packetevents.protocol.world.states.type.StateTypes;
 import com.github.retrooper.packetevents.util.Vector3i;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockChange;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChunkData;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerMultiBlockChange;
-import org.bukkit.Chunk;
-import org.bukkit.Location;
-import org.bukkit.NamespacedKey;
-import org.bukkit.World;
+import org.bukkit.*;
+import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataType;
 
 import javax.annotation.Nullable;
+import java.util.Set;
 
 /**
  * Written by referencing HMCLeaves https://github.com/HibiscusMC/HMCLeaves/blob/master/src/main/java/io/github/fisher2911/hmcleaves/packet/BlockListener.java
@@ -36,6 +38,14 @@ import javax.annotation.Nullable;
  * Realistic Seasons and other biome-adders basically caused clients to crash with that
  */
 public class BlockPacketListener {
+
+    // invisible crystal types
+    private final Set<StateType> crystalTypes = Set.of(
+            StateTypes.SMALL_AMETHYST_BUD,
+            StateTypes.MEDIUM_AMETHYST_BUD,
+            StateTypes.LARGE_AMETHYST_BUD,
+            StateTypes.AMETHYST_CLUSTER
+    );
 
     public void register() {
         PacketEvents.getAPI().getEventManager().registerListener(new PacketListenerAbstract() {
@@ -116,17 +126,41 @@ public class BlockPacketListener {
                         }
                         else if (blockState.getType() == StateTypes.TRIPWIRE) {
                             CustomItem customItem = getCustomItemFromPos(world, realX, realY, realZ);
-                            if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomTripwireBlock customTripwireBlock) {
+                            if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomTripwireBlock) {
+                                var customTripwireBlock = getCustomTripwireBlock(customBlockItem, world, realX, realY, realZ);
                                 baseChunk.set(x, y, z, getBlockStateFromTripwire(customTripwireBlock));
-                            }
-                            else {
+                            } else {
                                 baseChunk.set(x, y, z, getNormalTripwire(blockState));
+                            }
+                        } else if (blockState.getType() == StateTypes.BUDDING_AMETHYST) {
+                            CustomItem customItem = getCustomItemFromPos(world, realX, realY, realZ);
+                            if (customItem instanceof CustomPlaceableItem placeableItem && placeableItem.getCustomBlock() instanceof CustomBuddingBlock budding) {
+                                baseChunk.set(x, y, z, getBlockStateFromNote(budding));
+                            }
+                        } else if (crystalTypes.contains(blockState.getType())) {
+                            var crystalBlock = getCustomCrystalFromPos(world, realX, realY, realZ);
+                            if (crystalBlock != null) {
+                                // if this is collision glitchy we can use barriers
+                                baseChunk.set(x, y, z, StateTypes.AIR.createBlockState());
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    private CustomTripwireBlock getCustomTripwireBlock(CustomPlaceableItem customPlaceableItem, World world, int x, int y, int z) {
+        if (customPlaceableItem instanceof CustomMultiplierItem customMultiplierItem) {
+            var furnitureStore = getStoreFromPos(world, x, y, z);
+            int multiplier = furnitureStore.getMultiplier();
+            return (CustomTripwireBlock) customMultiplierItem.getCustomBlock(multiplier);
+        } else if (customPlaceableItem instanceof CustomFacingItem customFacingItem) {
+            var furnitureStore = getStoreFromPos(world, x, y, z);
+            String facing = furnitureStore.getFacing();
+            return (CustomTripwireBlock) customFacingItem.getCustomBlock(facing);
+        }
+        return (CustomTripwireBlock) customPlaceableItem.getCustomBlock();
     }
 
     private CustomCaveVineBlock getHiddenCaveBlock(String identifier, CustomCaveVineDirectional customCaveVineDirectional) {
@@ -142,19 +176,32 @@ public class BlockPacketListener {
     }
 
     @Nullable
-    private CustomItem getCustomItemFromPos(World world, int x, int y, int z) {
-        String identifier = getIdentifierFromPos(world, x, y, z);
-        if (identifier != null) {
-            // remove hidden parts
-            String[] parts = identifier.split("\\.");
-            return GardensFurniture.itemRegistry.getItem(parts[0]);
+    private CustomCrystalBlock getCustomCrystalFromPos(World world, int x, int y, int z) {
+        Location location = new Location(world, x, y, z);
+        var itemFrame = CustomBlockManager.getBlock(location);
+        if (itemFrame != null) {
+            var customItem = GardensFurniture.itemRegistry.getCustomItem(itemFrame.getItem());
+            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
+                return crystalBlock;
+            }
         }
         return null;
     }
 
-    private String getIdentifierFromPos(World world, int x, int y, int z) {
+    @Nullable
+    private CustomItem getCustomItemFromPos(World world, int x, int y, int z) {
+        return GardensFurniture.itemRegistry.getItem(getIdentifierFromPos(world, x, y, z));
+    }
+
+    private FurnitureStore getStoreFromPos(World world, int x, int y, int z) {
         Chunk chunk = world.getChunkAt(new Location(world, x, y, z));
-        return chunk.getPersistentDataContainer().get(new NamespacedKey("gardens", x + "." + y + "." + z), PersistentDataType.STRING);
+        return FurnitureStoreHandler.INSTANCE.getFurnitureStore(chunk, x, y, z);
+    }
+
+    private String getIdentifierFromPos(World world, int x, int y, int z) {
+        var store = getStoreFromPos(world, x, y, z);
+        if (store == null) return null;
+        return store.getItemIdentifier();
     }
 
     private boolean handleBlockChange(WrapperPlayServerBlockChange packet, Player player) {
@@ -181,7 +228,8 @@ public class BlockPacketListener {
         }
         else if (blockState.getType() == StateTypes.TRIPWIRE) {
             CustomItem customItem = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
-            if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomTripwireBlock customTripwireBlock) {
+            if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomTripwireBlock) {
+                var customTripwireBlock = getCustomTripwireBlock(customBlockItem, player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
                 WrappedBlockState blockState1 = getBlockStateFromTripwire(customTripwireBlock);
                 PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
                         player,
@@ -265,7 +313,8 @@ public class BlockPacketListener {
             }
             else if (blockState1.getType() == StateTypes.TRIPWIRE) {
                 CustomItem customItem = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
-                if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomTripwireBlock customTripwireBlock) {
+                if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomTripwireBlock) {
+                    var customTripwireBlock = getCustomTripwireBlock(customBlockItem, player.getWorld(), block.getX(), block.getY(), block.getZ());
                     WrappedBlockState blockState = getBlockStateFromTripwire(customTripwireBlock);
                     block.setBlockState(blockState);
                 }
@@ -310,7 +359,9 @@ public class BlockPacketListener {
     private WrappedBlockState getBlockStateFromVine(CustomCaveVineBlock customCaveVineBlock, boolean berries) {
         WrappedBlockState blockState = StateTypes.CAVE_VINES.createBlockState();
         blockState.setAge(customCaveVineBlock.getAge());
-        blockState.setBerries(berries);
+        if (customCaveVineBlock.allowGlow()) {
+            blockState.setBerries(berries); // only send berry state if custom vine allows glow
+        }
         return blockState;
     }
 
@@ -321,12 +372,19 @@ public class BlockPacketListener {
         return blockState;
     }
 
+    private WrappedBlockState getBlockStateFromNote(CustomNoteBlock customNoteBlock) {
+        var blockState = StateTypes.NOTE_BLOCK.createBlockState();
+        blockState.setNote(customNoteBlock.getNote());
+        blockState.setInstrument(Instrument.valueOf(customNoteBlock.getInstrument().toUpperCase()));
+        return blockState;
+    }
+
     private WrappedBlockState getBlockStateFromTripwire(CustomTripwireBlock customTripwireBlock) {
         WrappedBlockState blockState = StateTypes.TRIPWIRE.createBlockState();
         blockState.setNorth(North.valueOf(String.valueOf(customTripwireBlock.isNorth()).toUpperCase()));
         blockState.setSouth(South.valueOf(String.valueOf(customTripwireBlock.isSouth()).toUpperCase()));
         blockState.setEast(East.valueOf(String.valueOf(customTripwireBlock.isEast()).toUpperCase()));
-        blockState.setWest(West.valueOf(String.valueOf(customTripwireBlock.isEast()).toUpperCase()));
+        blockState.setWest(West.valueOf(String.valueOf(customTripwireBlock.isWest()).toUpperCase()));
         blockState.setDisarmed(customTripwireBlock.isDisarmed());
         blockState.setPowered(customTripwireBlock.isPowered());
         blockState.setAttached(customTripwireBlock.isAttached());

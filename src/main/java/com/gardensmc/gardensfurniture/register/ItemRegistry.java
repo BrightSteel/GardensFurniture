@@ -1,31 +1,37 @@
 package com.gardensmc.gardensfurniture.register;
 
 import com.gardensmc.gardensfurniture.custom.*;
+import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
+import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.util.ChatUtil;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import org.bukkit.ChatColor;
+import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 public class ItemRegistry {
 
     public CustomItemFactory customItemFactory;
     public CustomBlockFactory customBlockFactory;
 
-    private final HashMap<String, CustomItem> customItems = new HashMap<>();
+    private final Map<String, Set<CustomItem>> customItemByCategory = new HashMap<>();
+    private final Map<String, CustomItem> customItems = new HashMap<>();
 
     // also can be for leaves too: distance,persistent -> identifier
     // note,instrument,powered -> custom_item_identifier
-    public final HashMap<String, String> customNoteBlocks = new HashMap<>();
+    public final Map<String, String> customNoteBlocks = new HashMap<>();
+
+    public final CrystalRegistry crystalRegistry = new CrystalRegistry();
 
     public ItemRegistry() {
         customItemFactory = new CustomItemFactory();
@@ -33,12 +39,19 @@ public class ItemRegistry {
     }
 
     public void assembleItems() {
-        for (Configuration config : ConfigUtil.all_items) {
+        for (Map.Entry<String, Configuration> entry : ConfigUtil.all_items.entrySet()) {
+            String name = entry.getKey();
+            var config = entry.getValue();
             for (String key : config.getKeys(false)) {
                 ConfigurationSection section = config.getConfigurationSection(key);
                 if (section != null) {
                     CustomItem customItem = customItemFactory.createCustomItem(key, section);
                     customItems.put(key, customItem);
+
+                    registerCrystalIfPresent(customItem);
+
+                    Set<CustomItem> categoryItems = customItemByCategory.computeIfAbsent(name, s -> new HashSet<>());
+                    categoryItems.add(customItem);
                 }
             }
         }
@@ -46,6 +59,15 @@ public class ItemRegistry {
 
     public List<String> getItemIdentifiers() {
         return customItems.keySet().stream().toList();
+    }
+
+    @Nullable
+    public Set<CustomItem> getCustomItemsByCategory(String category) {
+        return customItemByCategory.get(category);
+    }
+
+    public Set<String> getItemCategories() {
+        return customItemByCategory.keySet();
     }
 
     @Nullable
@@ -76,6 +98,12 @@ public class ItemRegistry {
                     meta.setLore(hexLore);
                 }
 
+                // color
+                if (customItem.getColor() != null && meta instanceof LeatherArmorMeta leatherArmorMeta) {
+                    // todo make this actually use the color with manual map of string -> color; or use rgb
+                    leatherArmorMeta.setColor(Color.AQUA);
+                }
+
                 itemStack.setItemMeta(meta);
             }
             return itemStack;
@@ -85,6 +113,9 @@ public class ItemRegistry {
 
     public void reload() {
         customItems.clear();
+        customItemByCategory.clear();
+        customNoteBlocks.clear();
+        crystalRegistry.clear();
         assembleItems();
     }
 
@@ -105,6 +136,12 @@ public class ItemRegistry {
             return customItems.get(identifier);
         }
         return null;
+    }
+
+    private void registerCrystalIfPresent(CustomItem customItem) {
+        if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
+            crystalRegistry.addCrystalToMap(crystalBlock.getCrystalId(), crystalBlock.getType(), customItem.getIdentifier());
+        }
     }
 
 }

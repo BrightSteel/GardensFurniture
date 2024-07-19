@@ -16,14 +16,11 @@ import net.minecraft.world.EnumHand;
 import net.minecraft.world.item.context.ItemActionContext;
 import net.minecraft.world.phys.MovingObjectPositionBlock;
 import net.minecraft.world.phys.Vec3D;
-import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.NoteBlock;
-import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_20_R1.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -31,6 +28,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
 
 public class PlayerListener implements Listener {
 
@@ -84,14 +82,15 @@ public class PlayerListener implements Listener {
         if (e.getHand() == null) return;
 
         // handle placement of custom items
-        Location location = getLocationFromBlockFace(e.getClickedBlock().getLocation(), e.getBlockFace());
+        Location clickedLocation = e.getClickedBlock().getLocation();
+        Location location = getLocationFromBlockFace(clickedLocation, e.getBlockFace());
         if (location.getBlock().getType() != Material.AIR) return;
 
         CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
         if (customItem != null) {
             if (!ProtectionUtil.canBuild(location, e.getPlayer())) return;
             if (customItem instanceof CustomPlaceableItem placeableItem) {
-                boolean placed = CustomBlockManager.attemptPlacement(e.getPlayer(), placeableItem, location, e.getBlockFace(), true);
+                boolean placed = CustomBlockManager.attemptPlacement(e.getItem(), e.getPlayer(), placeableItem, location, e.getBlockFace(), true);
                 if (placed) {
                     e.setCancelled(true);
                     switch (e.getHand()) {
@@ -125,6 +124,7 @@ public class PlayerListener implements Listener {
 
     private Location getLocationFromBlockFace(Location location, BlockFace blockFace) {
         Location temp = location;
+        // todo uhm why not use Block#getRelative ?
         switch (blockFace) {
             case UP -> temp.add(0, 1, 0);
             case WEST -> temp.add(-1, 0, 0);
@@ -147,6 +147,18 @@ public class PlayerListener implements Listener {
             if (customItem instanceof CustomPlaceableItem customBlockItem) {
                 e.setCancelled(true);
 
+                // dye if applicable
+                if (heldItem != null && heldItem.getType().toString().toUpperCase().endsWith("DYE")) {
+                    if (customItem.isDyeable() && itemFrame.getItem().getItemMeta() instanceof LeatherArmorMeta leatherMeta) {
+                        leatherMeta.setColor(getColorFromDye(heldItem.getType()));
+                        var item = itemFrame.getItem();
+                        item.setItemMeta(leatherMeta);
+                        itemFrame.setItem(item);
+                        heldItem.setAmount(heldItem.getAmount() - 1);
+                        return;
+                    }
+                }
+
                 if (customBlockItem.getCustomBlock().isSeated()) {
                     double offset = customBlockItem.getCustomBlock().getSeatOffset();
                     GSitAPI.createSeat(itemFrame.getLocation().getBlock(), e.getPlayer(), true, 0.0, offset, 0.0, e.getPlayer().getLocation().getYaw(), true);
@@ -157,5 +169,29 @@ public class PlayerListener implements Listener {
                 }
             }
         }
+    }
+
+    private Color getColorFromDye(Material material) {
+        Color color;
+        switch (material) {
+            case BLACK_DYE -> color = Color.BLACK;
+            case BLUE_DYE -> color = Color.BLUE;
+            case BROWN_DYE -> color = Color.fromRGB(160,82,45);
+            case CYAN_DYE -> color = Color.AQUA;
+            case GRAY_DYE -> color = Color.GRAY;
+            case GREEN_DYE -> color = Color.GREEN;
+            case LIGHT_BLUE_DYE -> color = Color.fromRGB(137, 207, 240);
+            case LIGHT_GRAY_DYE -> color = Color.SILVER;
+            case LIME_DYE -> color = Color.LIME;
+            case MAGENTA_DYE -> color = Color.FUCHSIA;
+            case ORANGE_DYE -> color = Color.ORANGE;
+            case PINK_DYE -> color = Color.fromRGB(255,192,203);
+            case PURPLE_DYE -> color = Color.PURPLE;
+            case RED_DYE -> color = Color.RED;
+            case WHITE_DYE -> color = Color.WHITE;
+            case YELLOW_DYE -> color = Color.YELLOW;
+            default -> throw new RuntimeException("Unknown dye: " + material);
+        }
+        return color;
     }
 }

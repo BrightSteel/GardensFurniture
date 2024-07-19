@@ -3,11 +3,13 @@ package com.gardensmc.gardensfurniture.custom.item;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomCaveVineBlock;
+import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
 
@@ -25,8 +27,8 @@ public class CustomCaveVineItem extends CustomPlaceableItem {
     }
 
     @Override
-    public boolean placeBlock(Player player, Location location, BlockFace blockFace, boolean persistent) {
-        return plant.placeBlock(this, player, location, blockFace, persistent);
+    public boolean placeBlock(ItemStack heldItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
+        return plant.placeBlock(heldItem, this, player, location, blockFace, persistent, new FurnitureStore(getIdentifier()));
     }
 
     @Override

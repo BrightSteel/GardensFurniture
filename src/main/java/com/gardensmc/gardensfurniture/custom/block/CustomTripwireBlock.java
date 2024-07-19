@@ -1,10 +1,10 @@
 package com.gardensmc.gardensfurniture.custom.block;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
+import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -12,6 +12,8 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -93,7 +95,7 @@ public class CustomTripwireBlock extends CustomBlock {
     }
 
     @Override
-    public boolean placeBlock(CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
+    public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
         Block block = location.getBlock();
         // ensure below block is placeable
         if (!getPlaceable().isEmpty()) {
@@ -120,12 +122,12 @@ public class CustomTripwireBlock extends CustomBlock {
 
             // place blank tripwire as hitbox
             top.setType(Material.TRIPWIRE);
-            FurnitureStore.INSTANCE.addFurnitureStore(top, "tripwire_top");
+            FurnitureStoreHandler.INSTANCE.addFurnitureStore(top, new FurnitureStore("tripwire_top"));
         }
 
 
         block.setType(Material.TRIPWIRE);
-        FurnitureStore.INSTANCE.addFurnitureStore(block, customItem.getIdentifier());
+        FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, furnitureStore);
 
         Bukkit.getPluginManager().callEvent(new CustomBlockPlaceEvent(player, customItem, block));
         return true;
