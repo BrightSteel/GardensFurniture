@@ -1,6 +1,13 @@
 package com.gardensmc.gardensfurniture.custom.block;
 
+import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.store.FurnitureStore;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 public class CustomCrystalBlock extends CustomItemFrameBlock {
 
@@ -26,10 +33,30 @@ public class CustomCrystalBlock extends CustomItemFrameBlock {
     }
 
     public enum CrystalType {
-        SMALL_BUD,
-        MEDIUM_BUD,
-        LARGE_BUD,
-        CLUSTER
+        SMALL_BUD(Material.SMALL_AMETHYST_BUD),
+        MEDIUM_BUD(Material.MEDIUM_AMETHYST_BUD),
+        LARGE_BUD(Material.LARGE_AMETHYST_BUD),
+        CLUSTER(Material.AMETHYST_CLUSTER);
+
+        private final Material crystalMaterial;
+
+        CrystalType(Material crystalMaterial) {
+            this.crystalMaterial = crystalMaterial;
+        }
+
+        public Material getCrystalMaterial() {
+            return crystalMaterial;
+        }
+    }
+
+    @Override
+    public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
+        boolean success = super.placeBlock(heldItem, customItem, player, location, blockFace, persistent, furnitureStore);
+        if (success) {
+            // place amethyst crystal server-side to handle growth
+            location.getBlock().setType(type.getCrystalMaterial());
+        }
+        return success;
     }
 }
 

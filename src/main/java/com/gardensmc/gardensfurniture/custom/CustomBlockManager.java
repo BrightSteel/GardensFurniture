@@ -1,8 +1,10 @@
 package com.gardensmc.gardensfurniture.custom;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
 import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
+import com.gardensmc.gardensfurniture.listener.BlockListener;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import de.tr7zw.nbtapi.NBTEntity;
@@ -31,7 +33,9 @@ public class CustomBlockManager {
             return false;
         }
 
-        if (location.getBlock().getType() != Material.AIR) return false; // for terra gen
+        var material = location.getBlock().getType();
+        if (material != Material.AIR && !BlockListener.isAmethystBud(material)) return false;
+        // for terra gen, and also make sure we allow amethyst buds to place under the server-side bud
 
         return placeableItem.placeBlock(heldItem, player, location, blockFace, persistent);
     }
@@ -70,6 +74,19 @@ public class CustomBlockManager {
             }
         }
 
+        return null;
+    }
+
+    @Nullable
+    public static CustomCrystalBlock getCustomCrystalFromPos(World world, int x, int y, int z) {
+        Location location = new Location(world, x, y, z);
+        var itemFrame = CustomBlockManager.getBlock(location);
+        if (itemFrame != null) {
+            var customItem = GardensFurniture.itemRegistry.getCustomItem(itemFrame.getItem());
+            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
+                return crystalBlock;
+            }
+        }
         return null;
     }
 

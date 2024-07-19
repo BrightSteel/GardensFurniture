@@ -1,14 +1,20 @@
 package com.gardensmc.gardensfurniture.listener;
 
+import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
+import com.gardensmc.gardensfurniture.custom.block.CustomBuddingBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.block.CustomTripwireBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import org.bukkit.Instrument;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.type.AmethystCluster;
 import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -16,6 +22,7 @@ import org.bukkit.event.block.*;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
 
 import static com.gardensmc.gardensfurniture.util.CustomDropUtil.dropCustomItem;
 
@@ -123,5 +130,53 @@ public class BlockListener implements Listener {
         if (e.getInstrument() != Instrument.PIANO) {
             e.setCancelled(true);
         }
+    }
+
+    @EventHandler
+    public void onBlockGrowth(BlockGrowEvent e) {
+        var block = e.getBlock();
+        if (isAmethystBud(block.getType())) {
+            AmethystCluster clusterData = (AmethystCluster) block.getBlockData(); // safe to cast?
+            var crystal = CustomBlockManager.getCustomCrystalFromPos(block.getWorld(), block.getX(), block.getY(), block.getZ());
+            if (crystal != null) {
+                var newMaterial = e.getNewState().getType();
+                // remove old crystal
+                CustomBlockManager.breakBlock(null, block.getLocation());
+                // place new crystal
+                var newIdentifier = GardensFurniture.itemRegistry.crystalRegistry.getCrystalIdentifier(crystal.getCrystalId(), getCrystalType(newMaterial));
+                CustomPlaceableItem newCustomItem = (CustomPlaceableItem) GardensFurniture.itemRegistry.getItem(newIdentifier);
+                CustomBlockManager.attemptPlacement(null, null, newCustomItem, block.getLocation(), clusterData.getFacing(), false);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onBlockSpread(BlockSpreadEvent e) {
+        var block = e.getSource();
+        if (block.getType() != Material.BUDDING_AMETHYST) {
+            return;
+        }
+        AmethystCluster clusterData = (AmethystCluster) e.getNewState().getBlockData(); // safe to cast ?
+        var customItem = CustomBlockManager.getItemFromLeaves(block);
+        if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomBuddingBlock buddingBlock) {
+            var crystalId = buddingBlock.getCrystalId();
+            var budIdentifier = GardensFurniture.itemRegistry.crystalRegistry.getCrystalIdentifier(crystalId, CustomCrystalBlock.CrystalType.SMALL_BUD);
+            if (budIdentifier == null) {
+                GardensFurniture.plugin.getLogger().log(Level.SEVERE, "Failed to get small bud for crystalId: " + crystalId);
+                return;
+            }
+            var customBudItem = GardensFurniture.itemRegistry.getItem(budIdentifier);
+            CustomBlockManager.attemptPlacement(null, null, (CustomPlaceableItem) customBudItem, e.getNewState().getLocation(), clusterData.getFacing(), false);
+        }
+    }
+
+    public static boolean isAmethystBud(Material material) {
+        return material == Material.SMALL_AMETHYST_BUD
+                || material == Material.MEDIUM_AMETHYST_BUD
+                || material == Material.LARGE_AMETHYST_BUD;
+    }
+
+    private CustomCrystalBlock.CrystalType getCrystalType(Material material) {
+        return Arrays.stream(CustomCrystalBlock.CrystalType.values()).filter(crystalType -> crystalType.getCrystalMaterial() == material).findFirst().orElseThrow();
     }
 }

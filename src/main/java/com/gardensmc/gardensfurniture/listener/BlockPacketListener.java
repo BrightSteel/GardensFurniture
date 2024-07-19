@@ -32,6 +32,8 @@ import org.bukkit.persistence.PersistentDataType;
 import javax.annotation.Nullable;
 import java.util.Set;
 
+import static com.gardensmc.gardensfurniture.custom.CustomBlockManager.getCustomCrystalFromPos;
+
 /**
  * Written by referencing HMCLeaves https://github.com/HibiscusMC/HMCLeaves/blob/master/src/main/java/io/github/fisher2911/hmcleaves/packet/BlockListener.java
  * And by using code from SC2Listener that had to be retired because I couldn't figure out how to initialize the ViaVersion block palette correctly.
@@ -176,19 +178,6 @@ public class BlockPacketListener {
     }
 
     @Nullable
-    private CustomCrystalBlock getCustomCrystalFromPos(World world, int x, int y, int z) {
-        Location location = new Location(world, x, y, z);
-        var itemFrame = CustomBlockManager.getBlock(location);
-        if (itemFrame != null) {
-            var customItem = GardensFurniture.itemRegistry.getCustomItem(itemFrame.getItem());
-            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
-                return crystalBlock;
-            }
-        }
-        return null;
-    }
-
-    @Nullable
     private CustomItem getCustomItemFromPos(World world, int x, int y, int z) {
         return GardensFurniture.itemRegistry.getItem(getIdentifierFromPos(world, x, y, z));
     }
@@ -222,6 +211,27 @@ public class BlockPacketListener {
                 PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
                         player,
                         new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
+                );
+                return true;
+            }
+        }
+        else if (blockState.getType() == StateTypes.BUDDING_AMETHYST) {
+            CustomItem customItem = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
+            if (customItem instanceof CustomPlaceableItem placeableItem && placeableItem.getCustomBlock() instanceof CustomBuddingBlock customBuddingBlock) {
+                var bState = getBlockStateFromNote(customBuddingBlock);
+                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
+                        player,
+                        new WrapperPlayServerBlockChange(pos, bState.getGlobalId())
+                );
+                return true;
+            }
+        }
+        else if (crystalTypes.contains(blockState.getType())) {
+            var crystal = getCustomCrystalFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
+            if (crystal != null) {
+                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
+                        player,
+                        new WrapperPlayServerBlockChange(pos, StateTypes.AIR.createBlockState().getGlobalId())
                 );
                 return true;
             }
@@ -309,6 +319,18 @@ public class BlockPacketListener {
                 }
                 else {
                     block.setBlockState(getNormalLeaveState());
+                }
+            }
+            else if (blockState1.getType() == StateTypes.BUDDING_AMETHYST) {
+                CustomItem customItem = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
+                if (customItem instanceof CustomPlaceableItem placeableItem && placeableItem.getCustomBlock() instanceof CustomBuddingBlock buddingBlock) {
+                    block.setBlockState(getBlockStateFromNote(buddingBlock));
+                }
+            }
+            else if (crystalTypes.contains(blockState1.getType())) {
+                var crystal = getCustomCrystalFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
+                if (crystal != null) {
+                    block.setBlockState(StateTypes.AIR.createBlockState());
                 }
             }
             else if (blockState1.getType() == StateTypes.TRIPWIRE) {
