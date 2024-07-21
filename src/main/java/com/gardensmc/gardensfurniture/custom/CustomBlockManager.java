@@ -64,13 +64,23 @@ public class CustomBlockManager {
 
     @Nullable
     public static ItemFrame getBlock(Location location) {
+        return (ItemFrame) getEntityByClass(location, ItemFrame.class);
+    }
+
+    @Nullable
+    public static ItemDisplay getDisplayEntity(Location location) {
+        return (ItemDisplay) getEntityByClass(location, ItemDisplay.class);
+    }
+
+    @Nullable
+    public static Entity getEntityByClass(Location location, Class<? extends Entity> entityClass) {
         Collection<Entity> entities = location.getWorld().getNearbyEntities(location, 1, 1, 1);
         Block center = location.getBlock();
 
         for (Entity entity : entities) {
-            if (entity instanceof ItemFrame itemFrame) {
+            if (entityClass.isInstance(entity)) {
                 if (entity.getLocation().getBlock().getLocation().equals(center.getLocation()))
-                    return itemFrame;
+                    return entity;
             }
         }
 

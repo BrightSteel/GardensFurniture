@@ -1,7 +1,6 @@
 package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.*;
 import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
@@ -31,8 +30,6 @@ import org.bukkit.persistence.PersistentDataType;
 
 import javax.annotation.Nullable;
 import java.util.Set;
-
-import static com.gardensmc.gardensfurniture.custom.CustomBlockManager.getCustomCrystalFromPos;
 
 /**
  * Written by referencing HMCLeaves https://github.com/HibiscusMC/HMCLeaves/blob/master/src/main/java/io/github/fisher2911/hmcleaves/packet/BlockListener.java
@@ -139,13 +136,13 @@ public class BlockPacketListener {
                             if (customItem instanceof CustomPlaceableItem placeableItem && placeableItem.getCustomBlock() instanceof CustomBuddingBlock budding) {
                                 baseChunk.set(x, y, z, getBlockStateFromNote(budding));
                             }
-                        } else if (crystalTypes.contains(blockState.getType())) {
-                            var crystalBlock = getCustomCrystalFromPos(world, realX, realY, realZ);
-                            if (crystalBlock != null) {
-                                // if this is collision glitchy we can use barriers
-                                baseChunk.set(x, y, z, StateTypes.AIR.createBlockState());
-                            }
                         }
+//                        } else if (crystalTypes.contains(blockState.getType())) {
+//                            var crystalBlock = getCustomItemFromPos(world, realX, realY, realZ);
+//                            if (crystalBlock instanceof CustomPlaceableItem placeableItem && placeableItem.getCustomBlock() instanceof CustomCrystalBlock crystalBlock1) {
+//                                baseChunk.set(x, y, z, getBlockStateFromCrystal(blockState));
+//                            }
+//                        }
                     }
                 }
             }
@@ -226,16 +223,16 @@ public class BlockPacketListener {
                 return true;
             }
         }
-        else if (crystalTypes.contains(blockState.getType())) {
-            var crystal = getCustomCrystalFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
-            if (crystal != null) {
-                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
-                        player,
-                        new WrapperPlayServerBlockChange(pos, StateTypes.AIR.createBlockState().getGlobalId())
-                );
-                return true;
-            }
-        }
+//        else if (crystalTypes.contains(blockState.getType())) {
+//            var crystal = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
+//            if (crystal instanceof CustomPlaceableItem placeableItem && placeableItem.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
+//                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
+//                        player,
+//                        new WrapperPlayServerBlockChange(pos, getBlockStateFromCrystal(blockState).getGlobalId())
+//                );
+//                return true;
+//            }
+//        }
         else if (blockState.getType() == StateTypes.TRIPWIRE) {
             CustomItem customItem = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
             if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomTripwireBlock) {
@@ -327,12 +324,12 @@ public class BlockPacketListener {
                     block.setBlockState(getBlockStateFromNote(buddingBlock));
                 }
             }
-            else if (crystalTypes.contains(blockState1.getType())) {
-                var crystal = getCustomCrystalFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
-                if (crystal != null) {
-                    block.setBlockState(StateTypes.AIR.createBlockState());
-                }
-            }
+//            else if (crystalTypes.contains(blockState1.getType())) {
+//                var crystal = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
+//                if (crystal instanceof CustomPlaceableItem placeableItem && placeableItem.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
+//                    block.setBlockState(getBlockStateFromCrystal(blockState1));
+//                }
+//            }
             else if (blockState1.getType() == StateTypes.TRIPWIRE) {
                 CustomItem customItem = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
                 if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomTripwireBlock) {
@@ -378,6 +375,27 @@ public class BlockPacketListener {
 
     }
 
+    private WrappedBlockState getBlockStateFromCrystal(WrappedBlockState blockstate) {
+//        WrappedBlockState blockState = StateTypes.getByName(customCrystalBlock.getType().getCrystalMaterial().toString()).createBlockState();
+//        blockState.setWaterlogged(true);
+        WrappedBlockState chorusState = StateTypes.CHORUS_PLANT.createBlockState();
+        chorusState.setDown(false);
+        switch (blockstate.getFacing()) {
+            case WEST -> chorusState.setEast(East.TRUE);
+            case EAST -> chorusState.setWest(West.TRUE);
+            case SOUTH -> chorusState.setNorth(North.TRUE);
+            case NORTH -> chorusState.setSouth(South.TRUE);
+            case DOWN -> chorusState.setUp(true);
+        }
+//        blockState.setDown(true);
+//        blockState.setUp(true);
+//        blockState.setNorth(North.TRUE);
+//        blockState.setEast(East.TRUE);
+//        blockState.setWest(West.TRUE);
+//        blockState.setSouth(South.TRUE);
+        return chorusState;
+    }
+
     private WrappedBlockState getBlockStateFromVine(CustomCaveVineBlock customCaveVineBlock, boolean berries) {
         WrappedBlockState blockState = StateTypes.CAVE_VINES.createBlockState();
         blockState.setAge(customCaveVineBlock.getAge());
@@ -418,6 +436,11 @@ public class BlockPacketListener {
         blockstate.setPowered(false);
         blockstate.setDisarmed(false);
         return blockstate;
+    }
+
+    private WrappedBlockState getNormalAmethyst(WrappedBlockState blockState) {
+        blockState.setWaterlogged(false);
+        return blockState;
     }
 
     private WrappedBlockState getNormalLeaveState() {

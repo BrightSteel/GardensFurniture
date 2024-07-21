@@ -7,5 +7,6 @@ public enum CustomBlockType {
     TRIPWIRE,
     ITEM_FRAME,
     CRYSTAL,
-    BUDDING
+    BUDDING,
+    DISPLAY
 }

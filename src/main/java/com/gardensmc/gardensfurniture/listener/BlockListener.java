@@ -16,6 +16,7 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.type.AmethystCluster;
 import org.bukkit.block.data.type.NoteBlock;
+import org.bukkit.entity.ItemFrame;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
@@ -141,7 +142,10 @@ public class BlockListener implements Listener {
             if (crystal != null) {
                 var newMaterial = e.getNewState().getType();
                 // remove old crystal
-                CustomBlockManager.breakBlock(null, block.getLocation());
+                ItemFrame itemFrame = CustomBlockManager.getBlock(block.getLocation());
+                if (itemFrame != null) {
+                    itemFrame.remove();
+                }
                 // place new crystal
                 var newIdentifier = GardensFurniture.itemRegistry.crystalRegistry.getCrystalIdentifier(crystal.getCrystalId(), getCrystalType(newMaterial));
                 CustomPlaceableItem newCustomItem = (CustomPlaceableItem) GardensFurniture.itemRegistry.getItem(newIdentifier);
@@ -167,6 +171,24 @@ public class BlockListener implements Listener {
             }
             var customBudItem = GardensFurniture.itemRegistry.getItem(budIdentifier);
             CustomBlockManager.attemptPlacement(null, null, (CustomPlaceableItem) customBudItem, e.getNewState().getLocation(), clusterData.getFacing(), false);
+        }
+    }
+
+    @EventHandler
+    public void onCrystalBreak(BlockBreakEvent e) {
+        if (e.isCancelled()) return;
+
+        var block = e.getBlock();
+        if (CustomCrystalBlock.isCrystalMaterial(block.getType())) {
+            var display = CustomBlockManager.getDisplayEntity(block.getLocation());
+            if (display != null) {
+                var customItem = GardensFurniture.itemRegistry.getCustomItem(display.getItemStack());
+                if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
+                    display.remove(); // remove custom crystal
+                    // remove furniture store
+                    FurnitureStoreHandler.INSTANCE.removeFurnitureStore(block);
+                }
+            }
         }
     }
 

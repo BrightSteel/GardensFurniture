@@ -30,6 +30,7 @@ public class CustomBlockFactory {
             case ITEM_FRAME -> customBlock = new CustomItemFrameBlock(blockSection);
             case CRYSTAL -> customBlock = new CustomCrystalBlock(blockSection, item_identifier);
             case BUDDING -> customBlock = new CustomBuddingBlock(blockSection, item_identifier);
+            case DISPLAY -> customBlock = new CustomDisplayBlock(blockSection);
             default -> throw new RuntimeException("Unknown customBlockType: " + type);
         }
         return customBlock;

@@ -3,16 +3,18 @@ package com.gardensmc.gardensfurniture.listener;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.*;
 import com.gardensmc.gardensfurniture.custom.block.CustomCaveVineBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineDirectional;
 import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
-import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.AmethystCluster;
 import org.bukkit.block.data.type.CaveVines;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -21,22 +23,33 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.persistence.PersistentDataType;
 
 import java.util.concurrent.ThreadLocalRandom;
 
 public class CaveVineListener implements Listener {
 
+    // cave vine and amethyst natural placing
     @EventHandler(priority = EventPriority.LOW)
     public void blockPlaceEvent(BlockPlaceEvent e) {
         if (e.isCancelled()) return;
 
+        var blockPlaced = e.getBlockPlaced();
         ItemStack itemStack = e.getItemInHand();
         if (itemStack.getType() == Material.GLOW_BERRIES) {
             CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
             if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
-                FurnitureStoreHandler.INSTANCE.addFurnitureStore(e.getBlockPlaced(), new FurnitureStore(customCaveVineItem.getIdentifier()));
+                FurnitureStoreHandler.INSTANCE.addFurnitureStore(blockPlaced, new FurnitureStore(customCaveVineItem.getIdentifier()));
             }
+        } else if (CustomCrystalBlock.isCrystalMaterial(itemStack.getType())) {
+            CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
+            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
+                // vanilla already placed the bud, let's place the item frame
+                AmethystCluster crystal = (AmethystCluster) blockPlaced.getBlockData();
+                crystalBlock.placeDisplayEntity(null, placeable, null, blockPlaced.getLocation(), crystal.getFacing(), false, null);
+                // furniture store
+                FurnitureStoreHandler.INSTANCE.addFurnitureStore(blockPlaced, new FurnitureStore(customItem.getIdentifier()));
+            }
+
         }
     }
 

@@ -1,14 +1,19 @@
 package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
+import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomDisplayBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
+import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import de.tr7zw.nbtapi.NBTEntity;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.entity.Interaction;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -39,6 +44,28 @@ public class EntityListener implements Listener {
     }
 
     @EventHandler
+    public void entityHitInteractionEntity(EntityDamageByEntityEvent e) {
+        if (e.isCancelled()) return;
+
+        if (e.getEntity() instanceof Interaction interaction && e.getDamager() instanceof Player player) {
+            var display = CustomBlockManager.getDisplayEntity(interaction.getLocation());
+            if (display == null) return;
+
+            var item = display.getItemStack();
+            if (item == null) return;
+
+            var customItem = GardensFurniture.itemRegistry.getCustomItem(item);
+            // chances are if there's an interaction entity it indeed has a hitbox, but might as well check
+            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
+                if (displayBlock.getHitbox() == CustomDisplayBlock.Hitbox.INTERACTION) {
+                    display.remove();
+                    display.getWorld().dropItemNaturally(display.getLocation(), item);
+                }
+            }
+        }
+    }
+
+    @EventHandler
     public void entityBreakItemFrame(EntityDamageByEntityEvent e) {
         if (e.isCancelled()) return;
 
@@ -57,6 +84,11 @@ public class EntityListener implements Listener {
                         if (ev.isCancelled()) {
                             return;
                         }
+
+                        if (customBlockItem.getCustomBlock() instanceof CustomCrystalBlock) {
+                            return; // only breakable by removing amethyst block
+                        }
+
                         NBTEntity nbtEntity = new NBTEntity(itemFrame);
                         String display = null;
                         if (nbtEntity.getPersistentDataContainer().hasKey("custom_name")) {
