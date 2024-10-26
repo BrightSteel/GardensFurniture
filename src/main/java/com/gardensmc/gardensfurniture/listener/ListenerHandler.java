@@ -26,7 +26,9 @@ public class ListenerHandler {
                 new ChunkListener(),
                 new EntityListener(),
                 new LeafListener(),
-                new PlayerListener()
+                new PlayerListener(),
+                new ArmorListener(),
+                new CustomBlockBreakListener()
         );
     }
 }

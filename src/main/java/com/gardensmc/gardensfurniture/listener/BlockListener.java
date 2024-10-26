@@ -2,24 +2,25 @@ package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
-import com.gardensmc.gardensfurniture.custom.block.CustomBuddingBlock;
-import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
+import com.gardensmc.gardensfurniture.custom.block.*;
 import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
-import com.gardensmc.gardensfurniture.custom.block.CustomTripwireBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.Instrument;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.type.AmethystCluster;
 import org.bukkit.block.data.type.NoteBlock;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.Arrays;
 import java.util.List;
@@ -40,6 +41,7 @@ public class BlockListener implements Listener {
 
         Material[] packetTypes = new Material[] {
                 Material.SPRUCE_LEAVES,
+                Material.CHERRY_LEAVES,
                 Material.CAVE_VINES,
                 Material.CAVE_VINES_PLANT
         };
@@ -60,6 +62,8 @@ public class BlockListener implements Listener {
         }
 
     }
+
+
 
     @EventHandler
     public void updateBlockState(BlockPhysicsEvent e) {
@@ -138,18 +142,26 @@ public class BlockListener implements Listener {
         var block = e.getBlock();
         if (isAmethystBud(block.getType())) {
             AmethystCluster clusterData = (AmethystCluster) block.getBlockData(); // safe to cast?
-            var crystal = CustomBlockManager.getCustomCrystalFromPos(block.getWorld(), block.getX(), block.getY(), block.getZ());
+            var crystal = CustomBlockManager.getDisplayEntity(block.getLocation());
+            var newMaterial = e.getNewState().getType();
             if (crystal != null) {
-                var newMaterial = e.getNewState().getType();
+                var model = crystal.getItemStack().getItemMeta().getCustomModelData();
+                var crystalId = GardensFurniture.itemRegistry.crystalRegistry.getCrystalIdentifier(CustomCrystalBlock.CrystalType.fromMaterial(block.getType()), model);
+                var customItem = GardensFurniture.itemRegistry.getItem(crystalId);
                 // remove old crystal
-                ItemFrame itemFrame = CustomBlockManager.getBlock(block.getLocation());
-                if (itemFrame != null) {
-                    itemFrame.remove();
+                crystal.remove();
+                if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
+                    // place new crystal
+                    var newIdentifier = GardensFurniture.itemRegistry.crystalRegistry.getCrystalIdentifier(crystalBlock.getCrystalId(), getCrystalType(newMaterial));
+                    CustomPlaceableItem newCustomItem = (CustomPlaceableItem) GardensFurniture.itemRegistry.getItem(newIdentifier);
+                    crystalBlock.placeDisplayEntity(newCustomItem, block.getLocation(), clusterData.getFacing());
+                } else {
+                    // normal amethyst - rotated to better fit display "fixed" setting
+                    var amethystBudDupe = GardensFurniture.itemRegistry.getItem(newMaterial.toString().toLowerCase());
+                    if (amethystBudDupe instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
+                        displayBlock.placeBlock(null, placeable, null, e.getBlock().getLocation(), clusterData.getFacing(), false, null);
+                    }
                 }
-                // place new crystal
-                var newIdentifier = GardensFurniture.itemRegistry.crystalRegistry.getCrystalIdentifier(crystal.getCrystalId(), getCrystalType(newMaterial));
-                CustomPlaceableItem newCustomItem = (CustomPlaceableItem) GardensFurniture.itemRegistry.getItem(newIdentifier);
-                CustomBlockManager.attemptPlacement(null, null, newCustomItem, block.getLocation(), clusterData.getFacing(), false);
             }
         }
     }
@@ -160,35 +172,119 @@ public class BlockListener implements Listener {
         if (block.getType() != Material.BUDDING_AMETHYST) {
             return;
         }
-        AmethystCluster clusterData = (AmethystCluster) e.getNewState().getBlockData(); // safe to cast ?
+        AmethystCluster clusterData = (AmethystCluster) e.getNewState().getBlockData();
+        var newMaterial = e.getNewState().getType();
         var customItem = CustomBlockManager.getItemFromLeaves(block);
         if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomBuddingBlock buddingBlock) {
             var crystalId = buddingBlock.getCrystalId();
-            var budIdentifier = GardensFurniture.itemRegistry.crystalRegistry.getCrystalIdentifier(crystalId, CustomCrystalBlock.CrystalType.SMALL_BUD);
+            var budIdentifier = GardensFurniture.itemRegistry.crystalRegistry.getCrystalIdentifier(crystalId, CustomCrystalBlock.CrystalType.fromMaterial(newMaterial));
             if (budIdentifier == null) {
                 GardensFurniture.plugin.getLogger().log(Level.SEVERE, "Failed to get small bud for crystalId: " + crystalId);
                 return;
             }
             var customBudItem = GardensFurniture.itemRegistry.getItem(budIdentifier);
             CustomBlockManager.attemptPlacement(null, null, (CustomPlaceableItem) customBudItem, e.getNewState().getLocation(), clusterData.getFacing(), false);
+        } else {
+            // normal amethyst - rotated to better fit display "fixed" setting
+            var amethystBudDupe = GardensFurniture.itemRegistry.getItem(newMaterial.toString().toLowerCase());
+            if (amethystBudDupe instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
+                displayBlock.placeBlock(null, placeable, null, e.getBlock().getLocation(), clusterData.getFacing(), false, null);
+            }
         }
     }
 
     @EventHandler
-    public void onCrystalBreak(BlockBreakEvent e) {
+    public void onCrystalOrCarpetBreak(BlockBreakEvent e) {
         if (e.isCancelled()) return;
 
         var block = e.getBlock();
-        if (CustomCrystalBlock.isCrystalMaterial(block.getType())) {
+        if (CustomCrystalBlock.isCrystalMaterial(block.getType()) || block.getType() == Material.BROWN_CARPET) {
             var display = CustomBlockManager.getDisplayEntity(block.getLocation());
             if (display != null) {
-                var customItem = GardensFurniture.itemRegistry.getCustomItem(display.getItemStack());
-                if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
-                    display.remove(); // remove custom crystal
-                    // remove furniture store
-                    FurnitureStoreHandler.INSTANCE.removeFurnitureStore(block);
+                // remove crystal one tick later to allow blockDropItem event to still see the entity
+                Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, display::remove, 1L);
+            }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onCarpetDrop(BlockDropItemEvent e) {
+        var block = e.getBlock(); // air
+        if (e.getBlockState().getType() == Material.BROWN_CARPET) {
+            var display = CustomBlockManager.getDisplayEntity(block.getLocation());
+            if (display == null || display.getItemStack() == null) return; // in-case we WE it in or something
+            var customItem = GardensFurniture.itemRegistry.getCustomItem(display.getItemStack());
+            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomCarpetBlock) {
+                for (Item item : e.getItems()) {
+                    var count = item.getItemStack().getAmount();
+                    if (item.getItemStack().getType() == Material.BROWN_CARPET) {
+                        var itemStack = GardensFurniture.itemRegistry.buildItem(customItem);
+                        if (itemStack != null) {
+                            itemStack.setAmount(count);
+                            item.setItemStack(itemStack);
+                        }
+                    }
                 }
             }
+        }
+    }
+
+    @EventHandler
+    public void onCrystalDrop(BlockDropItemEvent e) {
+        if (e.isCancelled()) return;
+
+        var block = e.getBlock(); // AIR at this point
+        String customCrystalId = null;
+        if (e.getBlockState().getType() == Material.BUDDING_AMETHYST) {
+            var customItem = CustomBlockManager.getItemFromLeaves(block);
+            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomBuddingBlock buddingBlock) {
+                customCrystalId = buddingBlock.getCrystalId();
+            }
+        } else if (CustomCrystalBlock.isCrystalMaterial(e.getBlockState().getType())) {
+            var display = CustomBlockManager.getDisplayEntity(block.getLocation());
+            var model = display.getItemStack().getItemMeta().getCustomModelData();
+            var crystalId = GardensFurniture.itemRegistry.crystalRegistry.getCrystalIdentifier(CustomCrystalBlock.CrystalType.fromMaterial(display.getItemStack().getType()), model);
+            var customItem = GardensFurniture.itemRegistry.getItem(crystalId);
+            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
+                customCrystalId = crystalBlock.getCrystalId();
+            }
+        }
+
+        if (customCrystalId != null) {
+            for (Item item : e.getItems()) {
+               var itemStack = item.getItemStack();
+               var count = itemStack.getAmount();
+               ItemStack crystalItemStack = null;
+               if (itemStack.getType() == Material.AMETHYST_SHARD) {
+                   crystalItemStack = GardensFurniture.itemRegistry.buildItem(customCrystalId.toLowerCase() + "_shard");
+               } else if (CustomCrystalBlock.isCrystalMaterial(itemStack.getType())) {
+                   var crystalType = CustomCrystalBlock.CrystalType.fromMaterial(itemStack.getType());
+                   var crystalIdentifier = GardensFurniture.itemRegistry.crystalRegistry.getCrystalIdentifier(customCrystalId, crystalType);
+                   crystalItemStack = GardensFurniture.itemRegistry.buildItem(crystalIdentifier);
+               }
+
+               if (crystalItemStack != null) {
+                   crystalItemStack.setAmount(count);
+                   item.setItemStack(crystalItemStack);
+               }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onCrystalPhysics(BlockPhysicsEvent e) {
+        if (e.isCancelled()) return;
+
+        if (e.getSourceBlock().getType() == Material.AIR && CustomCrystalBlock.isCrystalMaterial(e.getBlock().getType())) {
+            Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> {
+                // call once block has actually broken
+                if (e.getBlock().getType() == Material.AIR) {
+                    var display = CustomBlockManager.getDisplayEntity(e.getBlock().getLocation());
+                    if (display != null) {
+                        display.remove();
+                    }
+                }
+            }, 1);
         }
     }
 

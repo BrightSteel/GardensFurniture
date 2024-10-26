@@ -3,13 +3,16 @@ package com.gardensmc.gardensfurniture;
 import com.gardensmc.gardensfurniture.command.CommandHandler;
 import com.gardensmc.gardensfurniture.custom.CustomBlockFactory;
 import com.gardensmc.gardensfurniture.custom.CustomItemFactory;
+import com.gardensmc.gardensfurniture.listener.ChunkListener;
 import com.gardensmc.gardensfurniture.listener.ListenerHandler;
+import com.gardensmc.gardensfurniture.loader.ChunkFurnitureLoader;
 import com.gardensmc.gardensfurniture.register.ItemRegistry;
 import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.settings.PacketEventsSettings;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -51,5 +54,8 @@ public class GardensFurniture extends JavaPlugin {
 
         // init packet events
         PacketEvents.getAPI().init();
+
+//        Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, ChunkFurnitureLoader.INSTANCE::tickChunkFurnitureLoader, 0, 1);
+//        Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, ChunkFurnitureLoader.INSTANCE::tickChunkStats, 0, 100);
     }
 }

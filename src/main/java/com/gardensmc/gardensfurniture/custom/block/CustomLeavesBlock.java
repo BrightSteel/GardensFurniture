@@ -22,13 +22,17 @@ public class CustomLeavesBlock extends CustomBlock {
     private final boolean persistent;
 
     private final String sapling;
+    private final LeavesType leavesType;
 
     public CustomLeavesBlock(ConfigurationSection blockSection, String customBlockName) {
         super(blockSection);
         ConfigurationSection leavesSection = getConfigSectionOrThrow(blockSection, "leaves_data", customBlockName);
         this.distance = leavesSection.getInt("distance");
         this.persistent = leavesSection.getBoolean("persistent");
-        this.sapling = blockSection.getString("sapling");
+        this.sapling = blockSection.getString("sapling"); // want this under block section ??
+        this.leavesType = leavesSection.contains("type")
+                ? LeavesType.valueOf(leavesSection.getString("type").toUpperCase())
+                : LeavesType.SPRUCE;
     }
 
     public int getDistance() {
@@ -44,12 +48,21 @@ public class CustomLeavesBlock extends CustomBlock {
         return sapling;
     }
 
+    public LeavesType getLeavesType() {
+        return leavesType;
+    }
+
+    @Override
+    public boolean isSolid() {
+        return true;
+    }
+
     @Override
     public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
         Block block = location.getBlock();
-        block.setType(Material.SPRUCE_LEAVES);
+        block.setType(getLeavesType().getMaterial());
         try {
-            FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, furnitureStore);
+            FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, furnitureStore, heldItem != null);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -67,5 +80,20 @@ public class CustomLeavesBlock extends CustomBlock {
         Bukkit.getPluginManager().callEvent(new CustomBlockPlaceEvent(player, customItem, block));
 
         return true;
+    }
+
+    public enum LeavesType {
+        SPRUCE(Material.SPRUCE_LEAVES),
+        CHERRY(Material.CHERRY_LEAVES);
+
+        private final Material material;
+
+        LeavesType(Material material) {
+            this.material = material;
+        }
+
+        public Material getMaterial() {
+            return material;
+        }
     }
 }

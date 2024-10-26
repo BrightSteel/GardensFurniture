@@ -2,8 +2,7 @@ package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.*;
-import com.gardensmc.gardensfurniture.custom.block.CustomCaveVineBlock;
-import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
+import com.gardensmc.gardensfurniture.custom.block.*;
 import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineDirectional;
 import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
@@ -16,6 +15,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.type.AmethystCluster;
 import org.bukkit.block.data.type.CaveVines;
+import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -25,8 +25,11 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.logging.Level;
 
 public class CaveVineListener implements Listener {
+
+    private static final String AMETHYST_BUDDING_ID = "AMETHYST";
 
     // cave vine and amethyst natural placing
     @EventHandler(priority = EventPriority.LOW)
@@ -38,19 +41,53 @@ public class CaveVineListener implements Listener {
         if (itemStack.getType() == Material.GLOW_BERRIES) {
             CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
             if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
-                FurnitureStoreHandler.INSTANCE.addFurnitureStore(blockPlaced, new FurnitureStore(customCaveVineItem.getIdentifier()));
+                FurnitureStoreHandler.INSTANCE.addFurnitureStore(blockPlaced, new FurnitureStore(customCaveVineItem.getIdentifier()), true);
             }
         } else if (CustomCrystalBlock.isCrystalMaterial(itemStack.getType())) {
             CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
+            AmethystCluster crystal = (AmethystCluster) blockPlaced.getBlockData();
+            // make sure budding block matches bud if placing against one
+            boolean budding = e.getBlockAgainst().getType() == Material.BUDDING_AMETHYST;
             if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
+                if (budding && !crystalBlock.getCrystalId().equals(getBuddingCrystalId(e.getBlockAgainst()))) {
+                    e.setCancelled(true); // in-compatible budding
+                    return;
+                }
                 // vanilla already placed the bud, let's place the item frame
-                AmethystCluster crystal = (AmethystCluster) blockPlaced.getBlockData();
-                crystalBlock.placeDisplayEntity(null, placeable, null, blockPlaced.getLocation(), crystal.getFacing(), false, null);
+                crystalBlock.placeDisplayEntity(placeable, blockPlaced.getLocation(), crystal.getFacing());
                 // furniture store
-                FurnitureStoreHandler.INSTANCE.addFurnitureStore(blockPlaced, new FurnitureStore(customItem.getIdentifier()));
+//                FurnitureStoreHandler.INSTANCE.addFurnitureStore(blockPlaced, new FurnitureStore(customItem.getIdentifier()));
+            } else {
+                if (budding && !getBuddingCrystalId(e.getBlockAgainst()).equals(AMETHYST_BUDDING_ID)) {
+                    e.setCancelled(true);
+                    return;
+                }
+                // normal amethyst - rotated to better fit display "fixed" setting
+                var amethystBudDupe = GardensFurniture.itemRegistry.getItem(itemStack.getType().toString().toLowerCase());
+                if (amethystBudDupe instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
+                    displayBlock.placeBlock(null, placeable, null, blockPlaced.getLocation(), crystal.getFacing(), false, null);
+                }
             }
 
+        } else if (itemStack.getType() == Material.BROWN_CARPET) {
+            var carpetDupe = GardensFurniture.itemRegistry.getItem("brown_carpet");
+            if (carpetDupe == null) {
+                Bukkit.getLogger().log(Level.SEVERE, "Missing brown carpet dupe!");
+            } else if (carpetDupe instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
+                displayBlock.placeBlock(null, placeable, null, blockPlaced.getLocation(), BlockFace.UP, false, null);
+            }
         }
+    }
+
+    private String getBuddingCrystalId(Block block) {
+        var furnitureStore = FurnitureStoreHandler.INSTANCE.getFurnitureStore(block);
+        if (furnitureStore.getItemIdentifier() != null) {
+            var customBudding = GardensFurniture.itemRegistry.getItem(furnitureStore.getItemIdentifier());
+            if (customBudding instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomBuddingBlock buddingBlock) {
+                return buddingBlock.getCrystalId();
+            }
+        }
+        return AMETHYST_BUDDING_ID;
     }
 
     @EventHandler(priority = EventPriority.LOW)
@@ -74,7 +111,7 @@ public class CaveVineListener implements Listener {
                 } else if (customItem.getIdentifier().equalsIgnoreCase("willow_vines") && ThreadLocalRandom.current().nextInt(10) != 0) { // lower growth rate to 1/10 chance
                     e.setCancelled(true);
                 } else {
-                    FurnitureStoreHandler.INSTANCE.addFurnitureStore(nextBlock, new FurnitureStore(customCaveVineItem.getIdentifier()));
+                    FurnitureStoreHandler.INSTANCE.addFurnitureStore(nextBlock, new FurnitureStore(customCaveVineItem.getIdentifier()), true);
                 }
             }
             else if (customItem instanceof CustomCaveVineDirectional) {
@@ -111,7 +148,7 @@ public class CaveVineListener implements Listener {
             if (blockPlaceEvent.isCancelled()) return;
 
             // update chunk nbt
-            FurnitureStoreHandler.INSTANCE.addFurnitureStore(target, new FurnitureStore(customCaveVineItem.getIdentifier()));
+            FurnitureStoreHandler.INSTANCE.addFurnitureStore(target, new FurnitureStore(customCaveVineItem.getIdentifier()), true);
 
             // swing hand
             switch (e.getHand()) {

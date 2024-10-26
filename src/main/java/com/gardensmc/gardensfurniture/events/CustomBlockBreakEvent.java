@@ -1,6 +1,7 @@
 package com.gardensmc.gardensfurniture.events;
 
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
@@ -9,14 +10,13 @@ import org.bukkit.event.HandlerList;
 public class CustomBlockBreakEvent extends Event {
 
     private Player player;
-    private CustomItem customItem;
+    private CustomPlaceableItem customItem;
 
     private Block block;
 
     private static final HandlerList HANDLERS = new HandlerList();
 
-
-    public CustomBlockBreakEvent(Player player, CustomItem customItem, Block block) {
+    public CustomBlockBreakEvent(Player player, CustomPlaceableItem customItem, Block block) {
         this.player = player;
         this.customItem = customItem;
         this.block = block;
@@ -27,7 +27,7 @@ public class CustomBlockBreakEvent extends Event {
         return HANDLERS;
     }
 
-    public CustomItem getCustomItem() {
+    public CustomPlaceableItem getCustomItem() {
         return customItem;
     }
 

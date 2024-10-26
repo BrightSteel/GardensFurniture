@@ -107,7 +107,7 @@ public class CustomDropUtil {
                 }
             }
 
-            Bukkit.getPluginManager().callEvent(new CustomBlockBreakEvent(e.getPlayer(), customItem, e.getBlock()));
+            Bukkit.getPluginManager().callEvent(new CustomBlockBreakEvent(e.getPlayer(), customBlockItem, e.getBlock()));
             if (leaves) {
                 try {
                     FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());

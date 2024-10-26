@@ -8,5 +8,6 @@ public enum CustomBlockType {
     ITEM_FRAME,
     CRYSTAL,
     BUDDING,
-    DISPLAY
+    DISPLAY,
+    CARPET
 }

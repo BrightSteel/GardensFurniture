@@ -1,7 +1,7 @@
 package com.gardensmc.gardensfurniture.events;
 
-import com.gardensmc.gardensfurniture.custom.item.CustomItem;
-import org.bukkit.entity.ItemFrame;
+import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.itementity.ItemEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
@@ -10,19 +10,17 @@ import org.bukkit.event.HandlerList;
 public class FurnitureBreakEvent extends Event implements Cancellable {
 
     private Player player;
-    private CustomItem customItem;
-
-    private ItemFrame itemFrame;
+    private CustomPlaceableItem customItem;
+    private ItemEntity itemEntity;
 
     private boolean cancelled;
 
     private static final HandlerList HANDLERS = new HandlerList();
 
-
-    public FurnitureBreakEvent(Player player, CustomItem customItem, ItemFrame itemFrame) {
+    public FurnitureBreakEvent(Player player, CustomPlaceableItem customItem, ItemEntity itemEntity) {
         this.player = player;
         this.customItem = customItem;
-        this.itemFrame = itemFrame;
+        this.itemEntity = itemEntity;
     }
 
     @Override
@@ -34,7 +32,7 @@ public class FurnitureBreakEvent extends Event implements Cancellable {
         return HANDLERS;
     }
 
-    public CustomItem getCustomItem() {
+    public CustomPlaceableItem getCustomItem() {
         return customItem;
     }
 
@@ -42,8 +40,8 @@ public class FurnitureBreakEvent extends Event implements Cancellable {
         return player;
     }
 
-    public ItemFrame getItemFrame() {
-        return itemFrame;
+    public ItemEntity getItemEntity() {
+        return itemEntity;
     }
 
     @Override

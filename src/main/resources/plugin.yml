@@ -7,6 +7,6 @@ commands:
   furniture:
     description: Furniture command
     usage: /<command>
-depend: [GSit, NBTAPI, ProtocolLib, packetevents]
+depend: [GSit, NBTAPI, ProtocolLib, packetevents, ArmorEquipEvent]
 softdepend:
   - GardensPlayers

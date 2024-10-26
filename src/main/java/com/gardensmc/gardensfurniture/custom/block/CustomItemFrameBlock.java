@@ -29,6 +29,11 @@ public class CustomItemFrameBlock extends CustomBlock {
     }
 
     @Override
+    public boolean isSolid() {
+        return hasBarrier();
+    }
+
+    @Override
     public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
         World world = location.getWorld();
         if (world != null) {

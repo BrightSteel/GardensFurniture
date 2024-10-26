@@ -33,7 +33,8 @@ public class FurnitureCategoryMenu extends Menu {
         var customItems = GardensFurniture.itemRegistry.getCustomItemsByCategory(category);
         Objects.requireNonNull(customItems)
                 .stream()
-                .sorted(Comparator.comparing(CustomItem::getIdentifier))
+                .filter(CustomItem::showInMenu)
+//                .sorted(Comparator.comparing(CustomItem::getIdentifier))
                 .map(this::getGuiElement)
                 .forEach(group::addElement);
         gui.addElement(group);
@@ -41,7 +42,7 @@ public class FurnitureCategoryMenu extends Menu {
         gui.addElement(getPreviousButton());
         gui.addElement(new GuiPageElement(
                 'n',
-                new ItemStack(Material.STONE),
+                new ItemStack(Material.STICK),
                 GuiPageElement.PageAction.NEXT,
                 "Next")
         );
@@ -65,7 +66,7 @@ public class FurnitureCategoryMenu extends Menu {
     private StaticGuiElement getPreviousButton() {
         return new StaticGuiElement(
                 'b',
-                new ItemStack(Material.STONE),
+                new ItemStack(Material.STICK),
                 click -> {
                     boolean first = gui.getPageNumber(viewer) == 0;
                     if (first) {

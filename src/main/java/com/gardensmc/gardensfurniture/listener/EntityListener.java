@@ -8,6 +8,8 @@ import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
+import com.gardensmc.gardensfurniture.itementity.DisplayItemEntity;
+import com.gardensmc.gardensfurniture.itementity.FrameItemEntity;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import de.tr7zw.nbtapi.NBTEntity;
@@ -57,6 +59,11 @@ public class EntityListener implements Listener {
             var customItem = GardensFurniture.itemRegistry.getCustomItem(item);
             // chances are if there's an interaction entity it indeed has a hitbox, but might as well check
             if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
+                FurnitureBreakEvent ev = new FurnitureBreakEvent(player, placeable, new DisplayItemEntity(display));
+                Bukkit.getPluginManager().callEvent(ev);
+                if (ev.isCancelled()) {
+                    return;
+                }
                 if (displayBlock.getHitbox() == CustomDisplayBlock.Hitbox.INTERACTION) {
                     display.remove();
                     display.getWorld().dropItemNaturally(display.getLocation(), item);
@@ -79,7 +86,7 @@ public class EntityListener implements Listener {
                         e.setCancelled(true);
 
                         if (!ProtectionUtil.canBuild(e.getEntity().getLocation(), player)) return;
-                        FurnitureBreakEvent ev = new FurnitureBreakEvent(player, customItem, itemFrame);
+                        FurnitureBreakEvent ev = new FurnitureBreakEvent(player, customBlockItem, new FrameItemEntity(itemFrame));
                         Bukkit.getPluginManager().callEvent(ev);
                         if (ev.isCancelled()) {
                             return;

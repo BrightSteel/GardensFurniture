@@ -51,8 +51,10 @@ public class ConfigUtil {
 
         Map<String, Configuration> configs = new HashMap<>();
         for (File sub : sub_files) {
-            if (!sub.getName().contains(".DS_Store")) {
-                configs.put(sub.getName(), YamlConfiguration.loadConfiguration(sub));
+            var name = sub.getName();
+            var suffix = ".yml";
+            if (name.endsWith(suffix)) {
+                configs.put(name.substring(0, name.lastIndexOf(suffix)), YamlConfiguration.loadConfiguration(sub));
             }
         }
 

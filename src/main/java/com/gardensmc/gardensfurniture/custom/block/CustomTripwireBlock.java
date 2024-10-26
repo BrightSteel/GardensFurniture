@@ -95,7 +95,16 @@ public class CustomTripwireBlock extends CustomBlock {
     }
 
     @Override
+    public boolean isSolid() {
+        return true;
+    }
+
+    @Override
     public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
+        if (blockFace == null) {
+            blockFace = BlockFace.UP; // terra, lets use default direction
+        }
+
         Block block = location.getBlock();
         // ensure below block is placeable
         if (!getPlaceable().isEmpty()) {
@@ -122,12 +131,12 @@ public class CustomTripwireBlock extends CustomBlock {
 
             // place blank tripwire as hitbox
             top.setType(Material.TRIPWIRE);
-            FurnitureStoreHandler.INSTANCE.addFurnitureStore(top, new FurnitureStore("tripwire_top"));
+            FurnitureStoreHandler.INSTANCE.addFurnitureStore(top, new FurnitureStore("tripwire_top"), heldItem != null);
         }
 
 
         block.setType(Material.TRIPWIRE);
-        FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, furnitureStore);
+        FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, furnitureStore, heldItem != null);
 
         Bukkit.getPluginManager().callEvent(new CustomBlockPlaceEvent(player, customItem, block));
         return true;

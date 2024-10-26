@@ -19,7 +19,7 @@ public class CustomBlockFactory {
             case TRIPWIRE -> customBlock = new CustomTripwireBlock(blockSection, item_identifier);
             case NOTE -> {
                 CustomNoteBlock customNoteBlock = new CustomNoteBlock(blockSection, item_identifier);
-                GardensFurniture.itemRegistry.customNoteBlocks.put(customNoteBlock.getNote() + "," + customNoteBlock.getInstrument() + "," + customNoteBlock.isPowered(), item_identifier);
+                GardensFurniture.itemRegistry.customNoteBlocks.put(customNoteBlock.getNote() + "," + customNoteBlock.getInstrument().toUpperCase() + "," + customNoteBlock.isPowered(), item_identifier);
                 customBlock = customNoteBlock;
             }
             case LEAVES -> {
@@ -31,6 +31,7 @@ public class CustomBlockFactory {
             case CRYSTAL -> customBlock = new CustomCrystalBlock(blockSection, item_identifier);
             case BUDDING -> customBlock = new CustomBuddingBlock(blockSection, item_identifier);
             case DISPLAY -> customBlock = new CustomDisplayBlock(blockSection);
+            case CARPET -> customBlock = new CustomCarpetBlock(blockSection);
             default -> throw new RuntimeException("Unknown customBlockType: " + type);
         }
         return customBlock;

@@ -6,4 +6,5 @@ public class Permissions {
     public static String RELOAD = "gardens.furniture.reload";
     public static String FURNITURE_GIVE = "gardens.furniture.give";
     public static String FURNITURE_INFO = "gardens.furniture.info";
+    public static String LOAD_SPAWN_FURNITURE = "gardens.furniture.load.spawn";
 }

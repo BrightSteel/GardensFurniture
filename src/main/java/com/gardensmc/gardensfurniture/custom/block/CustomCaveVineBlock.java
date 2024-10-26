@@ -35,11 +35,16 @@ public class CustomCaveVineBlock extends CustomBlock {
     }
 
     @Override
+    public boolean isSolid() {
+        return false;
+    }
+
+    @Override
     public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
         if (heldItem != null && customItem.getMaterial() == Material.GLOW_BERRIES) return false; // place naturally (if not placed by terrain mapping)
 
         Block block = location.getBlock();
-        FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, furnitureStore);
+        FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, furnitureStore, heldItem != null);
         block.setType(Material.CAVE_VINES, true);
         return true;
     }

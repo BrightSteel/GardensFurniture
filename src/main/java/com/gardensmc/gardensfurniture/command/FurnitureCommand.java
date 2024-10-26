@@ -1,6 +1,7 @@
 package com.gardensmc.gardensfurniture.command;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.loader.ChunkFurnitureLoader;
 import com.gardensmc.gardensfurniture.menu.FurnitureMenu;
 import com.gardensmc.gardensfurniture.permission.Permissions;
 import com.gardensmc.gardensfurniture.util.CommandSenderUtil;
@@ -18,6 +19,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class FurnitureCommand implements TabExecutor {
 
@@ -30,6 +32,7 @@ public class FurnitureCommand implements TabExecutor {
                 case "GET" -> executeGet(commandSender, args);
                 case "GIVE" -> executeGive(commandSender, args);
                 case "INFO" -> executeInfo(commandSender);
+                case "LOAD_SPAWN" -> loadSpawnFurniture(commandSender);
             }
         } else if (commandSender instanceof Player player) {
             new FurnitureMenu(player).open();
@@ -125,6 +128,29 @@ public class FurnitureCommand implements TabExecutor {
             ItemStack heldItem = player.getInventory().getItemInMainHand();
             NBTItem nbtItem = new NBTItem(heldItem);
             player.sendMessage(nbtItem.toString());
+        }
+    }
+
+    private void loadSpawnFurniture(CommandSender commandSender) {
+        if (!commandSender.hasPermission(Permissions.LOAD_SPAWN_FURNITURE)) {
+            CommandSenderUtil.sendPermissionError(commandSender);
+        } else if (!(commandSender instanceof Player player)) {
+            CommandSenderUtil.sendPlayerOnly(commandSender);
+        } else {
+            commandSender.sendMessage("Loading spawn furniture...");
+            var centerChunk = player.getLocation().getChunk();
+            int i = 1;
+            for (int x = -2; x <= 2; x++) {
+                for (int z = -2; z <= 2; z++) {
+                    var chunk = centerChunk.getWorld().getChunkAt(centerChunk.getX() + x, centerChunk.getZ() + z);
+                    var snapshot = chunk.getChunkSnapshot();
+                    int finalI = i;
+                    CompletableFuture
+                            .runAsync(() -> ChunkFurnitureLoader.INSTANCE.processSnapshot(snapshot))
+                            .thenRun(() -> player.sendMessage("Loaded chunk furniture " + finalI + "/25"));
+                    i++;
+                }
+            }
         }
     }
 

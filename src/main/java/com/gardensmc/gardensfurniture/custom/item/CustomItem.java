@@ -1,11 +1,13 @@
 package com.gardensmc.gardensfurniture.custom.item;
 
+import com.github.retrooper.packetevents.protocol.recipe.CraftingCategory;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public class CustomItem {
+public class CustomItem implements Comparable<CustomItem> {
 
     private final String identifier;
     private final String display;
@@ -14,6 +16,9 @@ public class CustomItem {
     private final Material material;
     private final boolean dyeable;
     private final String color;
+    private final boolean shardblade;
+    private final CraftingCategory craft_category;
+    private final boolean show_in_menu;
 
     public CustomItem(String identifier, ConfigurationSection itemSection) {
         this.identifier = identifier;
@@ -23,6 +28,10 @@ public class CustomItem {
         this.lore = itemSection.getStringList("lore");
         this.dyeable = itemSection.getBoolean("dyeable");
         this.color = itemSection.getString("color");
+        this.shardblade = itemSection.getBoolean("shardblade");
+        var category = itemSection.getString("craft_category");
+        this.craft_category = category == null ? null : CraftingCategory.valueOf(category.toUpperCase());
+        this.show_in_menu = itemSection.getBoolean("show_in_menu", true);
     }
 
     public int getCustomModel() {
@@ -53,6 +62,18 @@ public class CustomItem {
         return color;
     }
 
+    public boolean isShardblade() {
+        return shardblade;
+    }
+
+    public CraftingCategory getCraftingCategory() {
+        return craft_category;
+    }
+
+    public boolean showInMenu() {
+        return show_in_menu;
+    }
+
     protected Material parseMaterial(String material_str) {
         Material material = Material.PAPER;
         if (material_str != null) {
@@ -68,6 +89,11 @@ public class CustomItem {
     @Override
     public int hashCode() {
         return identifier.hashCode();
+    }
+
+    @Override
+    public int compareTo(@NotNull CustomItem o) {
+        return identifier.compareTo(o.identifier);
     }
 }
 

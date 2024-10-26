@@ -12,18 +12,25 @@ import org.bukkit.event.block.LeavesDecayEvent;
 public class LeafListener implements Listener {
 
     @EventHandler
-    public void leafDecay(LeavesDecayEvent e) {
+    public void neverLeafDecay(LeavesDecayEvent e) {
         if (e.isCancelled()) return;
-
-        Block leafBlock = e.getBlock();
-        if (leafBlock.getBlockData() instanceof Leaves leaf && leafBlock.getType() == Material.SPRUCE_LEAVES) {
-            CustomItem customItem = CustomBlockManager.getItemFromLeaves(leafBlock);
-            if (customItem == null) return;
-            if (preventDecay(leafBlock, leaf)) {
-                e.setCancelled(true);
-            }
-        }
+        e.setCancelled(true);
     }
+
+    // Commenting out since just cancelling all decay for now
+//    @EventHandler
+//    public void leafDecay(LeavesDecayEvent e) {
+//        if (e.isCancelled()) return;
+//
+//        Block leafBlock = e.getBlock();
+//        if (leafBlock.getBlockData() instanceof Leaves leaf && leafBlock.getType() == Material.SPRUCE_LEAVES) {
+//            CustomItem customItem = CustomBlockManager.getItemFromLeaves(leafBlock);
+//            if (customItem == null) return;
+//            if (preventDecay(leafBlock, leaf)) {
+//                e.setCancelled(true);
+//            }
+//        }
+//    }
 
     private boolean preventDecay(Block leafBlock, Leaves leaf) {
         int distance = leaf.getDistance();

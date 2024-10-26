@@ -1,23 +1,29 @@
 package com.gardensmc.gardensfurniture.register;
 
+import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.*;
 import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
+import com.gardensmc.gardensfurniture.custom.item.CustomArmorItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.util.ChatUtil;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
-import org.bukkit.ChatColor;
-import org.bukkit.Color;
-import org.bukkit.Material;
+import de.tr7zw.nbtapi.NBTEntity;
+import org.bukkit.*;
 import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Display;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ArmorMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.inventory.meta.trim.ArmorTrim;
+import org.bukkit.inventory.meta.trim.TrimMaterial;
 
 import javax.annotation.Nullable;
 import java.util.*;
+import java.util.logging.Level;
 
 public class ItemRegistry {
 
@@ -50,7 +56,7 @@ public class ItemRegistry {
 
                     registerCrystalIfPresent(customItem);
 
-                    Set<CustomItem> categoryItems = customItemByCategory.computeIfAbsent(name, s -> new HashSet<>());
+                    Set<CustomItem> categoryItems = customItemByCategory.computeIfAbsent(name, s -> new TreeSet<>());
                     categoryItems.add(customItem);
                 }
             }
@@ -78,7 +84,7 @@ public class ItemRegistry {
     @Nullable
     public ItemStack buildItem(String identifier) {
         CustomItem customItem = getItem(identifier);
-       return buildItem(customItem);
+        return buildItem(customItem);
     }
 
     @Nullable
@@ -102,6 +108,21 @@ public class ItemRegistry {
                 if (customItem.getColor() != null && meta instanceof LeatherArmorMeta leatherArmorMeta) {
                     // todo make this actually use the color with manual map of string -> color; or use rgb
                     leatherArmorMeta.setColor(Color.AQUA);
+                }
+
+                // armor
+                if (customItem instanceof CustomArmorItem customArmorItem && meta instanceof ArmorMeta armorMeta) {
+                    NamespacedKey key = NamespacedKey.fromString(customArmorItem.getTrimPattern());
+                    if (key == null) {
+                        GardensFurniture.plugin.getLogger().log(Level.SEVERE, "Failed to construct key from trim pattern: " + customArmorItem.getTrimPattern());
+                        return null;
+                    }
+                    var trimPattern = Registry.TRIM_PATTERN.get(key);
+                    if (trimPattern == null) {
+                        GardensFurniture.plugin.getLogger().log(Level.SEVERE, "Failed to build armor with unknown trim pattern: " + key);
+                        return null;
+                    }
+                    armorMeta.setTrim(new ArmorTrim(TrimMaterial.REDSTONE, trimPattern));
                 }
 
                 itemStack.setItemMeta(meta);
@@ -140,8 +161,7 @@ public class ItemRegistry {
 
     private void registerCrystalIfPresent(CustomItem customItem) {
         if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
-            crystalRegistry.addCrystalToMap(crystalBlock.getCrystalId(), crystalBlock.getType(), customItem.getIdentifier());
+            crystalRegistry.addCrystalToMap(crystalBlock, customItem.getIdentifier());
         }
     }
-
 }

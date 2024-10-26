@@ -17,18 +17,25 @@ import net.minecraft.world.item.context.ItemActionContext;
 import net.minecraft.world.phys.MovingObjectPositionBlock;
 import net.minecraft.world.phys.Vec3D;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.NoteBlock;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_21_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_21_R1.inventory.CraftItemStack;
+import org.bukkit.entity.Display;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.ItemFrame;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+
+import java.util.concurrent.CompletableFuture;
 
 public class PlayerListener implements Listener {
 
@@ -84,7 +91,7 @@ public class PlayerListener implements Listener {
         // handle placement of custom items
         Location clickedLocation = e.getClickedBlock().getLocation();
         Location location = getLocationFromBlockFace(clickedLocation, e.getBlockFace());
-        if (location.getBlock().getType() != Material.AIR) return;
+        if (!CustomBlockManager.isPlaceableMaterial(location.getBlock().getType())) return;
 
         CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
         if (customItem != null) {
@@ -169,6 +176,68 @@ public class PlayerListener implements Listener {
                 }
             }
         }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPlayerJump(PlayerMoveEvent e) {
+        if (e.getPlayer().isSneaking()) return;
+
+        Player player = e.getPlayer();
+        double velocity = Math.round(player.getVelocity().getY()*100d) / 100d;
+
+
+        // player has jump velocity
+        if (velocity >= 0.42) {
+            if (!isStandingOnEnderPad(e.getPlayer())) return;
+
+            CompletableFuture.supplyAsync(() -> {
+                for (int i = 2; i <= 30; i++) {
+                    Block block = e.getPlayer().getWorld().getBlockAt(e.getPlayer().getLocation().add(0, i, 0));
+                    if (block.getType() == Material.BARRIER) {
+                        return block;
+                    }
+                }
+                return null;
+            }).thenAccept(ender_pad -> runTeleportation(player, ender_pad));
+        }
+    }
+
+    private void runTeleportation(Player player, Block ender_pad) {
+        Bukkit.getScheduler().runTask(GardensFurniture.plugin, () -> {
+            if (ender_pad != null) {
+                ItemDisplay itemDisplay = CustomBlockManager.getDisplayEntity(ender_pad.getLocation());
+                if (itemDisplay == null || itemDisplay.getItemStack() == null) return;
+
+                CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemDisplay.getItemStack());
+                if (customItem == null) return;
+
+                if (!customItem.getIdentifier().startsWith("ender_pad")) {
+                    return;
+                }
+                Location loc = player.getLocation();
+                loc.setY(ender_pad.getY() + 1);
+
+                player.getWorld().spawnParticle(Particle.PORTAL, player.getLocation(), 5);
+                player.getWorld().playSound(player.getLocation(), Sound.ITEM_CHORUS_FRUIT_TELEPORT, 0.2f, 0.2f);
+                player.teleport(loc);
+                player.getWorld().spawnParticle(Particle.PORTAL, loc, 5);
+                player.getWorld().playSound(player.getLocation(), Sound.ITEM_CHORUS_FRUIT_TELEPORT, 0.2f, 0.2f);
+            }
+        });
+    }
+
+    private boolean isStandingOnEnderPad(Player player) {
+        Block block = player.getLocation().subtract(0, 1, 0).getBlock();
+        if (block.getType() == Material.BARRIER) {
+            ItemDisplay display = CustomBlockManager.getDisplayEntity(block.getLocation());
+            if (display != null && display.getItemStack() != null) {
+                CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(display.getItemStack());
+                if (customItem != null) {
+                    return customItem.getIdentifier().startsWith("ender_pad");
+                }
+            }
+        }
+        return false;
     }
 
     private Color getColorFromDye(Material material) {

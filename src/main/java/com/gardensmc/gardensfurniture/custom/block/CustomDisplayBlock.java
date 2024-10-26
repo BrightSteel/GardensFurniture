@@ -3,6 +3,7 @@ package com.gardensmc.gardensfurniture.custom.block;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
+import com.gardensmc.gardensfurniture.util.LightUtil;
 import de.tr7zw.nbtapi.NBTEntity;
 import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.Location;
@@ -40,7 +41,16 @@ public class CustomDisplayBlock extends CustomBlock {
     }
 
     @Override
+    public boolean isSolid() {
+        return hitbox == Hitbox.BARRIER;
+    }
+
+    @Override
     public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem placeableItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
+        return placeDisplay(GardensFurniture.itemRegistry.buildItem(placeableItem), location, blockFace);
+    }
+
+    protected boolean placeDisplay(ItemStack item, Location location, BlockFace blockFace) {
         var world = location.getWorld();
         if (world == null) return false;
 
@@ -48,15 +58,14 @@ public class CustomDisplayBlock extends CustomBlock {
         location.setYaw(0);
         location.setPitch(0);
         ItemDisplay display = (ItemDisplay) world.spawnEntity(locationOffset, EntityType.ITEM_DISPLAY);
-        ItemStack item = GardensFurniture.itemRegistry.buildItem(placeableItem);
         display.setItemStack(item);
         display.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
         var meta = item.getItemMeta();
         if (meta != null) {
+            var nbtEntity = new NBTEntity(display).getPersistentDataContainer();
             var customName = meta.getDisplayName();
             if (customName != null) {
-                NBTEntity nbtEntity = new NBTEntity(display);
-                nbtEntity.getPersistentDataContainer().setString("custom_name", customName);
+                nbtEntity.setString("custom_name", customName);
             }
         }
 
@@ -64,6 +73,9 @@ public class CustomDisplayBlock extends CustomBlock {
         display.setRotation(rotation.getLeft(), rotation.getRight());
 
         spawnHitbox(locationOffset);
+        if (getLight() > 0) {
+            LightUtil.placeLight(location, getLight(), hitbox == Hitbox.BARRIER);
+        }
         return true;
     }
 

@@ -15,6 +15,7 @@ public class CustomItemFactory {
             case CAVE_VINE_DIRECTIONAL_BLOCK -> customItem = new CustomCaveVineDirectional(identifier, itemSection);
             case MULTIPLIER_BLOCK -> customItem = new CustomMultiplierItem(identifier, itemSection);
             case BLOCK_FACING -> customItem = new CustomFacingItem(identifier, itemSection);
+            case ARMOR -> customItem = new CustomArmorItem(identifier, itemSection);
             default -> customItem = new CustomItem(identifier, itemSection);
         }
         return customItem;

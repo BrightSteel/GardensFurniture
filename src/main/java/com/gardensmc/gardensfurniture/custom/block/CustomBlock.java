@@ -14,16 +14,15 @@ public abstract class CustomBlock {
     private final boolean seated;
     private int[] seats;
     private final boolean cancel_drop;
-
-    private double seat_offset;
+    private final double seat_offset;
+    private final int light;
 
     public CustomBlock(ConfigurationSection blockSection) {
         this.barrier = blockSection.getBoolean("barrier");
         this.seated = blockSection.getBoolean("seated");
         this.cancel_drop = blockSection.getBoolean("cancel_drop");
-        if (blockSection.contains("seat_offset")) {
-            this.seat_offset = blockSection.getDouble("seat_offset");
-        }
+        this.seat_offset = blockSection.getDouble("seat_offset");
+        this.light = blockSection.getInt("light");
     }
 
     public boolean hasBarrier() {
@@ -38,13 +37,15 @@ public abstract class CustomBlock {
         return seated;
     }
 
-    public void setSeatOffset(double offset) {
-        this.seat_offset = offset;
-    }
-
     public double getSeatOffset() {
         return seat_offset;
     }
+
+    public int getLight() {
+        return light;
+    }
+
+    public abstract boolean isSolid();
 
     protected ConfigurationSection getConfigSectionOrThrow(ConfigurationSection config, String sectionName, String customBlockName) {
         if (!config.isConfigurationSection(sectionName)) {

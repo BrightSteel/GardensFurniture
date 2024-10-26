@@ -2,10 +2,15 @@ package com.gardensmc.gardensfurniture.custom;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomTripwireBlock;
 import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
+import com.gardensmc.gardensfurniture.itementity.DisplayItemEntity;
+import com.gardensmc.gardensfurniture.itementity.FrameItemEntity;
+import com.gardensmc.gardensfurniture.itementity.ItemEntity;
 import com.gardensmc.gardensfurniture.listener.BlockListener;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
+import com.gardensmc.gardensfurniture.util.LightUtil;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import de.tr7zw.nbtapi.NBTEntity;
 import org.bukkit.*;
@@ -15,10 +20,12 @@ import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataType;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Collection;
+
+import static com.gardensmc.gardensfurniture.util.CustomDropUtil.dropCustomItem;
 
 public class CustomBlockManager {
 
@@ -34,10 +41,18 @@ public class CustomBlockManager {
         }
 
         var material = location.getBlock().getType();
-        if (material != Material.AIR && !BlockListener.isAmethystBud(material)) return false;
+        if (!isPlaceableMaterial(material) && !BlockListener.isAmethystBud(material)) return false;
         // for terra gen, and also make sure we allow amethyst buds to place under the server-side bud
 
         return placeableItem.placeBlock(heldItem, player, location, blockFace, persistent);
+    }
+
+    public static boolean isPlaceableMaterial(Material material) {
+        return material == Material.AIR
+                || material == Material.LIGHT
+                || material == Material.WATER
+                || material == Material.SHORT_GRASS
+                || material == Material.TALL_GRASS;
     }
 
     private static boolean entityBlocking(Location loc) {
@@ -54,7 +69,7 @@ public class CustomBlockManager {
     @Nullable
     public static CustomItem getItemFromNoteBlock(NoteBlock noteBlock) {
         int note = noteBlock.getNote().getId();
-        String instrument = noteBlock.getInstrument().toString().toLowerCase();
+        String instrument = noteBlock.getInstrument().toString().toUpperCase();
         boolean powered = noteBlock.isPowered();
         String key = note + "," + instrument + "," + powered;
 //        System.out.println("looking up " + note);
@@ -63,7 +78,20 @@ public class CustomBlockManager {
     }
 
     @Nullable
-    public static ItemFrame getBlock(Location location) {
+    private static ItemEntity getItemEntity(Location location) {
+        var displayEntity = getDisplayEntity(location);
+        if (displayEntity != null) {
+            return new DisplayItemEntity(displayEntity);
+        }
+        var itemFrame = getBlock(location);
+        if (itemFrame != null) {
+            return new FrameItemEntity(itemFrame);
+        }
+        return null;
+    }
+
+    @Nullable
+    private static ItemFrame getBlock(Location location) {
         return (ItemFrame) getEntityByClass(location, ItemFrame.class);
     }
 
@@ -105,23 +133,23 @@ public class CustomBlockManager {
            return;
        }
 
-        ItemFrame itemFrame = getBlock(location);
-        if (itemFrame == null) return;
+        ItemEntity itemEntity = getItemEntity(location);
+        if (itemEntity == null) return;
 
-        CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemFrame.getItem());
+        CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
         if (customItem == null) return;
 
-        FurnitureBreakEvent e = new FurnitureBreakEvent(player, customItem, itemFrame);
+        FurnitureBreakEvent e = new FurnitureBreakEvent(player, (CustomPlaceableItem) customItem, itemEntity);
         Bukkit.getPluginManager().callEvent(e);
         if (e.isCancelled()) {
             return;
         }
-        NBTEntity nbtEntity = new NBTEntity(itemFrame);
+        NBTEntity nbtEntity = new NBTEntity(itemEntity.getEntity());
         String display = null;
         if (nbtEntity.getPersistentDataContainer().hasKey("custom_name")) {
             display = nbtEntity.getPersistentDataContainer().getString("custom_name");
         }
-        itemFrame.remove();
+        itemEntity.getEntity().remove();
         Block block = location.getBlock();
         if (block.getType() == Material.BARRIER) {
             block.setType(Material.AIR);
@@ -136,9 +164,7 @@ public class CustomBlockManager {
             }
             location.getWorld().dropItemNaturally(location, itemStack);
         }
-
-
-
+//        LightUtil.addLightBack(block); - calls block break event already ?
     }
 
     @Nullable
@@ -154,7 +180,37 @@ public class CustomBlockManager {
     @Nullable
     public static CustomItem getItemFromLeaves(Block block) {
         var furnitureStore = FurnitureStoreHandler.INSTANCE.getFurnitureStore(block);
+        if (furnitureStore == null) {
+            return null;
+        }
         return GardensFurniture.itemRegistry.getItem(furnitureStore.getItemIdentifier());
     }
+
+    public static Material[] packetTypes = new Material[] {
+            Material.SPRUCE_LEAVES,
+            Material.CHERRY_LEAVES,
+            Material.CAVE_VINES,
+            Material.CAVE_VINES_PLANT
+    };
+
+    @Nullable
+    public static CustomItem getCustomItemFromBlock(Block block) {
+        if (block.getType() == Material.NOTE_BLOCK && block.getBlockData() instanceof NoteBlock noteBlock) {
+            return CustomBlockManager.getItemFromNoteBlock(noteBlock);
+        }
+        else if (block.getType() == Material.TRIPWIRE) {
+            return CustomBlockManager.getItemFromLeaves(block);
+        }
+        else if (Arrays.asList(packetTypes).contains(block.getType())) {
+            return CustomBlockManager.getItemFromLeaves(block);
+        }
+
+        ItemEntity itemEntity = getItemEntity(block.getLocation());
+        if (itemEntity != null) {
+            return GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
+        }
+        return null;
+    }
+
 
 }
