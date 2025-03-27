@@ -22,7 +22,6 @@ public class CustomMultiplierItem extends CustomPlaceableItem {
 
     public CustomMultiplierItem(String identifier, ConfigurationSection itemSection) {
         super(identifier, itemSection);
-        ConfigurationSection blockSection = itemSection.getConfigurationSection("block");
         for (int i = 1; i < 100; i++) {
             ConfigurationSection multiplierSection = Objects
                     .requireNonNull(blockSection)

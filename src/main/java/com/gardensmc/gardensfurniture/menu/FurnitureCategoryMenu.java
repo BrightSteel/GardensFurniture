@@ -33,7 +33,6 @@ public class FurnitureCategoryMenu extends Menu {
         var customItems = GardensFurniture.itemRegistry.getCustomItemsByCategory(category);
         Objects.requireNonNull(customItems)
                 .stream()
-                .filter(CustomItem::showInMenu)
 //                .sorted(Comparator.comparing(CustomItem::getIdentifier))
                 .map(this::getGuiElement)
                 .forEach(group::addElement);

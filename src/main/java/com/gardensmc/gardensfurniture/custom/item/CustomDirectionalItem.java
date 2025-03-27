@@ -20,7 +20,6 @@ public class CustomDirectionalItem extends CustomPlaceableItem {
 
     public CustomDirectionalItem(String identifier, ConfigurationSection itemSection) {
         super(identifier, itemSection);
-        ConfigurationSection blockSection = itemSection.getConfigurationSection("block");
         this.x = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("x"));
         this.y = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("y"));
         this.z = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("z"));
@@ -28,7 +27,8 @@ public class CustomDirectionalItem extends CustomPlaceableItem {
 
     @Override
     public boolean placeBlock(ItemStack heldItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
-       CustomBlock customBlock;
+        if (!super.placeBlock(heldItem, player, location, blockFace, persistent)) return false;
+        CustomBlock customBlock;
         switch (blockFace) {
                 case UP, DOWN -> customBlock = getY();
                 case EAST, WEST -> customBlock = getX();

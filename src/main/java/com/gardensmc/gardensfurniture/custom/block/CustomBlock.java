@@ -16,6 +16,7 @@ public abstract class CustomBlock {
     private final boolean cancel_drop;
     private final double seat_offset;
     private final int light;
+    private final String drop_override;
 
     public CustomBlock(ConfigurationSection blockSection) {
         this.barrier = blockSection.getBoolean("barrier");
@@ -23,6 +24,7 @@ public abstract class CustomBlock {
         this.cancel_drop = blockSection.getBoolean("cancel_drop");
         this.seat_offset = blockSection.getDouble("seat_offset");
         this.light = blockSection.getInt("light");
+        this.drop_override = blockSection.getString("drop_override");
     }
 
     public boolean hasBarrier() {
@@ -43,6 +45,10 @@ public abstract class CustomBlock {
 
     public int getLight() {
         return light;
+    }
+
+    public String getDropOverride() {
+        return drop_override;
     }
 
     public abstract boolean isSolid();

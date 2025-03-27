@@ -1,6 +1,7 @@
 package com.gardensmc.gardensfurniture.custom;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomTripwireBlock;
 import com.gardensmc.gardensfurniture.custom.item.*;
@@ -56,14 +57,18 @@ public class CustomBlockManager {
     }
 
     private static boolean entityBlocking(Location loc) {
-        if (loc.getWorld() == null) {
-            for (Entity entity : loc.getWorld().getNearbyEntities(loc, 1, 1, 1)) {
-                if (entity.getLocation().getBlock().equals(loc.getBlock()) && entity instanceof LivingEntity && !(entity instanceof ItemFrame)) {
-                    return true;
-                }
-            }
+        if (loc.getWorld() != null) {
+            return loc.getWorld().getNearbyEntities(loc, 1, 1, 1, entity -> entity instanceof LivingEntity || entity instanceof Display)
+                    .stream()
+                    // ignore display entity data holders
+                    .filter(entity -> !(entity instanceof ItemDisplay itemDisplay && itemDisplay.getItemStack() == null))
+                    .anyMatch(entity -> isValidEntity(entity, loc));
         }
         return false;
+    }
+
+    private static boolean isValidEntity(Entity entity, Location loc) {
+        return entity.getLocation().getBlock().equals(loc.getBlock());
     }
 
     @Nullable
@@ -78,7 +83,7 @@ public class CustomBlockManager {
     }
 
     @Nullable
-    private static ItemEntity getItemEntity(Location location) {
+    public static ItemEntity getItemEntity(Location location) {
         var displayEntity = getDisplayEntity(location);
         if (displayEntity != null) {
             return new DisplayItemEntity(displayEntity);
@@ -156,7 +161,7 @@ public class CustomBlockManager {
         }
 
         ItemStack itemStack = GardensFurniture.itemRegistry.buildItem(customItem);
-        if (itemStack != null) {
+        if (player != null && player.getGameMode() != GameMode.CREATIVE && itemStack != null) {
             if (display != null && itemStack.getItemMeta() != null) {
                 ItemMeta itemMeta = itemStack.getItemMeta();
                 itemMeta.setDisplayName(display);
@@ -167,15 +172,28 @@ public class CustomBlockManager {
 //        LightUtil.addLightBack(block); - calls block break event already ?
     }
 
-    @Nullable
-    public static CustomItem getFurniture(Entity entity) {
-        if (entity instanceof ItemFrame itemFrame) {
-            ItemStack itemStack = itemFrame.getItem();
-            CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
-            return customItem;
-        }
-        return null;
-    }
+//    @Nullable
+//    public static ItemEntity getItemEntity(Entity entity) {
+//        ItemEntity itemEntity = null;
+//        if (entity instanceof ItemFrame itemFrame) {
+//            itemEntity = new FrameItemEntity(itemFrame);
+//        }
+//        if (entity instanceof ItemDisplay display) {
+//            itemEntity = new DisplayItemEntity(display);
+//        }
+//        return itemEntity;
+//    }
+
+//    @Nullable
+//    public static CustomItem getFurniture(Entity entity) {
+//        ItemEntity itemEntity = getItemEntity(entity);
+//        if (itemEntity == null) return null;
+//
+//        ItemStack itemStack = itemEntity.getItem();
+//        CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
+//        return customItem;
+//
+//    }
 
     @Nullable
     public static CustomItem getItemFromLeaves(Block block) {
@@ -210,6 +228,18 @@ public class CustomBlockManager {
             return GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
         }
         return null;
+    }
+
+    public static ItemStack getDrop(CustomPlaceableItem customPlaceableItem) {
+        var block = customPlaceableItem.getCustomBlock();
+        if (block.cancelDrop()) {
+            return null;
+        }
+        var override = block.getDropOverride();
+        if (override != null) {
+            return GardensFurniture.itemRegistry.buildItem(override);
+        }
+        return GardensFurniture.itemRegistry.buildItem(customPlaceableItem);
     }
 
 

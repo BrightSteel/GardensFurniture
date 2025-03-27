@@ -21,4 +21,9 @@ public class FrameItemEntity implements ItemEntity {
     public Entity getEntity() {
         return itemFrame;
     }
+
+    @Override
+    public void setItem(ItemStack item) {
+        itemFrame.setItem(item);
+    }
 }

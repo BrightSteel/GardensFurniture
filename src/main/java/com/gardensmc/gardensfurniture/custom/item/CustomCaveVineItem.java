@@ -20,7 +20,6 @@ public class CustomCaveVineItem extends CustomPlaceableItem {
 
     public CustomCaveVineItem(String identifier, ConfigurationSection itemSection) {
         super(identifier, itemSection);
-        ConfigurationSection blockSection = itemSection.getConfigurationSection("block");
         this.plant = (CustomCaveVineBlock) GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("plant"));
         this.vine = (CustomCaveVineBlock) GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("vine"));
         this.vine_25 = (CustomCaveVineBlock) GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("vine_25"));
@@ -28,6 +27,7 @@ public class CustomCaveVineItem extends CustomPlaceableItem {
 
     @Override
     public boolean placeBlock(ItemStack heldItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
+        if (!super.placeBlock(heldItem, player, location, blockFace, persistent)) return false;
         return plant.placeBlock(heldItem, this, player, location, blockFace, persistent, new FurnitureStore(getIdentifier()));
     }
 

@@ -24,7 +24,6 @@ public class CustomFacingItem extends CustomPlaceableItem {
 
     public CustomFacingItem(String identifier, ConfigurationSection itemSection) {
         super(identifier, itemSection);
-        ConfigurationSection blockSection = itemSection.getConfigurationSection("block");
         this.north = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("north"));
         this.south = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("south"));
         this.east = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("east"));
@@ -33,6 +32,7 @@ public class CustomFacingItem extends CustomPlaceableItem {
 
     @Override
     public boolean placeBlock(ItemStack heldItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
+        if (!super.placeBlock(heldItem, player, location, blockFace, persistent)) return false;
         BlockFace facing = getFaceForPlacement(player, location);
        return getCustomBlock(facing.name()).placeBlock(
                heldItem, this, player, location, blockFace, persistent,

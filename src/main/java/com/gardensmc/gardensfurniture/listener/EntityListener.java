@@ -59,14 +59,18 @@ public class EntityListener implements Listener {
             var customItem = GardensFurniture.itemRegistry.getCustomItem(item);
             // chances are if there's an interaction entity it indeed has a hitbox, but might as well check
             if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
-                FurnitureBreakEvent ev = new FurnitureBreakEvent(player, placeable, new DisplayItemEntity(display));
+                FurnitureBreakEvent ev = new FurnitureBreakEvent(player, placeable, new DisplayItemEntity(display), interaction);
                 Bukkit.getPluginManager().callEvent(ev);
                 if (ev.isCancelled()) {
                     return;
                 }
                 if (displayBlock.getHitbox() == CustomDisplayBlock.Hitbox.INTERACTION) {
+                    e.getEntity().remove();
                     display.remove();
-                    display.getWorld().dropItemNaturally(display.getLocation(), item);
+                    var drop = CustomBlockManager.getDrop(placeable);
+                    if (drop != null) {
+                        display.getWorld().dropItemNaturally(display.getLocation(), drop);
+                    }
                 }
             }
         }

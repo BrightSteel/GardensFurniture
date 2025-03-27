@@ -13,11 +13,9 @@ import org.bukkit.inventory.ItemStack;
 public class CustomBlockItem extends CustomPlaceableItem {
 
     private final CustomBlock customBlock;
-    protected final ConfigurationSection blockSection;
 
     public CustomBlockItem(String identifier, ConfigurationSection itemSection) {
         super(identifier, itemSection);
-        this.blockSection = itemSection.getConfigurationSection("block");
         this.customBlock = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection);
     }
 
@@ -28,6 +26,7 @@ public class CustomBlockItem extends CustomPlaceableItem {
 
     @Override
     public boolean placeBlock(ItemStack heldItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
+        if (!super.placeBlock(heldItem, player, location, blockFace, persistent)) return false;
         return customBlock.placeBlock(heldItem, this, player, location, blockFace, persistent, new FurnitureStore(getIdentifier()));
     }
 }

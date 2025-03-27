@@ -51,7 +51,6 @@ public class FurnitureMenu extends Menu {
     private ItemStack getFirstItemInCategory(String category) {
         var customItem = Objects.requireNonNull(GardensFurniture.itemRegistry.getCustomItemsByCategory(category))
                 .stream()
-                .filter(CustomItem::showInMenu)
                 .iterator()
                 .next();
         return GardensFurniture.itemRegistry.buildItem(customItem);

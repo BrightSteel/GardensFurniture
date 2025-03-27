@@ -21,7 +21,6 @@ public class CustomCaveVineDirectional extends CustomPlaceableItem {
 
     public CustomCaveVineDirectional(String identifier, ConfigurationSection itemSection) {
         super(identifier, itemSection);
-        ConfigurationSection blockSection = itemSection.getConfigurationSection("block");
         this.vine_north = (CustomCaveVineBlock) GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("north"));
         this.vine_south = (CustomCaveVineBlock) GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("south"));
         this.vine_east = (CustomCaveVineBlock) GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("east"));
@@ -30,6 +29,7 @@ public class CustomCaveVineDirectional extends CustomPlaceableItem {
 
     @Override
     public boolean placeBlock(ItemStack heldItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
+        if (!super.placeBlock(heldItem, player, location, blockFace, persistent)) return false;
         BlockFace facing = BlockFace.valueOf(DirectionUtil.getDirectionFromFacing(player)).getOppositeFace();
         return vine_north.placeBlock(heldItem, this, player, location, blockFace, persistent,
                 new FurnitureStore.FurnitureStoreBuilder(getIdentifier())

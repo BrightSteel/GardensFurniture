@@ -21,4 +21,9 @@ public class DisplayItemEntity implements ItemEntity {
     public Entity getEntity() {
         return displayEntity;
     }
+
+    @Override
+    public void setItem(ItemStack item) {
+        displayEntity.setItemStack(item);
+    }
 }

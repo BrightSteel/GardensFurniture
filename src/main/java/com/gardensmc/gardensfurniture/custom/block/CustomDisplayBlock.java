@@ -2,10 +2,13 @@ package com.gardensmc.gardensfurniture.custom.block;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
+import com.gardensmc.gardensfurniture.util.ItemFrameUtil;
 import com.gardensmc.gardensfurniture.util.LightUtil;
 import de.tr7zw.nbtapi.NBTEntity;
 import org.apache.commons.lang3.tuple.Pair;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
@@ -22,12 +25,14 @@ public class CustomDisplayBlock extends CustomBlock {
     private Hitbox hitbox = Hitbox.NONE;
     private double hitboxWidth = 1.0; // only applicable for interaction hitbox
     private double hitboxHeight = 1.0;
+    private boolean facePlayer;
 
     public CustomDisplayBlock(ConfigurationSection blockSection) {
         super(blockSection);
         ConfigurationSection displaySection = blockSection.getConfigurationSection("display_data");
         if (displaySection == null) return;
 
+        this.facePlayer = displaySection.getBoolean("face_player");
         var hitboxSection = displaySection.getConfigurationSection("hitbox");
         if (hitboxSection != null) {
             this.hitbox = Hitbox.valueOf(hitboxSection.getString("type").toUpperCase());
@@ -47,10 +52,13 @@ public class CustomDisplayBlock extends CustomBlock {
 
     @Override
     public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem placeableItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
-        return placeDisplay(GardensFurniture.itemRegistry.buildItem(placeableItem), location, blockFace);
+        CustomBlockPlaceEvent event = new CustomBlockPlaceEvent(player, placeableItem, location.getBlock());
+        Bukkit.getPluginManager().callEvent(event);
+        if (event.isCancelled()) return false;
+        return placeDisplay(GardensFurniture.itemRegistry.buildItem(placeableItem), player, location, blockFace);
     }
 
-    protected boolean placeDisplay(ItemStack item, Location location, BlockFace blockFace) {
+    protected boolean placeDisplay(ItemStack item, Player player, Location location, BlockFace blockFace) {
         var world = location.getWorld();
         if (world == null) return false;
 
@@ -69,7 +77,7 @@ public class CustomDisplayBlock extends CustomBlock {
             }
         }
 
-        var rotation = getRotation(blockFace);
+        var rotation = facePlayer ? getRotation(player) : getRotation(blockFace);
         display.setRotation(rotation.getLeft(), rotation.getRight());
 
         spawnHitbox(locationOffset);
@@ -79,11 +87,20 @@ public class CustomDisplayBlock extends CustomBlock {
         return true;
     }
 
+    private Pair<Float, Float> getRotation(Player player) {
+        if (player != null) {
+            return ItemFrameUtil.getDisplayRotationFromFacing(player);
+        } else {
+            return Pair.of(0f, 0f);
+        }
+    }
+
     private void spawnHitbox(Location location) {
         if (hitbox == Hitbox.BARRIER) {
             location.getBlock().setType(Material.BARRIER);
         } else if (hitbox == Hitbox.INTERACTION) {
-            Interaction interaction = (Interaction) location.getWorld().spawnEntity(location, EntityType.INTERACTION);
+            var l = location.subtract(0, 0.5, 0); // offset down
+            Interaction interaction = (Interaction) location.getWorld().spawnEntity(l, EntityType.INTERACTION);
             interaction.setInteractionWidth((float) hitboxWidth);
             interaction.setInteractionHeight((float) hitboxHeight);
         }

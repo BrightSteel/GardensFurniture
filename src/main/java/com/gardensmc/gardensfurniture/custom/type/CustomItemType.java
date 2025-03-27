@@ -8,5 +8,6 @@ public enum CustomItemType {
     CAVE_VINE_DIRECTIONAL_BLOCK,
     MULTIPLIER_BLOCK,
     BLOCK_FACING,
-    ARMOR
+    ARMOR,
+    POTION
 }

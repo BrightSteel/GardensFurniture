@@ -101,7 +101,7 @@ public class CustomCrystalBlock extends CustomDisplayBlock {
             meta.setCustomModelData(modelOverride);
             crystalItem.setItemMeta(meta);
         }
-        return super.placeDisplay(crystalItem, location, blockFace);
+        return super.placeDisplay(crystalItem, null, location, blockFace);
     }
 
     public static boolean isCrystalMaterial(Material material) {

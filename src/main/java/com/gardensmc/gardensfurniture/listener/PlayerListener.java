@@ -7,7 +7,9 @@ import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.events.CustomBlockInteractEvent;
 import com.gardensmc.gardensfurniture.events.FurnitureInteractEvent;
+import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
+import de.tr7zw.nbtapi.NBTEntity;
 import dev.geco.gsit.api.GSitAPI;
 import net.minecraft.core.BlockPosition;
 import net.minecraft.core.EnumDirection;
@@ -20,22 +22,21 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.NoteBlock;
-import org.bukkit.craftbukkit.v1_21_R1.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_21_R1.inventory.CraftItemStack;
-import org.bukkit.entity.Display;
-import org.bukkit.entity.ItemDisplay;
-import org.bukkit.entity.ItemFrame;
-import org.bukkit.entity.Player;
+import org.bukkit.craftbukkit.v1_21_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_21_R3.inventory.CraftItemStack;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 
 public class PlayerListener implements Listener {
 
@@ -129,6 +130,21 @@ public class PlayerListener implements Listener {
         }
     }
 
+    @EventHandler(ignoreCancelled = true)
+    public void onRightClickBarrier(PlayerInteractEvent e) {
+        if (e.getAction() == Action.RIGHT_CLICK_BLOCK && e.getHand() == EquipmentSlot.HAND) { // called for each hand
+            var block = e.getClickedBlock();
+            if (block != null && block.getType() == Material.BARRIER) {
+                if (!ProtectionUtil.canBuild(block.getLocation(), e.getPlayer())) return;
+                var itemEntity = CustomBlockManager.getItemEntity(block.getLocation());
+                CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
+                Bukkit.getPluginManager().callEvent(new CustomBlockInteractEvent(
+                        e.getPlayer(), customItem, e.getHand(), e.getItem(), block
+                ));
+            }
+        }
+    }
+
     private Location getLocationFromBlockFace(Location location, BlockFace blockFace) {
         Location temp = location;
         // todo uhm why not use Block#getRelative ?
@@ -149,18 +165,20 @@ public class PlayerListener implements Listener {
         ItemStack heldItem = e.getPlayer().getInventory().getItem(e.getHand());
         if (e.getPlayer().isSneaking()) return;
 
-        if (e.getRightClicked() instanceof ItemFrame itemFrame) {
-            CustomItem customItem = CustomBlockManager.getFurniture(itemFrame);
+        if (e.getRightClicked() instanceof ItemFrame || e.getRightClicked() instanceof Interaction) {
+            var itemEntity = CustomBlockManager.getItemEntity(e.getRightClicked().getLocation());
+            if (itemEntity == null || itemEntity.getItem() == null) return;
+            CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
             if (customItem instanceof CustomPlaceableItem customBlockItem) {
                 e.setCancelled(true);
 
                 // dye if applicable
                 if (heldItem != null && heldItem.getType().toString().toUpperCase().endsWith("DYE")) {
-                    if (customItem.isDyeable() && itemFrame.getItem().getItemMeta() instanceof LeatherArmorMeta leatherMeta) {
+                    if (customItem.isDyeable() && itemEntity.getItem().getItemMeta() instanceof LeatherArmorMeta leatherMeta) {
                         leatherMeta.setColor(getColorFromDye(heldItem.getType()));
-                        var item = itemFrame.getItem();
+                        var item = itemEntity.getItem();
                         item.setItemMeta(leatherMeta);
-                        itemFrame.setItem(item);
+                        itemEntity.setItem(item);
                         heldItem.setAmount(heldItem.getAmount() - 1);
                         return;
                     }
@@ -168,11 +186,30 @@ public class PlayerListener implements Listener {
 
                 if (customBlockItem.getCustomBlock().isSeated()) {
                     double offset = customBlockItem.getCustomBlock().getSeatOffset();
-                    GSitAPI.createSeat(itemFrame.getLocation().getBlock(), e.getPlayer(), true, 0.0, offset, 0.0, e.getPlayer().getLocation().getYaw(), true);
+                    GSitAPI.createSeat(itemEntity.getEntity().getLocation().getBlock(), e.getPlayer(), true, 0.0, offset, 0.0, e.getPlayer().getLocation().getYaw(), true);
                 }
                 else {
-//                    if (!WorldGuardUtil.canBuildInRegion(e.getPlayer())) return;
-                    Bukkit.getPluginManager().callEvent(new FurnitureInteractEvent(e.getPlayer(), customItem, itemFrame, e.getHand(), heldItem));
+                    // todo update this to accept itemEntity
+//                    Bukkit.getPluginManager().callEvent(new FurnitureInteractEvent(e.getPlayer(), customItem, itemEntity, e.getHand(), heldItem));
+                }
+
+                if (customItem.getIdentifier().equals("maple_tap_5")) {
+                    if (heldItem != null && heldItem.getType() == Material.GLASS_BOTTLE) {
+                        itemEntity.setItem(GardensFurniture.itemRegistry.buildItem("maple_tap_1"));
+                        var nbt = new NBTEntity(itemEntity.getEntity()).getPersistentDataContainer();
+                        nbt.removeKey(MapleTapHandler.TAP_NBT);
+                        var mapleSyrup = GardensFurniture.itemRegistry.buildItem("maple_syrup");
+                        if (mapleSyrup == null) {
+                            Bukkit.getLogger().log(Level.SEVERE, "Failed to get maple_syrup item!");
+                            return;
+                        }
+                        if (heldItem.getAmount() > 1) {
+                            heldItem.setAmount(heldItem.getAmount() - 1);
+                            e.getPlayer().getInventory().addItem(mapleSyrup);
+                        } else {
+                            e.getPlayer().getInventory().setItem(e.getHand(), mapleSyrup);
+                        }
+                    }
                 }
             }
         }
