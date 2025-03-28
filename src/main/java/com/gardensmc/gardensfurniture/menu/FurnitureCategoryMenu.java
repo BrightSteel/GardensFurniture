@@ -7,7 +7,6 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.Comparator;
 import java.util.Objects;
 
 public class FurnitureCategoryMenu extends Menu {

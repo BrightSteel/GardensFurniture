@@ -2,28 +2,26 @@ package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
-import com.gardensmc.gardensfurniture.custom.item.CustomBlockItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.events.CustomBlockInteractEvent;
-import com.gardensmc.gardensfurniture.events.FurnitureInteractEvent;
 import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import de.tr7zw.nbtapi.NBTEntity;
 import dev.geco.gsit.api.GSitAPI;
-import net.minecraft.core.BlockPosition;
-import net.minecraft.core.EnumDirection;
-import net.minecraft.server.level.EntityPlayer;
-import net.minecraft.world.EnumHand;
-import net.minecraft.world.item.context.ItemActionContext;
-import net.minecraft.world.phys.MovingObjectPositionBlock;
-import net.minecraft.world.phys.Vec3D;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.NoteBlock;
-import org.bukkit.craftbukkit.v1_21_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_21_R3.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -60,27 +58,22 @@ public class PlayerListener implements Listener {
                     ItemStack stack = e.getPlayer().getInventory().getItem(e.getHand());
                     if (stack == null || stack.getType() == Material.AIR) return;
                     net.minecraft.world.item.ItemStack craftItemStack = CraftItemStack.asNMSCopy(stack);
-                    EntityPlayer human = ((CraftPlayer) e.getPlayer()).getHandle();
-                    EnumHand hand = EnumHand.a; // main hand
-                    EnumDirection direction;
+                    ServerPlayer human = ((CraftPlayer) e.getPlayer()).getHandle();
+                    Direction direction;
                     switch (e.getBlockFace()) {
-                        case SOUTH -> direction = EnumDirection.d;
-                        case WEST -> direction = EnumDirection.e;
-                        case NORTH -> direction = EnumDirection.c;
-                        case EAST -> direction = EnumDirection.f;
-                        case DOWN -> direction = EnumDirection.a;
-                        default -> direction = EnumDirection.b;
+                        case SOUTH -> direction = Direction.SOUTH;
+                        case WEST -> direction = Direction.WEST;
+                        case NORTH -> direction = Direction.NORTH;
+                        case EAST -> direction = Direction.EAST;
+                        case DOWN -> direction = Direction.DOWN;
+                        default -> direction = Direction.UP;
                     }
-
-                    craftItemStack.a(new ItemActionContext(human, hand, new MovingObjectPositionBlock(
-                            new Vec3D(e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ()),
+                    craftItemStack.useOn(new UseOnContext(human, InteractionHand.MAIN_HAND, new BlockHitResult(
+                            new Vec3(e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ()),
                             direction,
-                            new BlockPosition(e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ()),
+                            new BlockPos(e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ()),
                             false
                     )));
-//
-
-
                 }
             }
         }

@@ -27,7 +27,6 @@ public class ListenerHandler {
                 new EntityListener(),
                 new LeafListener(),
                 new PlayerListener(),
-                new ArmorListener(),
                 new CustomBlockBreakListener()
         );
     }

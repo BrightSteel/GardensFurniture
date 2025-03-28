@@ -1,6 +1,5 @@
 package com.gardensmc.gardensfurniture.util;
 
-import com.gardensmc.gardensfurniture.GardensFurniture;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 

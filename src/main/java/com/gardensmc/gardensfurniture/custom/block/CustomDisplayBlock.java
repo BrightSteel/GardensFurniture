@@ -18,7 +18,6 @@ import org.bukkit.entity.Interaction;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.joml.AxisAngle4f;
 
 public class CustomDisplayBlock extends CustomBlock {
 

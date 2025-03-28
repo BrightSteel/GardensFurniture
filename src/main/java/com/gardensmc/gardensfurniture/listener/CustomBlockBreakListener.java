@@ -7,8 +7,6 @@ import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.util.LightUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.block.data.type.Light;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;

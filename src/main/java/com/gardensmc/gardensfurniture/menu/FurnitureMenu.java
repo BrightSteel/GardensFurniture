@@ -1,16 +1,13 @@
 package com.gardensmc.gardensfurniture.menu;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import de.themoep.inventorygui.GuiElement;
 import de.themoep.inventorygui.GuiElementGroup;
 import de.themoep.inventorygui.InventoryGui;
 import de.themoep.inventorygui.StaticGuiElement;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.Comparator;
 import java.util.Objects;
 
 public class FurnitureMenu extends Menu {

@@ -2,7 +2,6 @@ package com.gardensmc.gardensfurniture.util;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Rotation;
 import org.bukkit.entity.Player;
 
 public class PlayerUtil {

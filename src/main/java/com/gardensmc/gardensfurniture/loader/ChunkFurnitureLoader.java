@@ -9,7 +9,6 @@ import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.store.FurnitureCache;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
 import org.bukkit.ChunkSnapshot;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -18,10 +17,8 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.AmethystCluster;
 import org.bukkit.block.data.type.NoteBlock;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Queue;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class ChunkFurnitureLoader {

@@ -3,7 +3,6 @@ package com.gardensmc.gardensfurniture.custom.block;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
-import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.BlockFace;

@@ -8,9 +8,10 @@ import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.util.ChatUtil;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import de.tr7zw.nbtapi.NBT;
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.Consumable;
+import io.papermc.paper.datacomponent.item.consumable.ItemUseAnimation;
 import org.bukkit.*;
-import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemFlag;
@@ -18,7 +19,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.PotionMeta;
-import org.bukkit.inventory.meta.components.consumable.ConsumableComponent;
 import org.codehaus.plexus.util.FileUtils;
 
 import javax.annotation.Nullable;
@@ -200,10 +200,10 @@ public class ItemRegistry {
                     }
                     var consumableComponent = components.getConsumable();
                     if (consumableComponent != null) {
-                        var consumable = meta.getConsumable();
-                        consumable.setAnimation(ConsumableComponent.Animation.valueOf(consumableComponent.getAnimation()));
-                        consumable.setConsumeSeconds(consumable.getConsumeSeconds());
-                        meta.setConsumable(consumable);
+                        var consumable = Consumable.consumable()
+                                .animation(ItemUseAnimation.valueOf(consumableComponent.getAnimation()))
+                                .consumeSeconds((float) consumableComponent.getConsume_seconds());
+                        itemStack.setData(DataComponentTypes.CONSUMABLE, consumable.build());
                     }
                     var equippableComponent = components.getEquippable();
                     if (equippableComponent != null) {

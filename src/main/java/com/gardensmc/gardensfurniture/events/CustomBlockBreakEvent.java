@@ -1,6 +1,5 @@
 package com.gardensmc.gardensfurniture.events;
 
-import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;

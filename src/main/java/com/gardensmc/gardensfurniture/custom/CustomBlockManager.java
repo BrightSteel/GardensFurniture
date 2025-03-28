@@ -1,9 +1,7 @@
 package com.gardensmc.gardensfurniture.custom;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
-import com.gardensmc.gardensfurniture.custom.block.CustomTripwireBlock;
 import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.itementity.DisplayItemEntity;
@@ -11,7 +9,6 @@ import com.gardensmc.gardensfurniture.itementity.FrameItemEntity;
 import com.gardensmc.gardensfurniture.itementity.ItemEntity;
 import com.gardensmc.gardensfurniture.listener.BlockListener;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
-import com.gardensmc.gardensfurniture.util.LightUtil;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import de.tr7zw.nbtapi.NBTEntity;
 import org.bukkit.*;

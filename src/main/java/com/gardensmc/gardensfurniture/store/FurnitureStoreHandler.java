@@ -5,8 +5,6 @@ import org.bukkit.Chunk;
 import org.bukkit.block.Block;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.util.Objects;
-
 public class FurnitureStoreHandler {
 
     public static FurnitureStoreHandler INSTANCE = new FurnitureStoreHandler();

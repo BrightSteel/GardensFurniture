@@ -2,10 +2,7 @@ package com.gardensmc.gardensfurniture.menu;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import de.themoep.inventorygui.InventoryGui;
-import de.themoep.inventorygui.StaticGuiElement;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 
 public class Menu {
 

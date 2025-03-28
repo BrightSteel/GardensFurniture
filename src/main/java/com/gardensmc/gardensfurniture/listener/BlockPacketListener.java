@@ -12,7 +12,6 @@ import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.recipe.CraftingCategory;
 import com.github.retrooper.packetevents.protocol.recipe.data.ShapedRecipeData;
 import com.github.retrooper.packetevents.protocol.recipe.data.ShapelessRecipeData;
-import com.github.retrooper.packetevents.protocol.recipe.data.SimpleRecipeData;
 import com.github.retrooper.packetevents.protocol.world.chunk.BaseChunk;
 import com.github.retrooper.packetevents.protocol.world.chunk.Column;
 import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
