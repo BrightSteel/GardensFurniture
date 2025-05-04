@@ -2,6 +2,7 @@ package com.gardensmc.gardensfurniture.custom.item;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomWaxedBlock;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
@@ -17,6 +18,9 @@ public class CustomBlockItem extends CustomPlaceableItem {
     public CustomBlockItem(String identifier, ConfigurationSection itemSection) {
         super(identifier, itemSection);
         this.customBlock = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection);
+        if (this.customBlock instanceof CustomWaxedBlock customWaxedBlock) {
+            this.material = customWaxedBlock.getWaxedType().getMaterial();
+        }
     }
 
     @Override

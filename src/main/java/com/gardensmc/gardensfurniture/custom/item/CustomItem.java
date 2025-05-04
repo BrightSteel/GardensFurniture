@@ -1,26 +1,34 @@
 package com.gardensmc.gardensfurniture.custom.item;
 
 import com.gardensmc.gardensfurniture.custom.item.components.Components;
+import com.gardensmc.gardensfurniture.custom.item.mechanics.Mechanics;
 import com.github.retrooper.packetevents.protocol.recipe.CraftingCategory;
 import lombok.Getter;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.ItemFlag;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class CustomItem implements Comparable<CustomItem> {
 
     @Getter
     private final String identifier;
-    @Getter
     private final String display;
     @Getter
     private final List<String> lore;
     private final int custom_model;
     @Getter
-    private final Material material;
+    protected Material material;
     @Getter
     private final boolean dyeable;
     @Getter
@@ -32,10 +40,18 @@ public class CustomItem implements Comparable<CustomItem> {
     private final Components components;
     @Getter
     private final List<ItemFlag> itemFlags;
+    @Getter
+    private final Mechanics mechanics;
+    @Getter
+    private final List<AttributeModifier> attributeModifiers;
+    @Getter
+    private final boolean template;
+    @Getter
+    private final List<String> basedOn;
 
     public CustomItem(String identifier, ConfigurationSection itemSection) {
         this.identifier = identifier;
-        this.display = itemSection.getString("display", "");
+        this.display = itemSection.getString("display", identifier);
         this.custom_model = itemSection.getInt("custom_model", -1);
         this.material = parseMaterial(itemSection.getString("material"));
         this.lore = itemSection.getStringList("lore");
@@ -51,6 +67,14 @@ public class CustomItem implements Comparable<CustomItem> {
                 .stream()
                 .map(flag -> ItemFlag.valueOf(flag.toUpperCase()))
                 .toList();
+        var mechanicsSection = itemSection.getConfigurationSection("mechanics");
+        this.mechanics = mechanicsSection == null ? null : new Mechanics(mechanicsSection);
+        this.attributeModifiers = itemSection.getMapList("attribute_modifiers")
+                .stream()
+                .map(this::parseAttributeModifier)
+                .toList();
+        this.template = itemSection.getBoolean("template");
+        this.basedOn = itemSection.getStringList("basedOn");
     }
 
     public int getCustomModel() {
@@ -89,6 +113,28 @@ public class CustomItem implements Comparable<CustomItem> {
     @Override
     public int compareTo(@NotNull CustomItem o) {
         return identifier.compareTo(o.identifier);
+    }
+
+    private AttributeModifier parseAttributeModifier(Map<?, ?> modifierMap) {
+        var attribute = NamespacedKey.fromString(modifierMap.get("attribute").toString());
+        var amount = Double.parseDouble(modifierMap.get("amount").toString());
+        var operationNum = modifierMap.containsKey("operation")
+                ? Integer.parseInt(modifierMap.get("operation").toString())
+                : 0;
+        var operation = Arrays.stream(AttributeModifier.Operation.values()).toList().get(operationNum);
+        var slot = modifierMap.containsKey("slot")
+                ? EquipmentSlotGroup.getByName(modifierMap.get("slot").toString())
+                : EquipmentSlotGroup.ANY;
+
+        return new AttributeModifier(attribute, amount, operation, slot);
+    }
+
+    public String getDisplayRawFormatted() {
+        return "<!italic><white>" + StringUtils.capitalize(display) + "</white>";
+    }
+
+    public Component getDisplayName() {
+        return MiniMessage.miniMessage().deserialize(getDisplayRawFormatted());
     }
 }
 

@@ -1,8 +1,11 @@
 package com.gardensmc.gardensfurniture;
 
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.ProtocolManager;
 import com.gardensmc.gardensfurniture.command.CommandHandler;
 import com.gardensmc.gardensfurniture.hook.HookGardensFurniture;
 import com.gardensmc.gardensfurniture.listener.ListenerHandler;
+import com.gardensmc.gardensfurniture.listener.sounds.DigSoundListener;
 import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
 import com.gardensmc.gardensfurniture.register.ItemRegistry;
 import com.gardensmc.gardensfurniture.structure.StructureHandler;
@@ -23,6 +26,8 @@ public class GardensFurniture extends JavaPlugin {
     public static StructureHandler structureHandler;
     public static ItemRegistry itemRegistry;
 
+    public static ProtocolManager protocolManager;
+
     @Override
     public void onLoad() {
         loadPacketEvents();
@@ -38,6 +43,8 @@ public class GardensFurniture extends JavaPlugin {
     public void onEnable() {
         plugin = this;
         gardensPlayers = getServer().getPluginManager().getPlugin("GardensPlayers");
+        protocolManager = ProtocolLibrary.getProtocolManager();
+        new DigSoundListener().registerListener();
 
         // load custom item configs
         ConfigUtil.loadConfigs();

@@ -2,17 +2,19 @@ package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
+import com.gardensmc.gardensfurniture.custom.block.CustomNoteBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomWaxedBlock;
+import com.gardensmc.gardensfurniture.custom.item.CustomDirectionalItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.events.CustomBlockInteractEvent;
-import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
+import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
-import de.tr7zw.nbtapi.NBTEntity;
-import dev.geco.gsit.api.GSitAPI;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -31,10 +33,9 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.inventory.meta.Damageable;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Level;
 
 public class PlayerListener implements Listener {
 
@@ -57,6 +58,40 @@ public class PlayerListener implements Listener {
                 if (e.getHand() != null) {
                     ItemStack stack = e.getPlayer().getInventory().getItem(e.getHand());
                     if (stack == null || stack.getType() == Material.AIR) return;
+
+                    if (stack.getType().toString().endsWith("AXE")) {
+                        System.out.println("Axe hit");
+                        var mechanics = customItem.getMechanics();
+                        if (mechanics != null && mechanics.getStripped_log() != null) {
+                            System.out.println("Stripped log mechanic found: " + mechanics.getStripped_log());
+                            // todo helper method for noteblock replacement ? then we can just be like replace this block and it will internally do so in the fast way
+                            var strippedLog = GardensFurniture.itemRegistry.getItem(mechanics.getStripped_log());
+                            if (customItem instanceof CustomDirectionalItem directionalItem && strippedLog instanceof CustomDirectionalItem blockItem) {
+                                System.out.println("Found directional item");
+                                var direction = directionalItem.getBlockDirection(noteBlock);
+                                if (direction != null) {
+                                    System.out.println("Found direction: " + direction);
+                                    if (blockItem.getCustomBlock(direction) instanceof CustomNoteBlock customNoteBlock) {
+                                        noteBlock.setInstrument(customNoteBlock.getInstrument());
+                                        noteBlock.setNote(customNoteBlock.getNote());
+                                        noteBlock.setPowered(customNoteBlock.isPowered());
+                                        e.getClickedBlock().setBlockData(noteBlock);
+                                        e.getInteractionPoint().getWorld().playSound(
+                                                e.getInteractionPoint(), Sound.ITEM_AXE_STRIP, 1, 1
+                                        );
+
+                                        // decrement axe durability
+                                        if (e.getPlayer().getGameMode() != GameMode.CREATIVE && stack.getItemMeta() instanceof Damageable damageable) {
+                                            damageable.setDamage(damageable.getDamage() + 2);
+                                            stack.setItemMeta(damageable);
+                                        }
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     net.minecraft.world.item.ItemStack craftItemStack = CraftItemStack.asNMSCopy(stack);
                     ServerPlayer human = ((CraftPlayer) e.getPlayer()).getHandle();
                     Direction direction;
@@ -68,12 +103,19 @@ public class PlayerListener implements Listener {
                         case DOWN -> direction = Direction.DOWN;
                         default -> direction = Direction.UP;
                     }
-                    craftItemStack.useOn(new UseOnContext(human, InteractionHand.MAIN_HAND, new BlockHitResult(
-                            new Vec3(e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ()),
+                    var result = craftItemStack.useOn(new UseOnContext(human, InteractionHand.MAIN_HAND, new BlockHitResult(
+                            new Vec3(e.getInteractionPoint().getX(), e.getInteractionPoint().getY(), e.getInteractionPoint().getZ()),
                             direction,
                             new BlockPos(e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ()),
                             false
                     )));
+                    if (result != InteractionResult.FAIL) {
+                        // TODO do for other packet types
+                        // manually create furniture stores
+                        if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomWaxedBlock customWaxed) {
+                            customWaxed.placeBlock(e.getItem(), placeable, e.getPlayer(), e.getClickedBlock().getRelative(e.getBlockFace()).getLocation(), e.getBlockFace(), false, new FurnitureStore(customItem.getIdentifier()));
+                        }
+                    }
                 }
             }
         }
@@ -119,7 +161,7 @@ public class PlayerListener implements Listener {
 
         if (e.getClickedBlock().getType() == Material.BARRIER) {
             if (!ProtectionUtil.canBuild(e.getClickedBlock().getLocation(), e.getPlayer())) return;
-            CustomBlockManager.breakBlock(e.getPlayer(), e.getClickedBlock().getLocation());
+            CustomBlockManager.breakFurniture(e.getPlayer(), e.getClickedBlock().getLocation());
         }
     }
 
@@ -130,6 +172,7 @@ public class PlayerListener implements Listener {
             if (block != null && block.getType() == Material.BARRIER) {
                 if (!ProtectionUtil.canBuild(block.getLocation(), e.getPlayer())) return;
                 var itemEntity = CustomBlockManager.getItemEntity(block.getLocation());
+                if (itemEntity == null) return;
                 CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
                 Bukkit.getPluginManager().callEvent(new CustomBlockInteractEvent(
                         e.getPlayer(), customItem, e.getHand(), e.getItem(), block
@@ -152,59 +195,35 @@ public class PlayerListener implements Listener {
         return temp;
     }
 
+    @EventHandler(ignoreCancelled = true)
+    public void interactWithDestroyStick(PlayerInteractEntityEvent e) {
+        ItemStack heldItem = e.getPlayer().getInventory().getItem(e.getHand());
+        var customItem = GardensFurniture.itemRegistry.getCustomItem(heldItem);
+        if (customItem == null) return;
+        if (customItem.getIdentifier().equalsIgnoreCase("destroy_stick") && e.getPlayer().hasPermission("gardens.destroy_stick")) {
+            e.getRightClicked().remove();
+        }
+    }
+
     @EventHandler
     public void interactFurniture(PlayerInteractEntityEvent e) {
-//        if (e.isCancelled()) return;
-        ItemStack heldItem = e.getPlayer().getInventory().getItem(e.getHand());
-        if (e.getPlayer().isSneaking()) return;
-
         if (e.getRightClicked() instanceof ItemFrame || e.getRightClicked() instanceof Interaction) {
             var itemEntity = CustomBlockManager.getItemEntity(e.getRightClicked().getLocation());
-            if (itemEntity == null || itemEntity.getItem() == null) return;
-            CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
-            if (customItem instanceof CustomPlaceableItem customBlockItem) {
-                e.setCancelled(true);
+            if (itemEntity == null) return;
+            CustomBlockManager.onInteractFurniture(e.getPlayer(), e.getHand(), itemEntity);
+            e.setCancelled(true);
+        }
+    }
 
-                // dye if applicable
-                if (heldItem != null && heldItem.getType().toString().toUpperCase().endsWith("DYE")) {
-                    if (customItem.isDyeable() && itemEntity.getItem().getItemMeta() instanceof LeatherArmorMeta leatherMeta) {
-                        leatherMeta.setColor(getColorFromDye(heldItem.getType()));
-                        var item = itemEntity.getItem();
-                        item.setItemMeta(leatherMeta);
-                        itemEntity.setItem(item);
-                        heldItem.setAmount(heldItem.getAmount() - 1);
-                        return;
-                    }
-                }
-
-                if (customBlockItem.getCustomBlock().isSeated()) {
-                    double offset = customBlockItem.getCustomBlock().getSeatOffset();
-                    GSitAPI.createSeat(itemEntity.getEntity().getLocation().getBlock(), e.getPlayer(), true, 0.0, offset, 0.0, e.getPlayer().getLocation().getYaw(), true);
-                }
-                else {
-                    // todo update this to accept itemEntity
-//                    Bukkit.getPluginManager().callEvent(new FurnitureInteractEvent(e.getPlayer(), customItem, itemEntity, e.getHand(), heldItem));
-                }
-
-                if (customItem.getIdentifier().equals("maple_tap_5")) {
-                    if (heldItem != null && heldItem.getType() == Material.GLASS_BOTTLE) {
-                        itemEntity.setItem(GardensFurniture.itemRegistry.buildItem("maple_tap_1"));
-                        var nbt = new NBTEntity(itemEntity.getEntity()).getPersistentDataContainer();
-                        nbt.removeKey(MapleTapHandler.TAP_NBT);
-                        var mapleSyrup = GardensFurniture.itemRegistry.buildItem("maple_syrup");
-                        if (mapleSyrup == null) {
-                            Bukkit.getLogger().log(Level.SEVERE, "Failed to get maple_syrup item!");
-                            return;
-                        }
-                        if (heldItem.getAmount() > 1) {
-                            heldItem.setAmount(heldItem.getAmount() - 1);
-                            e.getPlayer().getInventory().addItem(mapleSyrup);
-                        } else {
-                            e.getPlayer().getInventory().setItem(e.getHand(), mapleSyrup);
-                        }
-                    }
-                }
-            }
+    @EventHandler
+    public void onInteractBarrier(PlayerInteractEvent e) {
+        if (e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        var block = e.getClickedBlock();
+        if (block != null && block.getType() == Material.BARRIER) {
+            var itemEntity = CustomBlockManager.getItemEntity(block.getLocation());
+            if (itemEntity == null) return;
+            CustomBlockManager.onInteractFurniture(e.getPlayer(), e.getHand(), itemEntity);
+            e.setCancelled(true);
         }
     }
 
@@ -270,27 +289,5 @@ public class PlayerListener implements Listener {
         return false;
     }
 
-    private Color getColorFromDye(Material material) {
-        Color color;
-        switch (material) {
-            case BLACK_DYE -> color = Color.BLACK;
-            case BLUE_DYE -> color = Color.BLUE;
-            case BROWN_DYE -> color = Color.fromRGB(160,82,45);
-            case CYAN_DYE -> color = Color.AQUA;
-            case GRAY_DYE -> color = Color.GRAY;
-            case GREEN_DYE -> color = Color.GREEN;
-            case LIGHT_BLUE_DYE -> color = Color.fromRGB(137, 207, 240);
-            case LIGHT_GRAY_DYE -> color = Color.SILVER;
-            case LIME_DYE -> color = Color.LIME;
-            case MAGENTA_DYE -> color = Color.FUCHSIA;
-            case ORANGE_DYE -> color = Color.ORANGE;
-            case PINK_DYE -> color = Color.fromRGB(255,192,203);
-            case PURPLE_DYE -> color = Color.PURPLE;
-            case RED_DYE -> color = Color.RED;
-            case WHITE_DYE -> color = Color.WHITE;
-            case YELLOW_DYE -> color = Color.YELLOW;
-            default -> throw new RuntimeException("Unknown dye: " + material);
-        }
-        return color;
-    }
+
 }

@@ -1,6 +1,7 @@
 package com.gardensmc.gardensfurniture.structure;
 
 import com.gardensmc.gardensfurniture.structure.structures.BeeNest;
+import com.gardensmc.gardensfurniture.structure.structures.MapleTree;
 import org.bukkit.Location;
 
 import java.util.HashMap;
@@ -28,5 +29,6 @@ public class StructureHandler {
 
     private void mapStructures() {
         structureMap.put("BEE_NEST", new BeeNest());
+        structureMap.put("MAPLE_TREE", new MapleTree());
     }
 }

@@ -9,9 +9,6 @@ import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerAbstract;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
-import com.github.retrooper.packetevents.protocol.recipe.CraftingCategory;
-import com.github.retrooper.packetevents.protocol.recipe.data.ShapedRecipeData;
-import com.github.retrooper.packetevents.protocol.recipe.data.ShapelessRecipeData;
 import com.github.retrooper.packetevents.protocol.world.chunk.BaseChunk;
 import com.github.retrooper.packetevents.protocol.world.chunk.Column;
 import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
@@ -25,14 +22,18 @@ import com.github.retrooper.packetevents.protocol.world.states.type.StateTypes;
 import com.github.retrooper.packetevents.util.Vector3i;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockChange;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChunkData;
-import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerDeclareRecipes;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerMultiBlockChange;
+import joptsimple.internal.Strings;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 
 import javax.annotation.Nullable;
-import java.lang.reflect.Field;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
+
+import static java.util.Map.entry;
 
 /**
  * Written by referencing HMCLeaves https://github.com/HibiscusMC/HMCLeaves/blob/master/src/main/java/io/github/fisher2911/hmcleaves/packet/BlockListener.java
@@ -49,41 +50,63 @@ public class BlockPacketListener {
             StateTypes.AMETHYST_CLUSTER
     );
 
+    private final Set<StateType> leavesTypes = Set.of(
+            StateTypes.SPRUCE_LEAVES,
+            StateTypes.CHERRY_LEAVES,
+            StateTypes.BIRCH_LEAVES
+    );
+
+    private final Map<StateType, StateType> waxedTypes = Map.ofEntries(
+            entry(StateTypes.WAXED_CUT_COPPER_STAIRS, StateTypes.CUT_COPPER_STAIRS),
+            entry(StateTypes.WAXED_CUT_COPPER_SLAB, StateTypes.CUT_COPPER_SLAB),
+            entry(StateTypes.WAXED_COPPER_TRAPDOOR, StateTypes.COPPER_TRAPDOOR),
+            entry(StateTypes.WAXED_COPPER_DOOR, StateTypes.COPPER_DOOR),
+
+            entry(StateTypes.WAXED_EXPOSED_CUT_COPPER_STAIRS, StateTypes.EXPOSED_CUT_COPPER_STAIRS),
+            entry(StateTypes.WAXED_EXPOSED_CUT_COPPER_SLAB, StateTypes.EXPOSED_CUT_COPPER_SLAB),
+            entry(StateTypes.WAXED_EXPOSED_COPPER_TRAPDOOR, StateTypes.EXPOSED_COPPER_TRAPDOOR),
+            entry(StateTypes.WAXED_EXPOSED_COPPER_DOOR, StateTypes.EXPOSED_COPPER_DOOR),
+
+            entry(StateTypes.WAXED_WEATHERED_CUT_COPPER_STAIRS, StateTypes.WEATHERED_CUT_COPPER_STAIRS),
+            entry(StateTypes.WAXED_WEATHERED_CUT_COPPER_SLAB, StateTypes.WEATHERED_CUT_COPPER_SLAB),
+            entry(StateTypes.WAXED_WEATHERED_COPPER_TRAPDOOR, StateTypes.WEATHERED_COPPER_TRAPDOOR),
+            entry(StateTypes.WAXED_WEATHERED_COPPER_DOOR, StateTypes.WEATHERED_COPPER_DOOR),
+
+            entry(StateTypes.WAXED_OXIDIZED_CUT_COPPER_STAIRS, StateTypes.OXIDIZED_CUT_COPPER_STAIRS),
+            entry(StateTypes.WAXED_OXIDIZED_CUT_COPPER_SLAB, StateTypes.OXIDIZED_CUT_COPPER_SLAB),
+            entry(StateTypes.WAXED_OXIDIZED_COPPER_TRAPDOOR, StateTypes.OXIDIZED_COPPER_TRAPDOOR),
+            entry(StateTypes.WAXED_OXIDIZED_COPPER_DOOR, StateTypes.OXIDIZED_COPPER_DOOR)
+    );
+
     public void register() {
         PacketEvents.getAPI().getEventManager().registerListener(new PacketListenerAbstract() {
             @Override
             public void onPacketSend(PacketSendEvent event) {
-                if (event.getPacketType() == PacketType.Play.Server.DECLARE_RECIPES) {
-                    var wrapper = new WrapperPlayServerDeclareRecipes(event);
-                    var recipes = wrapper.getRecipes();
-                    for (int i = 0; i < recipes.length; i++) {
-                        var recipe = recipes[i];
-                        if (recipe.getIdentifier().startsWith("customcrafting:cc_display.gardens")) {
-                            var data = recipe.getData();
-                            try {
-//                                if (data instanceof SimpleRecipeData simpleRecipeData) {
-//                                    Field category = simpleRecipeData.getClass().getDeclaredField("category");
+//                if (event.getPacketType() == PacketType.Play.Server.DECLARE_RECIPES) {
+//                    var wrapper = new WrapperPlayServerDeclareRecipes(event);
+//                    var recipes = wrapper.getRecipes();
+//                    for (int i = 0; i < recipes.length; i++) {
+//                        var recipe = recipes[i];
+//                        if (recipe.getIdentifier().startsWith("customcrafting:cc_display.gardens")) {
+//                            var data = recipe.getData();
+//                            try {
+//                                if (data instanceof ShapedRecipeData recipeData) {
+//                                    Field category = recipeData.getClass().getDeclaredField("category");
 //                                    category.setAccessible(true);
-//                                    category.set(simpleRecipeData, CraftingCategory.BUILDING);
-                                if (data instanceof ShapedRecipeData recipeData) {
-                                    Field category = recipeData.getClass().getDeclaredField("category");
-                                    category.setAccessible(true);
-                                    category.set(recipeData, CraftingCategory.BUILDING);
-                                    var result = recipeData.getResult();
-//                                    GardensFurniture.itemRegistry.getCustomItem(result);
-                                } else if (data instanceof ShapelessRecipeData recipeData) {
-                                    Field category = recipeData.getClass().getDeclaredField("category");
-                                    category.setAccessible(true);
-                                    category.set(recipeData, CraftingCategory.BUILDING);
-
-                                }
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        }
-
-                    }
-                }
+//                                    category.set(recipeData, CraftingCategory.BUILDING);
+//                                } else if (data instanceof ShapelessRecipeData recipeData) {
+//                                    Field category = recipeData.getClass().getDeclaredField("category");
+//                                    category.setAccessible(true);
+//                                    category.set(recipeData, CraftingCategory.BUILDING);
+//
+//                                }
+//                            } catch (Exception e) {
+//                                e.printStackTrace();
+//                            }
+//                        }
+//
+//                    }
+//                }
                 if (!(event.getPlayer() instanceof Player player)) return;
                 if (event.getPacketType() == PacketType.Play.Server.CHUNK_DATA) {
                     handleChunkChange(new WrapperPlayServerChunkData(event), player);
@@ -117,7 +140,7 @@ public class BlockPacketListener {
                         int realZ = coordinateZ + z;
                         int realY = y + (16 * i) - Math.abs(worldMinHeight);
 
-                        if (blockState.getType() == StateTypes.SPRUCE_LEAVES || blockState.getType() == StateTypes.CHERRY_LEAVES) {
+                        if (leavesTypes.contains(blockState.getType())) {
                             CustomItem customItem = getCustomItemFromPos(player.getWorld(), realX, realY, realZ);
                             if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
                                 baseChunk.set(x, y, z, getBlockStateFromLeaves(customLeavesBlock, blockState.getType()));
@@ -168,6 +191,13 @@ public class BlockPacketListener {
                             CustomItem customItem = getCustomItemFromPos(world, realX, realY, realZ);
                             if (customItem instanceof CustomPlaceableItem placeableItem && placeableItem.getCustomBlock() instanceof CustomBuddingBlock budding) {
                                 baseChunk.set(x, y, z, getBlockStateFromNote(budding));
+                            }
+                        } else if (blockState.getType() == StateTypes.OAK_SAPLING) {
+
+                        } else if (waxedTypes.containsKey(blockState.getType())) {
+                            CustomItem customItem = getCustomItemFromPos(player.getWorld(), realX, realY, realZ);
+                            if (customItem == null) {
+                                baseChunk.set(x, y, z, getUnwaxedState(blockState));
                             }
                         }
 //                        } else if (crystalTypes.contains(blockState.getType())) {
@@ -225,7 +255,7 @@ public class BlockPacketListener {
     private boolean handleBlockChange(WrapperPlayServerBlockChange packet, Player player) {
         Vector3i pos = packet.getBlockPosition();
         WrappedBlockState blockState = packet.getBlockState();
-        if (blockState.getType() == StateTypes.SPRUCE_LEAVES || blockState.getType() == StateTypes.CHERRY_LEAVES) {
+        if (leavesTypes.contains(blockState.getType())) {
             CustomItem customItem = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
             if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
                 WrappedBlockState blockState1 = getBlockStateFromLeaves(customLeavesBlock, blockState.getType());
@@ -237,6 +267,17 @@ public class BlockPacketListener {
             }
             else {
                 WrappedBlockState blockState1 = getNormalLeaveState(blockState.getType());
+                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
+                        player,
+                        new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
+                );
+                return true;
+            }
+        }
+        else if (waxedTypes.containsKey(blockState.getType())) {
+            CustomItem customItem = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
+            if (customItem == null) {
+                WrappedBlockState blockState1 = getUnwaxedState(blockState);
                 PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
                         player,
                         new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
@@ -340,7 +381,7 @@ public class BlockPacketListener {
         var blocks = packet.getBlocks();
         for (var block : blocks) {
             WrappedBlockState blockState1 = block.getBlockState(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion());
-            if (blockState1.getType() == StateTypes.SPRUCE_LEAVES || blockState1.getType() == StateTypes.CHERRY_LEAVES) {
+            if (leavesTypes.contains(blockState1.getType())) {
                 CustomItem customItem = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
                 if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
                     WrappedBlockState blockState = getBlockStateFromLeaves(customLeavesBlock, blockState1.getType());
@@ -348,6 +389,13 @@ public class BlockPacketListener {
                 }
                 else {
                     block.setBlockState(getNormalLeaveState(blockState1.getType()));
+                }
+            }
+            if (waxedTypes.containsKey(blockState1.getType())) {
+                CustomItem customItem = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
+                if (customItem == null) {
+                    WrappedBlockState blockState = getUnwaxedState(blockState1);
+                    block.setBlockState(blockState);
                 }
             }
             else if (blockState1.getType() == StateTypes.BUDDING_AMETHYST) {
@@ -437,6 +485,31 @@ public class BlockPacketListener {
         return blockState;
     }
 
+    private WrappedBlockState getUnwaxedState(WrappedBlockState blockState) {
+       var state = waxedTypes.get(blockState.getType()).createBlockState();
+       var typeName = state.getType().toString().toUpperCase();
+       // copy over data
+        if (typeName.endsWith("_DOOR")) {
+            state.setFacing(blockState.getFacing());
+            state.setHalf(blockState.getHalf());
+            state.setHinge(blockState.getHinge());
+            state.setOpen(blockState.isOpen());
+            state.setPowered(blockState.isPowered());
+        } else if (typeName.endsWith("_TRAPDOOR")) {
+            state.setFacing(blockState.getFacing());
+            state.setHalf(blockState.getHalf());
+            state.setOpen(blockState.isOpen());
+            state.setPowered(blockState.isPowered());
+            state.setWaterlogged(blockState.isWaterlogged());
+        } else if (typeName.endsWith("_STAIRS")) {
+            state.setFacing(blockState.getFacing());
+            state.setHalf(blockState.getHalf());
+            state.setShape(blockState.getShape());
+            state.setWaterlogged(blockState.isWaterlogged());
+        }
+        return state;
+    }
+
     private WrappedBlockState getBlockStateFromLeaves(CustomLeavesBlock customLeavesBlock, StateType leafType) {
         WrappedBlockState blockState = leafType.createBlockState();
         blockState.setDistance(customLeavesBlock.getDistance());
@@ -446,8 +519,8 @@ public class BlockPacketListener {
 
     private WrappedBlockState getBlockStateFromNote(CustomNoteBlock customNoteBlock) {
         var blockState = StateTypes.NOTE_BLOCK.createBlockState();
-        blockState.setNote(customNoteBlock.getNote());
-        blockState.setInstrument(Instrument.valueOf(customNoteBlock.getInstrument().toUpperCase()));
+        blockState.setNote(customNoteBlock.getNote().getId());
+        blockState.setInstrument(Instrument.valueOf(customNoteBlock.getInstrument().toString()));
         return blockState;
     }
 

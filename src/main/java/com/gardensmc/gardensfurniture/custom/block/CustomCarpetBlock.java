@@ -11,8 +11,9 @@ import org.bukkit.inventory.ItemStack;
 
 public class CustomCarpetBlock extends CustomDisplayBlock {
 
-    public CustomCarpetBlock(ConfigurationSection blockSection) {
-        super(blockSection);
+    public CustomCarpetBlock(ConfigurationSection blockSection, String identifier) {
+        super(blockSection, identifier);
+        this.hitbox = Hitbox.NONE;
     }
 
     @Override

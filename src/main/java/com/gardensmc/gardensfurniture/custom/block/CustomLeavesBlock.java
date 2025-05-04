@@ -84,7 +84,8 @@ public class CustomLeavesBlock extends CustomBlock {
 
     public enum LeavesType {
         SPRUCE(Material.SPRUCE_LEAVES),
-        CHERRY(Material.CHERRY_LEAVES);
+        CHERRY(Material.CHERRY_LEAVES),
+        BIRCH(Material.BIRCH_LEAVES);
 
         private final Material material;
 

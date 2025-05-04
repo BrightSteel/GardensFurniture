@@ -1,10 +1,9 @@
 package com.gardensmc.gardensfurniture.menu;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
-import de.themoep.inventorygui.GuiElement;
-import de.themoep.inventorygui.GuiElementGroup;
-import de.themoep.inventorygui.InventoryGui;
-import de.themoep.inventorygui.StaticGuiElement;
+import de.themoep.inventorygui.*;
+import org.apache.commons.lang3.StringUtils;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -15,7 +14,8 @@ public class FurnitureMenu extends Menu {
     private static final String[] layout = new String[]{
             "aaaaaaaaa",
             "aaaaaaaaa",
-            "aaaaaaaaa"
+            "aaaaaaaaa",
+            " b     n "
     };
 
     public FurnitureMenu(Player viewer) {
@@ -27,9 +27,22 @@ public class FurnitureMenu extends Menu {
         var group = new GuiElementGroup('a');
         GardensFurniture.itemRegistry.getItemCategories()
                 .stream()
+                .sorted()
                 .map(this::getCategoryElement)
                 .forEach(group::addElement);
         this.gui.addElement(group);
+        gui.addElement(new GuiPageElement(
+                'n',
+                new ItemStack(Material.STICK),
+                GuiPageElement.PageAction.NEXT,
+                "Next")
+        );
+        gui.addElement(new GuiPageElement(
+                'b',
+                new ItemStack(Material.STICK),
+                GuiPageElement.PageAction.PREVIOUS,
+                "Back")
+        );
     }
 
     private GuiElement getCategoryElement(String category) {
@@ -41,7 +54,7 @@ public class FurnitureMenu extends Menu {
                     new FurnitureCategoryMenu(category, viewer).open();
                     return true;
                 },
-                category
+                StringUtils.capitalize(category)
         );
     }
 

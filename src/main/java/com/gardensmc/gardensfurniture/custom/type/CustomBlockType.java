@@ -9,5 +9,7 @@ public enum CustomBlockType {
     CRYSTAL,
     BUDDING,
     DISPLAY,
-    CARPET
+    CARPET,
+    SAPLING,
+    WAXED
 }

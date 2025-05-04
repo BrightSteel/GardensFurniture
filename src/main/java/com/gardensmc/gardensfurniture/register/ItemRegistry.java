@@ -5,12 +5,16 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.*;
 import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
 import com.gardensmc.gardensfurniture.custom.item.*;
+import com.gardensmc.gardensfurniture.generator.GenDefinitionsHandler;
+import com.gardensmc.gardensfurniture.generator.GenOverworldDimensionHandler;
 import com.gardensmc.gardensfurniture.util.ChatUtil;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import de.tr7zw.nbtapi.NBT;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.Consumable;
 import io.papermc.paper.datacomponent.item.consumable.ItemUseAnimation;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.*;
 import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.ConfigurationSection;
@@ -25,6 +29,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class ItemRegistry {
 
@@ -40,8 +45,11 @@ public class ItemRegistry {
 
     public final CrystalRegistry crystalRegistry = new CrystalRegistry();
 
-    private static final String FURNITURE_KEY = "GardensFurnitureId";
-    private static final File generatedDir = new File(GardensFurniture.plugin.getDataFolder(), "generated");
+    public static final String FURNITURE_KEY = "GardensFurnitureId";
+    public static final File generatedDir = new File(GardensFurniture.plugin.getDataFolder(), "generated");
+
+    // Regular expression to match text between ":" and "/"
+    private static final Pattern OUTER_DIR_PATTERN = Pattern.compile("(?<=:)([^/]+)(?=/)");
 
     public ItemRegistry() {
         customItemFactory = new CustomItemFactory();
@@ -56,6 +64,7 @@ public class ItemRegistry {
                 e.printStackTrace();
             }
         }
+//        Set<String> outerFolders = new HashSet<>();
         for (Map.Entry<String, Configuration> entry : ConfigUtil.all_items.entrySet()) {
             String name = entry.getKey();
             var config = entry.getValue();
@@ -67,7 +76,7 @@ public class ItemRegistry {
 
                     registerCrystalIfPresent(customItem);
 
-                    if (customItem.showInMenu()) {
+                    if (customItem.showInMenu() && !customItem.isTemplate()) {
                         Set<CustomItem> categoryItems = customItemByCategory.computeIfAbsent(name, s -> new TreeSet<>());
                         categoryItems.add(customItem);
                     }
@@ -79,6 +88,15 @@ public class ItemRegistry {
                         if (itemModel != null) {
                             try {
                                 writeOutModelFile(itemModel, customItem.getMaterial().toString().toUpperCase().startsWith("LEATHER"));
+                                if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
+                                    if (crystalBlock.getModelOverride() != null) {
+                                        writeOutModelFile(crystalBlock.getModelOverride(), false);
+                                    }
+                                }
+//                                var outerFolder = OUTER_DIR_PATTERN.matcher(itemModel);
+//                                if (outerFolder.find()) {
+//                                    outerFolders.add(outerFolder.group(1));
+//                                }
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
@@ -87,6 +105,12 @@ public class ItemRegistry {
                 }
             }
         }
+        GenDefinitionsHandler.INSTANCE.generate();
+        GenOverworldDimensionHandler.INSTANCE.generate();
+
+//        if (!outerFolders.isEmpty()) {
+//            writeOutAtlases(outerFolders);
+//        }
     }
 
     // todo use POJOs to be cleaner
@@ -95,7 +119,7 @@ public class ItemRegistry {
         var node = mapper.createObjectNode();
         var modelNode = mapper.createObjectNode();
         modelNode.put("type", "minecraft:model");
-        modelNode.put("model", itemModel.replaceFirst(":", ":item/"));
+        modelNode.put("model", itemModel);
         if (isTintable) {
             var tints = mapper.createArrayNode();
             var dyeNode = mapper.createObjectNode();
@@ -109,6 +133,22 @@ public class ItemRegistry {
         var output = new File(generatedDir, itemModel.replaceFirst(":", "/items/") + ".json");
         output.getParentFile().mkdirs();
         mapper.writerWithDefaultPrettyPrinter().writeValue(output, node);
+    }
+
+    private void writeOutAtlases(Set<String> outerFolders) {
+        JsonMapper jsonMapper = new JsonMapper();
+        var atlas = new Atlases(outerFolders
+                .stream()
+                .map(folder -> new Atlas("directory", folder, folder + "/"))
+                .toList()
+        );
+        var output = new File(generatedDir, "minecraft/atlases/blocks.json");
+        output.getParentFile().mkdirs();
+        try {
+            jsonMapper.writerWithDefaultPrettyPrinter().writeValue(output, atlas);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public List<String> getItemIdentifiers() {
@@ -135,8 +175,8 @@ public class ItemRegistry {
         return buildItem(customItem);
     }
 
+
     @Nullable
-    @SuppressWarnings("UnstableApiUsage")
     public ItemStack buildItem(CustomItem customItem) {
         if (customItem != null) {
             ItemStack itemStack = new ItemStack(customItem.getMaterial());
@@ -146,14 +186,14 @@ public class ItemRegistry {
                 if (customModel != -1) {
                     meta.setCustomModelData(customModel);
                 }
-                meta.setDisplayName(ChatColor.WHITE + ChatUtil.translateHex(customItem.getDisplay()));
+                meta.displayName(customItem.getDisplayName());
 
                 if (customItem.getLore() != null) {
-                    List<String> hexLore = new ArrayList<>();
-                    for (String lore : customItem.getLore()) {
-                        hexLore.add(ChatUtil.translateHex(lore));
-                    }
-                    meta.setLore(hexLore);
+                    meta.lore(customItem.getLore()
+                            .stream()
+                            .map(s -> MiniMessage.miniMessage().deserialize(s))
+                            .toList()
+                    );
                 }
 
                 // flags

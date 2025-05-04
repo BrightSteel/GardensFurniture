@@ -12,6 +12,7 @@ import com.gardensmc.gardensfurniture.itementity.FrameItemEntity;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import de.tr7zw.nbtapi.NBTEntity;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.ItemFrame;
@@ -46,31 +47,8 @@ public class EntityListener implements Listener {
     @EventHandler
     public void entityHitInteractionEntity(EntityDamageByEntityEvent e) {
         if (e.isCancelled()) return;
-
         if (e.getEntity() instanceof Interaction interaction && e.getDamager() instanceof Player player) {
-            var display = CustomBlockManager.getDisplayEntity(interaction.getLocation());
-            if (display == null) return;
-
-            var item = display.getItemStack();
-            if (item == null) return;
-
-            var customItem = GardensFurniture.itemRegistry.getCustomItem(item);
-            // chances are if there's an interaction entity it indeed has a hitbox, but might as well check
-            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
-                FurnitureBreakEvent ev = new FurnitureBreakEvent(player, placeable, new DisplayItemEntity(display), interaction);
-                Bukkit.getPluginManager().callEvent(ev);
-                if (ev.isCancelled()) {
-                    return;
-                }
-                if (displayBlock.getHitbox() == CustomDisplayBlock.Hitbox.INTERACTION) {
-                    e.getEntity().remove();
-                    display.remove();
-                    var drop = CustomBlockManager.getDrop(placeable);
-                    if (drop != null) {
-                        display.getWorld().dropItemNaturally(display.getLocation(), drop);
-                    }
-                }
-            }
+            CustomBlockManager.breakFurniture(player, interaction.getLocation());
         }
     }
 

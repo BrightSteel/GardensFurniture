@@ -2,10 +2,7 @@ package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
-import com.gardensmc.gardensfurniture.custom.block.CustomBuddingBlock;
-import com.gardensmc.gardensfurniture.custom.block.CustomCaveVineBlock;
-import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
-import com.gardensmc.gardensfurniture.custom.block.CustomDisplayBlock;
+import com.gardensmc.gardensfurniture.custom.block.*;
 import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineDirectional;
 import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
@@ -15,6 +12,7 @@ import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
+import org.bukkit.TreeType;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
@@ -28,6 +26,7 @@ import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockSpreadEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.world.StructureGrowEvent;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -81,6 +80,17 @@ public class CaveVineListener implements Listener {
                 Bukkit.getLogger().log(Level.SEVERE, "Missing brown carpet dupe!");
             } else if (carpetDupe instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
                 displayBlock.placeBlock(null, placeable, null, blockPlaced.getLocation(), BlockFace.UP, false, null);
+            }
+        } else if (itemStack.getType() == Material.OAK_SAPLING) {
+            CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
+            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomSaplingBlock customSaplingBlock) {
+                // vanilla already placed the sapling, let's place the item frame
+                customSaplingBlock.placeDisplayEntity(placeable, blockPlaced.getLocation(), BlockFace.UP);
+            } else {
+                var saplingDupe = GardensFurniture.itemRegistry.getItem("oak_sapling");
+                if (saplingDupe instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
+                    displayBlock.placeBlock(null, placeable, null, blockPlaced.getLocation(), BlockFace.UP, false, null);
+                }
             }
         }
     }
@@ -201,6 +211,32 @@ public class CaveVineListener implements Listener {
 //                    e.setCancelled(true);
 //                }
 //            }
+        }
+    }
+
+    @EventHandler
+    public void onTreeGrowth(StructureGrowEvent e) {
+        if (e.getSpecies() == TreeType.TREE || e.getSpecies() == TreeType.BIG_TREE) {
+            var customItem = CustomBlockManager.getCustomItemFromBlock(e.getLocation().getBlock());
+            if (customItem != null) {
+                CustomBlockManager.breakFurniture(null, e.getLocation());
+                if (customItem.getMechanics() != null) {
+                    var structure = customItem.getMechanics().getSapling_structure();
+                    if (structure != null) {
+                        e.setCancelled(true);
+                        GardensFurniture.structureHandler.spawnStructure(structure, e.getLocation());
+                    }
+                }
+            } else {
+                // vanilla sapling - remove dupe on growth
+                    var display = CustomBlockManager.getDisplayEntity(e.getLocation());
+                    if (display != null) {
+                        if (GardensFurniture.itemRegistry.getCustomItem(display.getItemStack()) != null) {
+                            display.remove();
+                        }
+                    }
+
+            }
         }
     }
 }

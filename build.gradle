@@ -33,6 +33,7 @@ repositories {
     maven {
         url = "https://repo.minebench.de/"
     }
+    maven { url 'https://mvn.lumine.io/repository/maven-public/' }
 }
 
 dependencies {
@@ -41,9 +42,11 @@ dependencies {
 
     compileOnly("de.tr7zw:item-nbt-api-plugin:2.14.1")
     compileOnly("com.github.Gecolay.GSit:core:2.2.1")
+    compileOnly('com.comphenix.protocol:ProtocolLib:5.3.0')
     compileOnly(fileTree("${project.rootDir}/dependencies") { include("*.jar") })
     implementation("de.themoep:inventorygui:1.6.5-SNAPSHOT")
     compileOnly("com.github.retrooper:packetevents-spigot:2.7.0")
+    compileOnly 'com.ticxo.modelengine:ModelEngine:R4.0.7'
     compileOnly 'org.projectlombok:lombok:1.18.36'
     annotationProcessor 'org.projectlombok:lombok:1.18.36'
 

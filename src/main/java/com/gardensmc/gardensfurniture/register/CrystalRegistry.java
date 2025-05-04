@@ -10,7 +10,7 @@ public class CrystalRegistry {
 
     // crystal_id -> (crystal type -> item identifier)
     public static final Map<String, Map<CustomCrystalBlock.CrystalType, String>> crystalSetMap = new HashMap<>();
-    private final Map<CustomCrystalBlock.CrystalType, Map<Integer, String>> modelOverrides = new HashMap<>();
+    private final Map<CustomCrystalBlock.CrystalType, Map<String, String>> modelOverrides = new HashMap<>();
 
     @Nullable
     public String getCrystalIdentifier(String crystalId, CustomCrystalBlock.CrystalType crystalType) {
@@ -22,7 +22,7 @@ public class CrystalRegistry {
     }
 
     @Nullable
-    public String getCrystalIdentifier(CustomCrystalBlock.CrystalType crystalType, int modelOverride) {
+    public String getCrystalIdentifier(CustomCrystalBlock.CrystalType crystalType, String modelOverride) {
         var overrides = modelOverrides.get(crystalType);
         if (overrides == null) return null;
         return overrides.get(modelOverride);

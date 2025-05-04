@@ -1,6 +1,7 @@
 package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Listener;
 
@@ -27,7 +28,8 @@ public class ListenerHandler {
                 new EntityListener(),
                 new LeafListener(),
                 new PlayerListener(),
-                new CustomBlockBreakListener()
+                new CustomBlockBreakListener(),
+                new VanillaBlockSoundListener()
         );
     }
 }

@@ -57,7 +57,7 @@ public class FurnitureCategoryMenu extends Menu {
                     viewer.getInventory().addItem(itemStack);
                     return true;
                 },
-                customItem.getDisplay()
+                customItem.getDisplayRawFormatted()
         );
     }
 

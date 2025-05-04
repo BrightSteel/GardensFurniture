@@ -4,6 +4,7 @@ import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.util.LightUtil;
+import lombok.Getter;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -12,30 +13,19 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+@Getter
 public class CustomNoteBlock extends CustomBlock {
 
-    private final int note;
-    private final String instrument;
+    private final Note note;
+    private final Instrument instrument;
     private final boolean powered;
 
     public CustomNoteBlock(ConfigurationSection blockSection, String blockName) {
         super(blockSection);
         ConfigurationSection noteSection = getConfigSectionOrThrow(blockSection, "note_data", blockName);
-        this.note = noteSection.getInt("note");
-        this.instrument = noteSection.getString("instrument");
+        this.note = new Note(noteSection.getInt("note"));
+        this.instrument = Instrument.valueOf(noteSection.getString("instrument").toUpperCase());
         this.powered = noteSection.getBoolean("powered");
-    }
-
-    public int getNote() {
-        return note;
-    }
-
-    public boolean isPowered() {
-        return powered;
-    }
-
-    public String getInstrument() {
-        return instrument;
     }
 
 
@@ -51,18 +41,11 @@ public class CustomNoteBlock extends CustomBlock {
         Bukkit.getPluginManager().callEvent(event);
         if (event.isCancelled()) return false;
 
-        Instrument instrument;
-        try {
-            instrument = Instrument.valueOf(getInstrument().toUpperCase());
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
         block.setType(Material.NOTE_BLOCK);
         if (block.getBlockData() instanceof NoteBlock noteBlock) {
-            noteBlock.setNote(new Note(getNote()));
+            noteBlock.setNote(note);
             noteBlock.setInstrument(instrument);
-            noteBlock.setPowered(isPowered());
+            noteBlock.setPowered(powered);
             block.setBlockData(noteBlock);
         }
 
@@ -70,5 +53,11 @@ public class CustomNoteBlock extends CustomBlock {
             LightUtil.placeLight(location, getLight(), true);
         }
         return true;
+    }
+
+    public boolean isNoteBlock(NoteBlock noteBlock) {
+        return noteBlock.getInstrument() == instrument
+                && noteBlock.getNote().equals(note)
+                && noteBlock.isPowered() == isPowered();
     }
 }

@@ -7,4 +7,5 @@ public interface ItemEntity {
     ItemStack getItem();
     Entity getEntity();
     void setItem(ItemStack item);
+    void rotate(int degrees);
 }

@@ -5,6 +5,7 @@ import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.AmethystCluster;
 import org.bukkit.configuration.ConfigurationSection;
@@ -20,17 +21,18 @@ public class CustomCrystalBlock extends CustomDisplayBlock {
 
     private final String crystalId;
     private final CrystalType type;
-    private final int modelOverride;
+    private final String modelOverride;
 
     public CustomCrystalBlock(ConfigurationSection blockSection, String customBlockName) {
-        super(blockSection);
+        super(blockSection, customBlockName);
+        this.hitbox = Hitbox.NONE;
         var crystalSection = blockSection.getConfigurationSection("crystal_data");
         if (crystalSection == null) {
             throw new RuntimeException("Missing crystal section for block: " + customBlockName);
         }
         this.crystalId = crystalSection.getString("id");
         this.type = CrystalType.valueOf(crystalSection.getString("type").toUpperCase());
-        this.modelOverride = crystalSection.getInt("model_override");
+        this.modelOverride = crystalSection.getString("model_override");
     }
 
     public CrystalType getType() {
@@ -41,7 +43,7 @@ public class CustomCrystalBlock extends CustomDisplayBlock {
         return crystalId;
     }
 
-    public int getModelOverride() {
+    public String getModelOverride() {
         return modelOverride;
     }
 
@@ -96,11 +98,11 @@ public class CustomCrystalBlock extends CustomDisplayBlock {
     public boolean placeDisplayEntity(CustomPlaceableItem customItem, Location location, BlockFace blockFace) {
         var crystalItem = GardensFurniture.itemRegistry.buildItem(customItem);
         ItemMeta meta = crystalItem.getItemMeta();
-        if (meta != null) {
-            meta.setCustomModelData(modelOverride);
+        if (meta != null && !modelOverride.isEmpty()) {
+            meta.setItemModel(NamespacedKey.fromString(modelOverride));
             crystalItem.setItemMeta(meta);
         }
-        return super.placeDisplay(crystalItem, null, location, blockFace);
+        return super.placeDisplay(crystalItem, null, location, blockFace, null);
     }
 
     public static boolean isCrystalMaterial(Material material) {
