@@ -6,6 +6,7 @@ import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomDisplayBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.store.FurnitureCache;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import org.bukkit.Bukkit;
@@ -71,7 +72,7 @@ public class ChunkFurnitureLoader {
             CustomItem customItem = GardensFurniture.itemRegistry.getItem(mapping);
             if (customItem instanceof CustomPlaceableItem placeableItem) {
                 block.setType(Material.AIR);
-                CustomBlockManager.attemptPlacement(null, null, placeableItem, block.getLocation(), null, false);
+                placeableItem.placeBlock(null, null, block.getLocation(), new PlaceOptions().setPersistentLeaves(false).setForce(true));
             }
         }
     }
@@ -93,7 +94,7 @@ public class ChunkFurnitureLoader {
                     // normal amethyst - rotated to better fit display "fixed" setting
                     var amethystBudDupe = GardensFurniture.itemRegistry.getItem(budMaterial.toString().toLowerCase());
                     if (amethystBudDupe instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
-                        displayBlock.placeBlock(null, placeable, null, b.getLocation(), face, false, null);
+                        displayBlock.placeBlock(null, null, placeable, b.getLocation(), new PlaceOptions().setBlockFace(face).setPersistentLeaves(false));
                     }
                 }
             }

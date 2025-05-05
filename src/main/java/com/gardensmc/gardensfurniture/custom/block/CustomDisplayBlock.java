@@ -1,29 +1,23 @@
 package com.gardensmc.gardensfurniture.custom.block;
 
-import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.custom.type.Facing;
 import com.gardensmc.gardensfurniture.custom.type.Rotation;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
-import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.util.LightUtil;
 import com.ticxo.modelengine.api.ModelEngineAPI;
 import de.tr7zw.nbtapi.NBT;
-import de.tr7zw.nbtapi.NBTEntity;
 import lombok.Getter;
 import org.bukkit.Bukkit;
-import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-
-import static com.gardensmc.gardensfurniture.register.ItemRegistry.FURNITURE_KEY;
 
 public class CustomDisplayBlock extends CustomBlock {
 
@@ -94,8 +88,8 @@ public class CustomDisplayBlock extends CustomBlock {
     }
 
     @Override
-    public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem placeableItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
-        CustomBlockPlaceEvent event = new CustomBlockPlaceEvent(player, placeableItem, location.getBlock());
+    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions) {
+        CustomBlockPlaceEvent event = new CustomBlockPlaceEvent(player, customItem, location.getBlock());
         Bukkit.getPluginManager().callEvent(event);
         if (event.isCancelled()) return false;
 
@@ -103,10 +97,10 @@ public class CustomDisplayBlock extends CustomBlock {
 //        if (heldItem != null && heldItem.getItemMeta() instanceof LeatherArmorMeta leather) {
 //            color = leather.getColor();
 //        }
-        return placeDisplay(heldItem, player, location, blockFace, null);
+        return placeDisplay(heldItem, player, location, placeOptions.getBlockFace());
     }
 
-    protected boolean placeDisplay(ItemStack item, Player player, Location location, BlockFace blockFace, Color color) {
+    protected boolean placeDisplay(ItemStack item, Player player, Location location, BlockFace blockFace) {
         var world = location.getWorld();
         if (world == null) return false;
 

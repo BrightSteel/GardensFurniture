@@ -4,10 +4,7 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.CustomNoteBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomWaxedBlock;
-import com.gardensmc.gardensfurniture.custom.item.CustomDirectionalItem;
-import com.gardensmc.gardensfurniture.custom.item.CustomItem;
-import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
-import com.gardensmc.gardensfurniture.custom.item.WrappedItem;
+import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.custom.item.mechanics.CaptureMobHandler;
 import com.gardensmc.gardensfurniture.events.CustomBlockInteractEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
@@ -115,7 +112,7 @@ public class PlayerListener implements Listener {
                         // TODO do for other packet types
                         // manually create furniture stores
                         if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomWaxedBlock customWaxed) {
-                            customWaxed.placeBlock(e.getItem(), placeable, e.getPlayer(), e.getClickedBlock().getRelative(e.getBlockFace()).getLocation(), e.getBlockFace(), false, new FurnitureStore(customItem.getIdentifier()));
+                            customWaxed.placeBlock(e.getPlayer(), e.getItem(), placeable, e.getClickedBlock().getRelative(e.getBlockFace()).getLocation(), new PlaceOptions().setBlockFace(e.getBlockFace()));
                         }
                     }
                 }
@@ -135,7 +132,7 @@ public class PlayerListener implements Listener {
         if (customItem != null) {
             if (!ProtectionUtil.canBuild(location, e.getPlayer())) return;
             if (customItem instanceof CustomPlaceableItem placeableItem) {
-                boolean placed = CustomBlockManager.attemptPlacement(e.getItem(), e.getPlayer(), placeableItem, location, e.getBlockFace(), true);
+                boolean placed = CustomBlockManager.attemptPlacement(e.getPlayer(), e.getItem(), placeableItem, location, new PlaceOptions().setBlockFace(e.getBlockFace()));
                 if (placed) {
                     e.setCancelled(true);
                     switch (e.getHand()) {
@@ -149,7 +146,7 @@ public class PlayerListener implements Listener {
                         e.getPlayer().getInventory().setItem(e.getHand(), usedItem);
                     }
                 }
-            } else if (customItem.getMechanics() != null && customItem.getMechanics().isCapture_mobs()) {
+            } else if (customItem.getMechanics() != null && customItem.getMechanics().isCaptureMobs()) {
                 var captureMobHandler = new CaptureMobHandler(e.getPlayer(), new WrappedItem(itemStack, customItem));
                 if (captureMobHandler.isStoringMob()) {
                     captureMobHandler.releaseMob(location);
@@ -222,7 +219,7 @@ public class PlayerListener implements Listener {
     }
 
     @EventHandler
-    public void interactMob(PlayerInteractEntityEvent e) {
+    public void interactMobForCapture(PlayerInteractEntityEvent e) {
         var mob = e.getRightClicked();
         if (!(mob instanceof LivingEntity livingEntity) || CaptureMobHandler.CAPTURABLE_MOB_FILTER.contains(mob.getType())) {
             return;

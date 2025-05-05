@@ -3,10 +3,7 @@ package com.gardensmc.gardensfurniture.listener;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.*;
-import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineDirectional;
-import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineItem;
-import com.gardensmc.gardensfurniture.custom.item.CustomItem;
-import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.Bukkit;
@@ -70,7 +67,7 @@ public class CaveVineListener implements Listener {
                 // normal amethyst - rotated to better fit display "fixed" setting
                 var amethystBudDupe = GardensFurniture.itemRegistry.getItem(itemStack.getType().toString().toLowerCase());
                 if (amethystBudDupe instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
-                    displayBlock.placeBlock(null, placeable, null, blockPlaced.getLocation(), crystal.getFacing(), false, null);
+                    displayBlock.placeBlock(null, null, placeable, blockPlaced.getLocation(), new PlaceOptions().setBlockFace(crystal.getFacing()));
                 }
             }
 
@@ -79,7 +76,7 @@ public class CaveVineListener implements Listener {
             if (carpetDupe == null) {
                 Bukkit.getLogger().log(Level.SEVERE, "Missing brown carpet dupe!");
             } else if (carpetDupe instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
-                displayBlock.placeBlock(null, placeable, null, blockPlaced.getLocation(), BlockFace.UP, false, null);
+                displayBlock.placeBlock(null, null, placeable, blockPlaced.getLocation());
             }
         } else if (itemStack.getType() == Material.OAK_SAPLING) {
             CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
@@ -89,7 +86,7 @@ public class CaveVineListener implements Listener {
             } else {
                 var saplingDupe = GardensFurniture.itemRegistry.getItem("oak_sapling");
                 if (saplingDupe instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
-                    displayBlock.placeBlock(null, placeable, null, blockPlaced.getLocation(), BlockFace.UP, false, null);
+                    displayBlock.placeBlock(null, null, placeable, blockPlaced.getLocation());
                 }
             }
         }

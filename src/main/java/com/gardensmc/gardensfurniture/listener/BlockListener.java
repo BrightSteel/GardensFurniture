@@ -5,6 +5,7 @@ import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.*;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
 import org.bukkit.*;
@@ -316,7 +317,7 @@ public class BlockListener implements Listener {
                     // normal amethyst - rotated to better fit display "fixed" setting
                     var amethystBudDupe = GardensFurniture.itemRegistry.getItem(newMaterial.toString().toLowerCase());
                     if (amethystBudDupe instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
-                        displayBlock.placeBlock(null, placeable, null, e.getBlock().getLocation(), clusterData.getFacing(), false, null);
+                        displayBlock.placeBlock(null, null, placeable, e.getBlock().getLocation(), new PlaceOptions().setBlockFace(clusterData.getFacing()));
                     }
                 }
             }
@@ -339,13 +340,15 @@ public class BlockListener implements Listener {
                 GardensFurniture.plugin.getLogger().log(Level.SEVERE, "Failed to get small bud for crystalId: " + crystalId);
                 return;
             }
-            var customBudItem = GardensFurniture.itemRegistry.getItem(budIdentifier);
-            CustomBlockManager.attemptPlacement(null, null, (CustomPlaceableItem) customBudItem, e.getNewState().getLocation(), clusterData.getFacing(), false);
+            var customBudItem = (CustomPlaceableItem) GardensFurniture.itemRegistry.getItem(budIdentifier);
+            if (customBudItem != null) {
+                customBudItem.placeBlock(null, null, e.getNewState().getLocation(), new PlaceOptions().setBlockFace(clusterData.getFacing()));
+            }
         } else {
             // normal amethyst - rotated to better fit display "fixed" setting
             var amethystBudDupe = GardensFurniture.itemRegistry.getItem(newMaterial.toString().toLowerCase());
             if (amethystBudDupe instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
-                displayBlock.placeBlock(null, placeable, null, e.getBlock().getLocation(), clusterData.getFacing(), false, null);
+                displayBlock.placeBlock(null, null, placeable, e.getBlock().getLocation(), new PlaceOptions().setBlockFace(clusterData.getFacing()));
             }
         }
     }

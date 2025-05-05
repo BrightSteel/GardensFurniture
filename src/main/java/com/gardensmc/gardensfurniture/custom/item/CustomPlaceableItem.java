@@ -33,10 +33,18 @@ public abstract class CustomPlaceableItem extends CustomItem {
         }
     }
 
-    public boolean placeBlock(ItemStack heldItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
-        // placeable targets check
-        if (player == null || blockFace == null) return true; // ignore for terra and if no block face was passed i guess
+    public void placeBlock(Location location) {
+        placeBlock(null, null, location, new PlaceOptions().setForce(true));
+    }
 
+    public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions) {
+        if (placeOptions.isForce()) {
+            return true;
+        }
+        return isValidBlockFace(placeOptions.getBlockFace(), location);
+    }
+
+    private boolean isValidBlockFace(BlockFace blockFace, Location location) {
         if (!placeDirections.isEmpty() && !placeDirections.contains(blockFace.toString().toUpperCase())) {
             return false;
         }

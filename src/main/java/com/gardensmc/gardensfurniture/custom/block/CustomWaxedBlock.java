@@ -1,13 +1,13 @@
 package com.gardensmc.gardensfurniture.custom.block;
 
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -44,7 +44,8 @@ public class CustomWaxedBlock extends CustomBlock {
     }
 
     @Override
-    public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem placeableItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
+    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions) {
+        var furnitureStore = new FurnitureStore(customItem.getIdentifier());
         FurnitureStoreHandler.INSTANCE.addFurnitureStore(location.getBlock(), furnitureStore, heldItem != null);
         if (waxedType.toString().startsWith("DOOR")) {
             // top door block

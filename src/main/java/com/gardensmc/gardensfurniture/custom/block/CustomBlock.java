@@ -1,9 +1,8 @@
 package com.gardensmc.gardensfurniture.custom.block;
 
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
-import com.gardensmc.gardensfurniture.store.FurnitureStore;
+import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import org.bukkit.Location;
-import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -60,5 +59,9 @@ public abstract class CustomBlock {
         return config.getConfigurationSection(sectionName);
     }
 
-    public abstract boolean placeBlock(ItemStack heldItem, CustomPlaceableItem placeableItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore);
+    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem placeableItem, Location location) {
+        return placeBlock(player, heldItem, placeableItem, location, new PlaceOptions());
+    }
+
+    public abstract boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem placeableItem, Location location, PlaceOptions placeOptions);
 }

@@ -2,8 +2,8 @@ package com.gardensmc.gardensfurniture.custom.block;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
-import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.util.ItemFrameUtil;
 import de.tr7zw.nbtapi.NBTEntity;
 import org.bukkit.*;
@@ -31,10 +31,10 @@ public class CustomItemFrameBlock extends CustomBlock {
     }
 
     @Override
-    public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
+    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions) {
         World world = location.getWorld();
+        var blockFace = placeOptions.getBlockFace();
         if (world != null) {
-
             ItemFrame itemFrame = (ItemFrame) location.getWorld().spawnEntity(location, EntityType.ITEM_FRAME);
             itemFrame.setVisible(false);
             itemFrame.setFacingDirection(getFacingDirection(location, blockFace), true);

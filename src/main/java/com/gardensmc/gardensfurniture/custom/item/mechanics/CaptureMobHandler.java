@@ -25,12 +25,7 @@ public class CaptureMobHandler {
 
     public static final Set<EntityType> CAPTURABLE_MOB_FILTER = Set.of(
             EntityType.PLAYER,
-            EntityType.INTERACTION,
-            EntityType.ITEM_DISPLAY,
-            EntityType.BLOCK_DISPLAY,
-            EntityType.TEXT_DISPLAY,
             EntityType.ARMOR_STAND,
-            EntityType.ITEM_FRAME,
             EntityType.ENDER_DRAGON
     );
     private static final String CAPTURED_GROUP_KEY = "CaptureMob";

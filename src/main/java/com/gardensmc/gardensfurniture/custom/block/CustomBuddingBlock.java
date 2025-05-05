@@ -1,8 +1,8 @@
 package com.gardensmc.gardensfurniture.custom.block;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
@@ -32,7 +32,7 @@ public class CustomBuddingBlock extends CustomNoteBlock {
     }
 
     @Override
-    public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
+    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions) {
         Block block = location.getBlock();
         CustomBlockPlaceEvent event = new CustomBlockPlaceEvent(player, customItem, block);
         Bukkit.getPluginManager().callEvent(event);
@@ -49,12 +49,14 @@ public class CustomBuddingBlock extends CustomNoteBlock {
                         CustomPlaceableItem placeable = (CustomPlaceableItem) GardensFurniture.itemRegistry.getItem(
                                 GardensFurniture.itemRegistry.crystalRegistry.getCrystalIdentifier(crystalId, CustomCrystalBlock.CrystalType.getRandom())
                         );
-                        CustomBlockManager.attemptPlacement(null, null, placeable, b.getLocation(), face, false);
+                        if (placeable != null) {
+                            placeable.placeBlock(null, null, b.getLocation(), new PlaceOptions().setBlockFace(face));
+                        }
                     }
                 }
             }
         }
-        FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, furnitureStore, updateCache);
+        FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, new FurnitureStore(customItem.getIdentifier()), updateCache);
 
         return true;
     }

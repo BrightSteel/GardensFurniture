@@ -2,7 +2,7 @@ package com.gardensmc.gardensfurniture.custom.block;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
-import com.gardensmc.gardensfurniture.store.FurnitureStore;
+import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -78,10 +78,11 @@ public class CustomCrystalBlock extends CustomDisplayBlock {
     }
 
     @Override
-    public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
+    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions) {
         if (heldItem != null && isCrystalMaterial(heldItem.getType())) {
             return false; // handle placement naturally w/ event
         }
+        var blockFace = placeOptions.getBlockFace();
         boolean success = placeDisplayEntity(customItem, location, blockFace);
         if (success) {
             var block = location.getBlock();
@@ -102,7 +103,7 @@ public class CustomCrystalBlock extends CustomDisplayBlock {
             meta.setItemModel(NamespacedKey.fromString(modelOverride));
             crystalItem.setItemMeta(meta);
         }
-        return super.placeDisplay(crystalItem, null, location, blockFace, null);
+        return super.placeDisplay(crystalItem, null, location, blockFace);
     }
 
     public static boolean isCrystalMaterial(Material material) {

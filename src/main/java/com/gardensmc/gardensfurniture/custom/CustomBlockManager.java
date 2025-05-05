@@ -2,27 +2,22 @@ package com.gardensmc.gardensfurniture.custom;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
-import com.gardensmc.gardensfurniture.custom.block.CustomDisplayBlock;
 import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.itementity.DisplayItemEntity;
 import com.gardensmc.gardensfurniture.itementity.FrameItemEntity;
 import com.gardensmc.gardensfurniture.itementity.ItemEntity;
-import com.gardensmc.gardensfurniture.listener.BlockListener;
 import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
-import com.ticxo.modelengine.api.ModelEngineAPI;
 import de.tr7zw.nbtapi.NBTEntity;
 import dev.geco.gsit.api.GSitAPI;
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 
 import javax.annotation.Nullable;
@@ -30,26 +25,26 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.logging.Level;
 
-import static com.gardensmc.gardensfurniture.util.CustomDropUtil.dropCustomItem;
-
 public class CustomBlockManager {
 
-    public static boolean attemptPlacement(ItemStack heldItem, Player player, CustomPlaceableItem placeableItem, Location location, BlockFace blockFace, boolean persistent) {
-        if (player != null) {
-            if (!ProtectionUtil.canBuild(location, player)) {
-                return false;
-            }
+    /**
+     * Performs additional checks before placing block.
+     * Checks:
+     *  • Build perms
+     *  • Location is not blocked by entities
+     *  • Location is replaceable material (air, grass, etc)
+     * @return placement success
+     */
+    public static boolean attemptPlacement(Player player, ItemStack heldItem, CustomPlaceableItem placeableItem, Location location, PlaceOptions placeOptions) {
+        if (!ProtectionUtil.canBuild(location, player)) {
+            return false;
         }
-
         if (entityBlocking(location)) {
             return false;
         }
-
         var material = location.getBlock().getType();
-        if (!isPlaceableMaterial(material) && !BlockListener.isAmethystBud(material)) return false;
-        // for terra gen, and also make sure we allow amethyst buds to place under the server-side bud
-
-        return placeableItem.placeBlock(heldItem, player, location, blockFace, persistent);
+        if (!isPlaceableMaterial(material)) return false;
+        return placeableItem.placeBlock(player, heldItem, location, placeOptions);
     }
 
     public static boolean isPlaceableMaterial(Material material) {

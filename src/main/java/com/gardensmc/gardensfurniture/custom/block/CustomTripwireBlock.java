@@ -2,6 +2,7 @@ package com.gardensmc.gardensfurniture.custom.block;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
@@ -99,12 +100,9 @@ public class CustomTripwireBlock extends CustomBlock {
     }
 
     @Override
-    public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem customItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
-        if (blockFace == null) {
-            blockFace = BlockFace.UP; // terra, lets use default direction
-        }
-
+    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions) {
         Block block = location.getBlock();
+        var blockFace = placeOptions.getBlockFace();
         // ensure below block is placeable
         if (!getPlaceable().isEmpty()) {
             Block below = block.getRelative(blockFace.getOppositeFace());
@@ -135,7 +133,13 @@ public class CustomTripwireBlock extends CustomBlock {
 
 
         block.setType(Material.TRIPWIRE);
-        FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, furnitureStore, heldItem != null);
+        FurnitureStoreHandler.INSTANCE.addFurnitureStore(
+                block,
+                new FurnitureStore.FurnitureStoreBuilder(customItem.getIdentifier())
+                        .withMultiplier(placeOptions.getMultiplier())
+                        .build(),
+                heldItem != null
+        );
 
         Bukkit.getPluginManager().callEvent(new CustomBlockPlaceEvent(player, customItem, block));
         return true;

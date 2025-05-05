@@ -1,7 +1,7 @@
 package com.gardensmc.gardensfurniture.custom.block;
 
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
-import com.gardensmc.gardensfurniture.store.FurnitureStore;
+import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
@@ -17,10 +17,10 @@ public class CustomCarpetBlock extends CustomDisplayBlock {
     }
 
     @Override
-    public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem placeableItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
-        if (blockFace != BlockFace.UP) return false;
+    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions) {
+        if (placeOptions.getBlockFace() != BlockFace.UP) return false;
 
-        boolean success = super.placeBlock(heldItem, placeableItem, player, location, blockFace, persistent, furnitureStore);
+        boolean success = super.placeBlock(player, heldItem, customItem, location, placeOptions);
         if (success) {
             var block = location.getBlock();
             block.setType(Material.BROWN_CARPET);

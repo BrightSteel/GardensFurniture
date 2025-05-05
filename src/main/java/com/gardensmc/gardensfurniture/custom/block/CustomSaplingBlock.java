@@ -2,7 +2,7 @@ package com.gardensmc.gardensfurniture.custom.block;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
-import com.gardensmc.gardensfurniture.store.FurnitureStore;
+import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import lombok.Getter;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
@@ -24,11 +24,11 @@ public class CustomSaplingBlock extends CustomDisplayBlock {
     }
 
     @Override
-    public boolean placeBlock(ItemStack heldItem, CustomPlaceableItem placeableItem, Player player, Location location, BlockFace blockFace, boolean persistent, FurnitureStore furnitureStore) {
+    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions) {
         return false; // handle placement naturally with event
     }
 
     public void placeDisplayEntity(CustomPlaceableItem customItem, Location location, BlockFace blockFace) {
-        super.placeDisplay(GardensFurniture.itemRegistry.buildItem(customItem), null, location, blockFace, null);
+        super.placeDisplay(GardensFurniture.itemRegistry.buildItem(customItem), null, location, blockFace);
     }
 }

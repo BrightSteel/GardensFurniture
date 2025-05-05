@@ -3,9 +3,7 @@ package com.gardensmc.gardensfurniture.custom.item;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomNoteBlock;
-import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import org.bukkit.Location;
-import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -13,7 +11,6 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
-
 
 public class CustomDirectionalItem extends CustomPlaceableItem {
 
@@ -27,16 +24,16 @@ public class CustomDirectionalItem extends CustomPlaceableItem {
     }
 
     @Override
-    public boolean placeBlock(ItemStack heldItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
-        if (!super.placeBlock(heldItem, player, location, blockFace, persistent)) return false;
+    public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions) {
+        if (!super.placeBlock(player, heldItem, location, placeOptions)) return false;
         CustomBlock customBlock;
-        switch (blockFace) {
+        switch (placeOptions.getBlockFace()) {
                 case UP, DOWN -> customBlock = getY();
                 case EAST, WEST -> customBlock = getX();
                 case NORTH, SOUTH -> customBlock = getZ();
-                default -> throw new RuntimeException("Unknown block face: " + blockFace);
+                default -> throw new RuntimeException("Unknown block face: " + placeOptions.getBlockFace());
             }
-        return customBlock.placeBlock(heldItem, this, player, location, blockFace, persistent, new FurnitureStore(getIdentifier()));
+        return customBlock.placeBlock(player, heldItem, this, location, placeOptions);
     }
 
     @Override

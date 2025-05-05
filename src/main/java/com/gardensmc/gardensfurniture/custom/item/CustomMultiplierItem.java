@@ -2,11 +2,9 @@ package com.gardensmc.gardensfurniture.custom.item;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
-import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -34,11 +32,8 @@ public class CustomMultiplierItem extends CustomPlaceableItem {
     }
 
     @Override
-    public boolean placeBlock(ItemStack heldItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
-        if (blockFace == null) {
-            blockFace = BlockFace.UP; // placed by terra, should probably just skip to the random multiplier but this is ok
-        }
-        Block clickedBlock = location.getBlock().getRelative(blockFace.getOppositeFace());
+    public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions) {
+        Block clickedBlock = location.getBlock().getRelative(placeOptions.getBlockFace().getOppositeFace());
         // only supports leaf / trip wire blocks right now
         var multiplier = getBlockMultiplier(clickedBlock, player);
         if (multiplier == -1) {
@@ -46,10 +41,11 @@ public class CustomMultiplierItem extends CustomPlaceableItem {
         }
         var placementLocation = multiplier == 1 ? location : clickedBlock.getLocation(); // need to replace current block if multiplying
         return blocks.get(multiplier - 1).placeBlock(
-                heldItem, this, player, placementLocation, blockFace, persistent,
-                new FurnitureStore.FurnitureStoreBuilder(this.getIdentifier())
-                        .withMultiplier(multiplier)
-                        .build()
+                player,
+                heldItem,
+                this,
+                placementLocation,
+                placeOptions.setMultiplier(multiplier)
         );
     }
 

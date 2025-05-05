@@ -2,7 +2,6 @@ package com.gardensmc.gardensfurniture.custom.item;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
-import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.util.DirectionUtil;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -12,7 +11,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Set;
-
 
 public class CustomFacingItem extends CustomPlaceableItem {
 
@@ -30,14 +28,15 @@ public class CustomFacingItem extends CustomPlaceableItem {
     }
 
     @Override
-    public boolean placeBlock(ItemStack heldItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
-        if (!super.placeBlock(heldItem, player, location, blockFace, persistent)) return false;
+    public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions) {
+        if (!super.placeBlock(player, heldItem, location, placeOptions)) return false;
         BlockFace facing = getFaceForPlacement(player, location);
        return getCustomBlock(facing.name()).placeBlock(
-               heldItem, this, player, location, blockFace, persistent,
-               new FurnitureStore.FurnitureStoreBuilder(this.getIdentifier())
-                       .withFacing(facing.name())
-                       .build()
+               player,
+               heldItem,
+               this,
+               location,
+               placeOptions.setFacing(facing.name())
        );
     }
 

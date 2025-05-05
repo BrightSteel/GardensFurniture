@@ -4,6 +4,7 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
@@ -42,7 +43,7 @@ public abstract class TStructure {
         Location loc = origin.clone().add(x, y, z);
         CustomItem customItem = GardensFurniture.itemRegistry.getItem(identifier);
         if (customItem instanceof CustomPlaceableItem placeableItem) {
-            CustomBlockManager.attemptPlacement(null, null, placeableItem, loc, BlockFace.UP, false);
+            placeableItem.placeBlock(null, null, loc, new PlaceOptions().setPersistentLeaves(false).setForce(true));
         }
     }
 

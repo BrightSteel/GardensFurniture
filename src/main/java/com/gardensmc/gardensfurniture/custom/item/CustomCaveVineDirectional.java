@@ -3,14 +3,12 @@ package com.gardensmc.gardensfurniture.custom.item;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomCaveVineBlock;
-import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.util.DirectionUtil;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-
 
 public class CustomCaveVineDirectional extends CustomPlaceableItem {
 
@@ -25,14 +23,10 @@ public class CustomCaveVineDirectional extends CustomPlaceableItem {
     }
 
     @Override
-    public boolean placeBlock(ItemStack heldItem, Player player, Location location, BlockFace blockFace, boolean persistent) {
-        if (!super.placeBlock(heldItem, player, location, blockFace, persistent)) return false;
+    public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions) {
+        if (!super.placeBlock(player, heldItem, location, placeOptions)) return false;
         BlockFace facing = BlockFace.valueOf(DirectionUtil.getDirectionFromFacing(player)).getOppositeFace();
-        return vine_north.placeBlock(heldItem, this, player, location, blockFace, persistent,
-                new FurnitureStore.FurnitureStoreBuilder(getIdentifier())
-                        .withFacing(facing.name())
-                        .build()
-        );
+        return vine_north.placeBlock(player, heldItem, this, location, placeOptions.setFacing(facing.name()));
     }
 
     public CustomCaveVineBlock getVine_north() {
