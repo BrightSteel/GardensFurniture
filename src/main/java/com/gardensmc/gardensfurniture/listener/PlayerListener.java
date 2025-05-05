@@ -7,6 +7,8 @@ import com.gardensmc.gardensfurniture.custom.block.CustomWaxedBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomDirectionalItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.custom.item.WrappedItem;
+import com.gardensmc.gardensfurniture.custom.item.mechanics.CaptureMobHandler;
 import com.gardensmc.gardensfurniture.events.CustomBlockInteractEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
@@ -143,11 +145,15 @@ public class PlayerListener implements Listener {
 
                     if (e.getPlayer().getGameMode() == GameMode.SURVIVAL) {
                         ItemStack usedItem = e.getPlayer().getInventory().getItem(e.getHand());
-                        if (usedItem != null) {
-                            usedItem.setAmount(usedItem.getAmount() - 1);
-                            e.getPlayer().getInventory().setItem(e.getHand(), usedItem);
-                        }
+                        usedItem.setAmount(usedItem.getAmount() - 1);
+                        e.getPlayer().getInventory().setItem(e.getHand(), usedItem);
                     }
+                }
+            } else if (customItem.getMechanics() != null && customItem.getMechanics().isCapture_mobs()) {
+                var captureMobHandler = new CaptureMobHandler(e.getPlayer(), new WrappedItem(itemStack, customItem));
+                if (captureMobHandler.isStoringMob()) {
+                    captureMobHandler.releaseMob(location);
+                    e.setCancelled(true);
                 }
             }
         }
@@ -212,6 +218,24 @@ public class PlayerListener implements Listener {
             if (itemEntity == null) return;
             CustomBlockManager.onInteractFurniture(e.getPlayer(), e.getHand(), itemEntity);
             e.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void interactMob(PlayerInteractEntityEvent e) {
+        var mob = e.getRightClicked();
+        if (!(mob instanceof LivingEntity livingEntity) || CaptureMobHandler.CAPTURABLE_MOB_FILTER.contains(mob.getType())) {
+            return;
+        }
+        if (!ProtectionUtil.canBuild(mob.getLocation(), e.getPlayer())) {
+            return;
+        }
+        var wrappedItem = WrappedItem.create(e.getPlayer().getInventory().getItem(e.getHand()));
+        if (wrappedItem.isPresent()) {
+            var captureMobHandler = new CaptureMobHandler(e.getPlayer(), wrappedItem.get());
+            if (captureMobHandler.isCaptureItem() && captureMobHandler.canCaptureMob(livingEntity)) {
+                captureMobHandler.captureMob(livingEntity);
+            }
         }
     }
 

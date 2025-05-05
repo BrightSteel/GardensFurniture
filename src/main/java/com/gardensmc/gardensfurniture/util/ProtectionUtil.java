@@ -1,18 +1,27 @@
 package com.gardensmc.gardensfurniture.util;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.inventory.EquipmentSlot;
 
 
 public class ProtectionUtil {
 
-    // todo implement block place event to check
     public static boolean canBuild(Location location, Player player) {
-        // ensure we have gardens players plugin, if so run isle perm check
-//        if (GardensFurniture.gardensPlayers == null) {
-//            return true;
-//        }
-        return true;
-//        return ProtectionEvents.isTrusted(player.getWorld(), player);
+        var block = location.getBlock();
+        var buildEvent = new BlockPlaceEvent(
+                block,
+                block.getState(),
+                block.getRelative(BlockFace.DOWN),
+                player.getInventory().getItemInMainHand(),
+                player,
+                true,
+                EquipmentSlot.HAND
+        );
+        Bukkit.getPluginManager().callEvent(buildEvent);
+        return !buildEvent.isCancelled();
     }
 }

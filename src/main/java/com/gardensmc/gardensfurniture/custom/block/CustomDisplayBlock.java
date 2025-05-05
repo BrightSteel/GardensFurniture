@@ -132,7 +132,6 @@ public class CustomDisplayBlock extends CustomBlock {
             // todo - apply other transformations to meg display
             if (light > 0) {
                 model.setBlockLight(light);
-                model.getAnimationHandler().
             }
             ModelEngineAPI
                     .createModeledEntity(display)
