@@ -2,14 +2,20 @@ package com.gardensmc.gardensfurniture.structure;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
+import com.gardensmc.gardensfurniture.custom.block.CustomLeavesBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
+import com.gardensmc.gardensfurniture.store.FurnitureCache;
+import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -19,6 +25,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public abstract class TStructure {
 
     protected Location origin;
+    private final Set<Chunk> furnitureAffectedChunks = new HashSet<>();
 
     public TStructure setOrigin(Location origin) {
         this.origin = origin;
@@ -26,6 +33,10 @@ public abstract class TStructure {
     }
 
     public abstract void generate();
+
+    public void refreshChunks() {
+        furnitureAffectedChunks.forEach(chunk -> FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(chunk)));
+    }
 
     protected void block(double x, double y, double z, String blockData) {
         if (origin == null) {
@@ -44,11 +55,23 @@ public abstract class TStructure {
         CustomItem customItem = GardensFurniture.itemRegistry.getItem(identifier);
         if (customItem instanceof CustomPlaceableItem placeableItem) {
             placeableItem.placeBlock(null, null, loc, new PlaceOptions().setPersistentLeaves(false).setForce(true));
+            furnitureAffectedChunks.add(loc.getChunk());
         }
+    }
+
+    protected void furnitureChecked(double x, double y, double z, String identifier) {
+        if (origin.getWorld().getBlockAt((int) x, (int) y, (int) z).isSolid()) {
+            return;
+        }
+        furniture(x, y, z, identifier);
     }
 
     protected int randomInt(int bound) {
         return ThreadLocalRandom.current().nextInt(bound);
+    }
+
+    protected double pow2(double num) {
+        return  Math.pow(num, 2);
     }
 
     private void throwOriginException() {

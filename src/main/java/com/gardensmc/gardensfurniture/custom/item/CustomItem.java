@@ -18,6 +18,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class CustomItem implements Comparable<CustomItem> {
 
@@ -113,6 +114,13 @@ public class CustomItem implements Comparable<CustomItem> {
     @Override
     public int compareTo(@NotNull CustomItem o) {
         return identifier.compareTo(o.identifier);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof CustomItem that)) return false;
+        return Objects.equals(identifier, that.identifier);
     }
 
     private AttributeModifier parseAttributeModifier(Map<?, ?> modifierMap) {

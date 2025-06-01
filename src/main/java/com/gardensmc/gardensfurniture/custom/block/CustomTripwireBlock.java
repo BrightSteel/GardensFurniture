@@ -15,9 +15,6 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class CustomTripwireBlock extends CustomBlock {
 
     private final boolean powered;
@@ -28,7 +25,6 @@ public class CustomTripwireBlock extends CustomBlock {
     private final boolean west;
     private final boolean disarmed;
     private final boolean large;
-    private final List<Material> placeable = new ArrayList<>();
 
     public CustomTripwireBlock(ConfigurationSection blockSection, String customBlockName) {
         super(blockSection);
@@ -41,25 +37,6 @@ public class CustomTripwireBlock extends CustomBlock {
         this.powered = tripWireSection.getBoolean("powered");
         this.attached = tripWireSection.getBoolean("attached");
         this.large = blockSection.getBoolean("large");
-        setPlaceable(blockSection.getStringList("placeable"));
-    }
-
-    /**
-     * List of materials that this can be placed on
-     * @return empty list if none
-     */
-    public List<Material> getPlaceable() {
-        return placeable;
-    }
-
-    public void setPlaceable(List<String> placeable) {
-        for (String str : placeable) {
-            try {
-                this.placeable.add(Material.valueOf(str.toUpperCase()));
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        }
     }
 
     public boolean isNorth() {
@@ -103,13 +80,6 @@ public class CustomTripwireBlock extends CustomBlock {
     public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions) {
         Block block = location.getBlock();
         var blockFace = placeOptions.getBlockFace();
-        // ensure below block is placeable
-        if (!getPlaceable().isEmpty()) {
-            Block below = block.getRelative(blockFace.getOppositeFace());
-            if (!getPlaceable().contains(below.getType())) {
-                return false;
-            }
-        }
 
         if (isLarge()) {
             // fail if not placing on ground since it is easiest to ensure top block is removed this way
@@ -137,6 +107,7 @@ public class CustomTripwireBlock extends CustomBlock {
                 block,
                 new FurnitureStore.FurnitureStoreBuilder(customItem.getIdentifier())
                         .withMultiplier(placeOptions.getMultiplier())
+                        .withFacing(placeOptions.getFacing())
                         .build(),
                 heldItem != null
         );

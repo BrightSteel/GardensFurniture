@@ -1,19 +1,21 @@
 package com.gardensmc.gardensfurniture.register;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.*;
-import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomLeavesBlock;
 import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.generator.GenDefinitionsHandler;
 import com.gardensmc.gardensfurniture.generator.GenOverworldDimensionHandler;
-import com.gardensmc.gardensfurniture.util.ChatUtil;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import de.tr7zw.nbtapi.NBT;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.Consumable;
 import io.papermc.paper.datacomponent.item.consumable.ItemUseAnimation;
-import net.kyori.adventure.text.Component;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.*;
 import org.bukkit.configuration.Configuration;
@@ -42,8 +44,6 @@ public class ItemRegistry {
     // also can be for leaves too: distance,persistent -> identifier
     // note,instrument,powered -> custom_item_identifier
     public final Map<String, String> customNoteBlocks = new HashMap<>();
-
-    public final CrystalRegistry crystalRegistry = new CrystalRegistry();
 
     public static final String FURNITURE_KEY = "GardensFurnitureId";
     public static final File generatedDir = new File(GardensFurniture.plugin.getDataFolder(), "generated");
@@ -74,8 +74,6 @@ public class ItemRegistry {
                     CustomItem customItem = customItemFactory.createCustomItem(key, section);
                     customItems.put(key, customItem);
 
-                    registerCrystalIfPresent(customItem);
-
                     if (customItem.showInMenu() && !customItem.isTemplate()) {
                         Set<CustomItem> categoryItems = customItemByCategory.computeIfAbsent(name, s -> new TreeSet<>());
                         categoryItems.add(customItem);
@@ -87,12 +85,13 @@ public class ItemRegistry {
                         var itemModel = components.getItem_model();
                         if (itemModel != null) {
                             try {
-                                writeOutModelFile(itemModel, customItem.getMaterial().toString().toUpperCase().startsWith("LEATHER"));
-                                if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
-                                    if (crystalBlock.getModelOverride() != null) {
-                                        writeOutModelFile(crystalBlock.getModelOverride(), false);
-                                    }
+                                Tint tint = null;
+                                if (customItem.getMaterial().toString().toUpperCase().startsWith("LEATHER")) {
+                                    tint = Tint.DYE;
+                                } else if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomLeavesBlock leaves && leaves.getLeavesType() == CustomLeavesBlock.LeavesType.OAK) {
+                                    tint = Tint.CONSTANT;
                                 }
+                                writeOutModelFile(itemModel, tint);
 //                                var outerFolder = OUTER_DIR_PATTERN.matcher(itemModel);
 //                                if (outerFolder.find()) {
 //                                    outerFolders.add(outerFolder.group(1));
@@ -113,19 +112,31 @@ public class ItemRegistry {
 //        }
     }
 
+    @AllArgsConstructor
+    @Getter
+    public enum Tint {
+        DYE(new ObjectMapper().createObjectNode()
+                .put("type", "minecraft:dye")
+                .put("default", -1)
+        ),
+        CONSTANT(new ObjectMapper().createObjectNode()
+                .put("type", "minecraft:constant")
+                .put("value", -12012264)
+        );
+
+        private final ObjectNode node;
+    }
+
     // todo use POJOs to be cleaner
-    private void writeOutModelFile(String itemModel, boolean isTintable) throws IOException {
+    private void writeOutModelFile(String itemModel, Tint tint) throws IOException {
         JsonMapper mapper = new JsonMapper();
         var node = mapper.createObjectNode();
         var modelNode = mapper.createObjectNode();
         modelNode.put("type", "minecraft:model");
         modelNode.put("model", itemModel);
-        if (isTintable) {
+        if (tint != null) {
             var tints = mapper.createArrayNode();
-            var dyeNode = mapper.createObjectNode();
-            dyeNode.put("type", "minecraft:dye");
-            dyeNode.put("default", -1);
-            tints.add(dyeNode);
+            tints.add(tint.getNode());
             modelNode.set("tints", tints);
         }
         node.set("model", modelNode);
@@ -216,6 +227,8 @@ public class ItemRegistry {
                 var components = customItem.getComponents();
                 if (components != null) {
                     if (components.getItem_model() != null) {
+                        // todo use new data builder for these, like so
+                        // itemStack.setData(DataComponentTypes.ITEM_MODEL, NamespacedKey.fromString(components.getItem_model()));
                         meta.setItemModel(NamespacedKey.fromString(components.getItem_model()));
                     }
                     if (components.getGlider() != null) {
@@ -257,6 +270,11 @@ public class ItemRegistry {
                 }
 
                 itemStack.setItemMeta(meta);
+                // paper data builder
+                // need to use NMS for block_state stuff until they implement block_data builder
+//                itemStack.setData(DataComponentTypes.BLOCK_DATA, new PaperBlockItemDataProperties(new BlockItemStateProperties(
+//                        Map.of("fart", "toot")
+//                )));
             }
 
             // identifying nbt
@@ -272,7 +290,6 @@ public class ItemRegistry {
         customItems.clear();
         customItemByCategory.clear();
         customNoteBlocks.clear();
-        crystalRegistry.clear();
         assembleItems();
     }
 
@@ -292,11 +309,5 @@ public class ItemRegistry {
             return customItems.get(identifier);
         }
         return null;
-    }
-
-    private void registerCrystalIfPresent(CustomItem customItem) {
-        if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
-            crystalRegistry.addCrystalToMap(crystalBlock, customItem.getIdentifier());
-        }
     }
 }

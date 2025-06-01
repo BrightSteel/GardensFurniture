@@ -20,11 +20,13 @@ import net.minecraft.world.phys.Vec3;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -51,7 +53,9 @@ public class PlayerListener implements Listener {
             CustomItem customItem = CustomBlockManager.getItemFromNoteBlock(noteBlock);
             if (customItem != null) {
                 e.setCancelled(true);
-                if (!ProtectionUtil.canBuild(e.getClickedBlock().getLocation(), e.getPlayer())) return;
+                if (!ProtectionUtil.canBuild(e.getClickedBlock().getLocation(), e.getPlayer())) {
+                    return;
+                }
                 Bukkit.getPluginManager().callEvent(new CustomBlockInteractEvent(e.getPlayer(), customItem, e.getHand(), e.getItem(), e.getClickedBlock()));
                 // if player is holding an item with an action, lets place it
                 if (e.getHand() != null) {
@@ -155,6 +159,24 @@ public class PlayerListener implements Listener {
             }
         }
     }
+
+//    @EventHandler
+//    public void onItemInteract(PlayerInteractEvent e) {
+//
+//
+//        if (e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+//        if (e.isCancelled()) return;
+//        if (e.getClickedBlock() == null) return;
+//
+//        // cancel all note block right clicks that are custom blocks
+//        if (e.getClickedBlock().getType() == Material.NOTE_BLOCK && e.getClickedBlock().getBlockData() instanceof NoteBlock noteBlock) {
+//            CustomItem customItem = CustomBlockManager.getItemFromNoteBlock(noteBlock);
+//            if (customItem != null) {
+//                e.setCancelled(true);
+//                System.out.println("Cancelling note block interaction");
+//            }
+//        }
+//    }
 
     @EventHandler
     public void onHitBarrier(PlayerInteractEvent e) {
@@ -271,6 +293,43 @@ public class PlayerListener implements Listener {
             }).thenAccept(ender_pad -> runTeleportation(player, ender_pad));
         }
     }
+
+//    @EventHandler(priority = EventPriority.LOW)
+//    public void onPlaceInitialCaveVineBlock(PlayerInteractEvent e) {
+//        Player player = e.getPlayer();
+//        if (e.getHand() == null) return;
+//        if (e.getBlockFace() != BlockFace.DOWN) return;
+//
+//        // only want to enable placement on leaves
+//        if (e.getClickedBlock() == null || !e.getClickedBlock().getType().toString().toUpperCase().endsWith("LEAVES")) {
+//            return;
+//        }
+//        Block target = e.getClickedBlock().getRelative(e.getBlockFace());
+//        if (target.getType() != Material.AIR) return;
+//
+//        ItemStack itemStack = player.getInventory().getItem(e.getHand());
+//        if (itemStack.getType() != Material.GLOW_BERRIES) return;
+//
+//        CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
+//        if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
+//            if(!ProtectionUtil.canBuild(e.getClickedBlock().getLocation(), player)) {
+//                return;
+//            }
+//            // swing hand
+//            switch (e.getHand()) {
+//                case HAND -> e.getPlayer().swingMainHand();
+//                case OFF_HAND -> e.getPlayer().swingOffHand();
+//            }
+//            // place item
+//            target.setType(Material.CAVE_VINES);
+//            // use up item
+//            if (e.getPlayer().getGameMode() == GameMode.SURVIVAL) {
+//                ItemStack usedItem = e.getPlayer().getInventory().getItem(e.getHand());
+//                usedItem.setAmount(usedItem.getAmount() - 1);
+//                e.getPlayer().getInventory().setItem(e.getHand(), usedItem);
+//            }
+//        }
+//    }
 
     private void runTeleportation(Player player, Block ender_pad) {
         Bukkit.getScheduler().runTask(GardensFurniture.plugin, () -> {

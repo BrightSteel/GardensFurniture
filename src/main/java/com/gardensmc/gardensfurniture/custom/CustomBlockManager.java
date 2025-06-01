@@ -1,7 +1,6 @@
 package com.gardensmc.gardensfurniture.custom;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
 import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.itementity.DisplayItemEntity;
@@ -70,10 +69,16 @@ public class CustomBlockManager {
         return entity.getLocation().getBlock().equals(loc.getBlock());
     }
 
+    // todo implement for model engine display
+    @Nullable
+    public static CustomItem getItemFromDisplay(ItemDisplay itemDisplay) {
+        return GardensFurniture.itemRegistry.getCustomItem(itemDisplay.getItemStack());
+    }
+
     @Nullable
     public static CustomItem getItemFromNoteBlock(NoteBlock noteBlock) {
         int note = noteBlock.getNote().getId();
-        String instrument = noteBlock.getInstrument().toString().toUpperCase();
+        String instrument = noteBlock.getInstrument().toString();
         boolean powered = noteBlock.isPowered();
         String key = note + "," + instrument + "," + powered;
 //        System.out.println("looking up " + note);
@@ -124,19 +129,6 @@ public class CustomBlockManager {
         return null;
     }
 
-    @Nullable
-    public static CustomCrystalBlock getCustomCrystalFromPos(World world, int x, int y, int z) {
-        Location location = new Location(world, x, y, z);
-        var itemFrame = CustomBlockManager.getBlock(location);
-        if (itemFrame != null) {
-            var customItem = GardensFurniture.itemRegistry.getCustomItem(itemFrame.getItem());
-            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomCrystalBlock crystalBlock) {
-                return crystalBlock;
-            }
-        }
-        return null;
-    }
-
     public static void breakFurniture(Player player, Location location) {
        if (!ProtectionUtil.canBuild(location, player)) {
            return;
@@ -150,21 +142,10 @@ public class CustomBlockManager {
         if (e.isCancelled()) {
             return;
         }
-//        Color color = null;
-//        if (itemEntity.getItem().getItemMeta() instanceof LeatherArmorMeta leatherMeta) {
-//            color = leatherMeta.getColor();
-//        }
-        System.out.println(itemEntity.getItem());
+
         var placeable = (CustomPlaceableItem) customItem;
         ItemStack itemStack = getDrop(itemEntity, placeable);
         if (player != null && player.getGameMode() != GameMode.CREATIVE && itemStack != null) {
-//            if (itemStack.getItemMeta() != null) {
-//                ItemMeta itemMeta = itemStack.getItemMeta();
-//                if (color != null && itemMeta instanceof LeatherArmorMeta leatherMeta) {
-//                    leatherMeta.setColor(color);
-//                }
-//                itemStack.setItemMeta(itemMeta);
-//            }
             location.getWorld().dropItemNaturally(location, itemStack);
         }
 
@@ -178,31 +159,7 @@ public class CustomBlockManager {
         if (block.getType() == Material.BARRIER) {
             block.setType(Material.AIR);
         }
-//        LightUtil.addLightBack(block); - calls block break event already ?
     }
-
-//    @Nullable
-//    public static ItemEntity getItemEntity(Entity entity) {
-//        ItemEntity itemEntity = null;
-//        if (entity instanceof ItemFrame itemFrame) {
-//            itemEntity = new FrameItemEntity(itemFrame);
-//        }
-//        if (entity instanceof ItemDisplay display) {
-//            itemEntity = new DisplayItemEntity(display);
-//        }
-//        return itemEntity;
-//    }
-
-//    @Nullable
-//    public static CustomItem getFurniture(Entity entity) {
-//        ItemEntity itemEntity = getItemEntity(entity);
-//        if (itemEntity == null) return null;
-//
-//        ItemStack itemStack = itemEntity.getItem();
-//        CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
-//        return customItem;
-//
-//    }
 
     @Nullable
     public static CustomItem getItemFromLeaves(Block block) {

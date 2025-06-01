@@ -35,6 +35,8 @@ public class CustomDisplayBlock extends CustomBlock {
     @Getter
     private String modelengine_id;
     private String itemIdentifier;
+    @Getter
+    private boolean connectable;
 
     public CustomDisplayBlock(ConfigurationSection blockSection, String identifier) {
         super(blockSection);
@@ -80,6 +82,7 @@ public class CustomDisplayBlock extends CustomBlock {
         }
         this.modelengine_id = displaySection.getString("modelengine_id");
         this.itemIdentifier = identifier;
+        this.connectable = displaySection.getBoolean("connectable");
     }
 
     @Override

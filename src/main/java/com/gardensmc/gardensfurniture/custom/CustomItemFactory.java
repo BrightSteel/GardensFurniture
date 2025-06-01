@@ -12,7 +12,6 @@ public class CustomItemFactory {
             case BLOCK -> customItem = new CustomBlockItem(identifier, itemSection);
             case DIRECTIONAL_BLOCK -> customItem = new CustomDirectionalItem(identifier, itemSection);
             case CAVE_VINE_BLOCK -> customItem = new CustomCaveVineItem(identifier, itemSection);
-            case CAVE_VINE_DIRECTIONAL_BLOCK -> customItem = new CustomCaveVineDirectional(identifier, itemSection);
             case MULTIPLIER_BLOCK -> customItem = new CustomMultiplierItem(identifier, itemSection);
             case BLOCK_FACING -> customItem = new CustomFacingItem(identifier, itemSection);
             case POTION -> customItem = new CustomPotionItem(identifier, itemSection);

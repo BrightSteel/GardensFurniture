@@ -6,10 +6,7 @@ public enum CustomBlockType {
     CAVE_VINE,
     TRIPWIRE,
     ITEM_FRAME,
-    CRYSTAL,
-    BUDDING,
     DISPLAY,
-    CARPET,
     SAPLING,
     WAXED
 }

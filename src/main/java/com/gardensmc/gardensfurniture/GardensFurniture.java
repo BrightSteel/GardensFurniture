@@ -15,13 +15,11 @@ import com.github.retrooper.packetevents.settings.PacketEventsSettings;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import me.lojosho.hibiscuscommons.hooks.Hooks;
 import org.bukkit.Bukkit;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class GardensFurniture extends JavaPlugin {
 
     public static GardensFurniture plugin;
-    public static Plugin gardensPlayers;
 
     public static StructureHandler structureHandler;
     public static ItemRegistry itemRegistry;
@@ -42,7 +40,6 @@ public class GardensFurniture extends JavaPlugin {
     @Override
     public void onEnable() {
         plugin = this;
-        gardensPlayers = getServer().getPluginManager().getPlugin("GardensPlayers");
         protocolManager = ProtocolLibrary.getProtocolManager();
         new DigSoundListener().registerListener();
 
@@ -56,7 +53,6 @@ public class GardensFurniture extends JavaPlugin {
         // register handlers
         CommandHandler.registerCommands();
         ListenerHandler.registerListeners();
-        structureHandler = new StructureHandler();
 
         // init packet events
         PacketEvents.getAPI().init();

@@ -9,6 +9,5 @@ commands:
     usage: /<command>
 depend: [GSit, NBTAPI, ProtocolLib, packetevents, HibiscusCommons]
 softdepend:
-  - GardensPlayers
   - packetevents
   - ProtocolLib

@@ -23,7 +23,6 @@ public class ListenerHandler {
     private static void createListeners() {
         listeners = List.of(
                 new BlockListener(),
-                new CaveVineListener(),
                 new ChunkListener(),
                 new EntityListener(),
                 new LeafListener(),

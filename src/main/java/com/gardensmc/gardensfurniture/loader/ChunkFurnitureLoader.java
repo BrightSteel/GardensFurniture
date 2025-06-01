@@ -1,16 +1,16 @@
 package com.gardensmc.gardensfurniture.loader;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
-import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomDisplayBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.store.FurnitureCache;
+import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChunkSnapshot;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -21,6 +21,7 @@ import org.bukkit.block.data.type.NoteBlock;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.logging.Level;
 
 public class ChunkFurnitureLoader {
 
@@ -30,7 +31,7 @@ public class ChunkFurnitureLoader {
     public void processSnapshot(ChunkSnapshot chunkSnapshot) {
         boolean updateCache = false;
         for (int x = 0; x < 16; x++) {
-            for (int y = 200; y > -60; y--) {
+            for (int y = 230; y > -60; y--) {
                 for (int z = 0; z < 16; z++) {
                     BlockData blockData = chunkSnapshot.getBlockData(x, y, z);
                     if (blockData instanceof NoteBlock noteBlock) {
@@ -66,37 +67,13 @@ public class ChunkFurnitureLoader {
         var chunk = Objects.requireNonNull(bukkitWorld).getChunkAt(chunkX, chunkZ);
         Block block = chunk.getBlock(x, y, z);
         // custom mappings
-        if (mapping.equals("amethyst_budding")) {
-            placeAmethystBuddingWithBuds(block);
+        CustomItem customItem = GardensFurniture.itemRegistry.getItem(mapping);
+        block.setType(Material.AIR);
+        if (customItem instanceof CustomPlaceableItem placeableItem) {
+            placeableItem.placeBlock(null, null, block.getLocation(), new PlaceOptions().setPersistentLeaves(false));
         } else {
-            CustomItem customItem = GardensFurniture.itemRegistry.getItem(mapping);
-            if (customItem instanceof CustomPlaceableItem placeableItem) {
-                block.setType(Material.AIR);
-                placeableItem.placeBlock(null, null, block.getLocation(), new PlaceOptions().setPersistentLeaves(false).setForce(true));
-            }
-        }
-    }
-
-    // custom mapping for normal amethyst buds, but place it with chance of budding
-    private void placeAmethystBuddingWithBuds(Block block) {
-        block.setType(Material.BUDDING_AMETHYST);
-        // chance of buds
-        for (BlockFace face : List.of(BlockFace.UP, BlockFace.DOWN, BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST)) {
-            if (ThreadLocalRandom.current().nextInt(2) == 0) {
-                var b = block.getRelative(face);
-                if (b.getType() == Material.AIR) {
-                    var budMaterial = CustomCrystalBlock.CrystalType.getRandom().getCrystalMaterial();
-                    b.setType(budMaterial);
-                    if (b.getBlockData() instanceof AmethystCluster cluster) {
-                        cluster.setFacing(face);
-                        b.setBlockData(cluster);
-                    }
-                    // normal amethyst - rotated to better fit display "fixed" setting
-                    var amethystBudDupe = GardensFurniture.itemRegistry.getItem(budMaterial.toString().toLowerCase());
-                    if (amethystBudDupe instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
-                        displayBlock.placeBlock(null, null, placeable, b.getLocation(), new PlaceOptions().setBlockFace(face).setPersistentLeaves(false));
-                    }
-                }
+            if (!StructureHandler.INSTANCE.spawnStructure(mapping, block.getLocation())) {
+                GardensFurniture.plugin.getLogger().log(Level.SEVERE, "Generation mapping " + mapping + " is not a placeable custom block or structure!");
             }
         }
     }

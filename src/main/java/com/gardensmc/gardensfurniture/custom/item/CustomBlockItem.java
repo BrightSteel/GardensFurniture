@@ -2,8 +2,10 @@ package com.gardensmc.gardensfurniture.custom.item;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomCaveVineBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomWaxedBlock;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -18,6 +20,8 @@ public class CustomBlockItem extends CustomPlaceableItem {
         this.customBlock = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection);
         if (this.customBlock instanceof CustomWaxedBlock customWaxedBlock) {
             this.material = customWaxedBlock.getWaxedType().getMaterial();
+        } else if (this.customBlock instanceof CustomCaveVineBlock) {
+            this.material = Material.GLOW_BERRIES;
         }
     }
 

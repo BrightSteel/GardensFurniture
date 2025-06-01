@@ -2,6 +2,7 @@ package com.gardensmc.gardensfurniture.custom.block;
 
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
+import lombok.Getter;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -10,10 +11,12 @@ import org.bukkit.inventory.ItemStack;
 public abstract class CustomBlock {
 
     private final boolean barrier;
+    @Getter
     private final boolean seated;
     private int[] seats;
     private final boolean cancel_drop;
     private final double seat_offset;
+    @Getter
     private final int light;
     private final String drop_override;
 
@@ -34,16 +37,8 @@ public abstract class CustomBlock {
         return cancel_drop;
     }
 
-    public boolean isSeated() {
-        return seated;
-    }
-
     public double getSeatOffset() {
         return seat_offset;
-    }
-
-    public int getLight() {
-        return light;
     }
 
     public String getDropOverride() {
@@ -64,4 +59,7 @@ public abstract class CustomBlock {
     }
 
     public abstract boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem placeableItem, Location location, PlaceOptions placeOptions);
+
+    public void onBreak(Location location) {
+    }
 }

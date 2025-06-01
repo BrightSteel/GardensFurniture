@@ -4,7 +4,6 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.*;
 import com.gardensmc.gardensfurniture.custom.block.CustomLeavesBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomTripwireBlock;
-import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineDirectional;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomMultiplierItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
@@ -71,7 +70,6 @@ public class CustomDropUtil {
 
     public static void dropCustomItem(BlockBreakEvent e, CustomItem customItem, boolean leaves) {
         if (customItem instanceof CustomPlaceableItem customBlockItem) {
-            boolean dropAnyway = customItem instanceof CustomCaveVineDirectional;
             e.setDropItems(false);
 
             if (e.getPlayer().getGameMode() != GameMode.CREATIVE && !customBlockItem.getCustomBlock().cancelDrop()){
@@ -84,7 +82,7 @@ public class CustomDropUtil {
                     } else {
                         drop = true;
                     }
-                    if (drop || dropAnyway) {
+                    if (drop) {
                         e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), itemStack);
                     }
                     else if (e.getBlock().getBlockData() instanceof Leaves leaves1 && customBlockItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {

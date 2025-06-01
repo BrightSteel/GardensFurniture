@@ -4,31 +4,31 @@ import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
+import lombok.Getter;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+@Getter
 public class CustomCaveVineBlock extends CustomBlock {
 
     private final int age;
-    private final boolean allowGlow;
+    // growth
+    private final boolean growBerries;
+    private final boolean grow;
+    private final double growthRate;
 
     public CustomCaveVineBlock(ConfigurationSection blockSection, String customBlockName) {
         super(blockSection);
         ConfigurationSection caveVineSection = getConfigSectionOrThrow(blockSection, "cave_vine_data", customBlockName);
         this.age = caveVineSection.getInt("age");
-        this.allowGlow = caveVineSection.getBoolean("allow_glow");
-    }
-
-    public int getAge() {
-        return age;
-    }
-
-    public boolean allowGlow() {
-        return allowGlow;
+        this.growBerries = blockSection.getBoolean("grow_berries", false);
+        this.grow = blockSection.getBoolean("grow");
+        this.growthRate = blockSection.getDouble("growth_rate", 100);
     }
 
     @Override
@@ -37,11 +37,16 @@ public class CustomCaveVineBlock extends CustomBlock {
     }
 
     @Override
-    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions) {
-        if (heldItem != null && customItem.getMaterial() == Material.GLOW_BERRIES) return false; // place naturally (if not placed by terrain mapping)
-
+    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem placeableItem, Location location, PlaceOptions placeOptions) {
         Block block = location.getBlock();
-        FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, new FurnitureStore(customItem.getIdentifier()), heldItem != null);
+        FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, new FurnitureStore(placeableItem.getIdentifier()), heldItem != null);
+        if (heldItem != null && placeableItem.getMaterial() == Material.GLOW_BERRIES) {
+            if (placeOptions.getBlockFace() == BlockFace.DOWN && block.getType().toString().toUpperCase().endsWith("LEAVES")) {
+                block.setType(Material.CAVE_VINES, true);
+                return true;
+            }
+            return false; // place naturally (if not placed by terrain mapping)
+        }
         block.setType(Material.CAVE_VINES, true);
         return true;
     }

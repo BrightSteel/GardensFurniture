@@ -2,7 +2,7 @@ package com.gardensmc.gardensfurniture.custom.item;
 
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
-import org.bukkit.Location;
+import org.bukkit.*;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -15,6 +15,7 @@ public abstract class CustomPlaceableItem extends CustomItem {
 
     protected final ConfigurationSection blockSection;
     private final List<String> placeTargets;
+    private final List<Tag<Material>> placeTags;
     private final List<String> placeDirections;
 
     public CustomPlaceableItem(String identifier, ConfigurationSection itemSection) {
@@ -23,6 +24,10 @@ public abstract class CustomPlaceableItem extends CustomItem {
         this.placeTargets = blockSection.getStringList("place_targets")
                 .stream()
                 .map(String::toUpperCase)
+                .toList();
+        this.placeTags = blockSection.getStringList("place_tags")
+                .stream()
+                .map(s -> Bukkit.getTag("blocks", NamespacedKey.minecraft(s.toLowerCase()), Material.class))
                 .toList();
         this.placeDirections = blockSection.getStringList("place_directions")
                 .stream()
@@ -41,23 +46,28 @@ public abstract class CustomPlaceableItem extends CustomItem {
         if (placeOptions.isForce()) {
             return true;
         }
-        return isValidBlockFace(placeOptions.getBlockFace(), location);
+        return isValidBlockFace(player, placeOptions.getBlockFace(), location);
     }
 
-    private boolean isValidBlockFace(BlockFace blockFace, Location location) {
+    private boolean isValidBlockFace(Player player, BlockFace blockFace, Location location) {
         if (!placeDirections.isEmpty() && !placeDirections.contains(blockFace.toString().toUpperCase())) {
             return false;
         }
-
+        var target = location.getBlock().getRelative(blockFace.getOppositeFace());
         if (!placeTargets.isEmpty()) {
             // first allow material
-            var target = location.getBlock().getRelative(blockFace.getOppositeFace());
             if (placeTargets.contains(target.getType().toString().toUpperCase())) {
                 return true;
             }
             // check for customItem
             var customItem = CustomBlockManager.getCustomItemFromBlock(target);
             return customItem != null && placeTargets.contains(customItem.getIdentifier().toUpperCase());
+        }
+        if (!placeTags.isEmpty()) {
+            return placeTags.stream().anyMatch(materialTag -> materialTag.isTagged(target.getType()));
+        }
+        if (player == null && !getIdentifier().equals("log_mushroom") && !getIdentifier().contains("leaves")) { // world-gen, avoid placing in air or on each other
+            return target.isSolid() && target.getType() != Material.TRIPWIRE && target.getType() != Material.NOTE_BLOCK;
         }
         return true;
     }

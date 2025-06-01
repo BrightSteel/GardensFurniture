@@ -15,7 +15,6 @@ public class CustomBlockFactory {
 
         CustomBlock customBlock;
         switch(CustomBlockType.valueOf(type.toUpperCase())) {
-            case CAVE_VINE -> customBlock = new CustomCaveVineBlock(blockSection, item_identifier);
             case TRIPWIRE -> customBlock = new CustomTripwireBlock(blockSection, item_identifier);
             case NOTE -> {
                 CustomNoteBlock customNoteBlock = new CustomNoteBlock(blockSection, item_identifier);
@@ -28,12 +27,10 @@ public class CustomBlockFactory {
                 customBlock = customLeavesBlock;
             }
             case ITEM_FRAME -> customBlock = new CustomItemFrameBlock(blockSection);
-            case CRYSTAL -> customBlock = new CustomCrystalBlock(blockSection, item_identifier);
-            case BUDDING -> customBlock = new CustomBuddingBlock(blockSection, item_identifier);
             case DISPLAY -> customBlock = new CustomDisplayBlock(blockSection, item_identifier);
-            case CARPET -> customBlock = new CustomCarpetBlock(blockSection, item_identifier);
             case SAPLING -> customBlock = new CustomSaplingBlock(blockSection, item_identifier);
             case WAXED -> customBlock = new CustomWaxedBlock(blockSection, item_identifier);
+            case CAVE_VINE -> customBlock = new CustomCaveVineBlock(blockSection, item_identifier);
             default -> throw new RuntimeException("Un-implemented customBlockType: " + type);
         }
         return customBlock;

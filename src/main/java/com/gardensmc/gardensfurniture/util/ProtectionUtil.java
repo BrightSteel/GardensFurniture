@@ -12,6 +12,7 @@ public class ProtectionUtil {
 
     public static boolean canBuild(Location location, Player player) {
         var block = location.getBlock();
+        var blockData = block.getBlockData();
         var buildEvent = new BlockPlaceEvent(
                 block,
                 block.getState(),
@@ -22,6 +23,8 @@ public class ProtectionUtil {
                 EquipmentSlot.HAND
         );
         Bukkit.getPluginManager().callEvent(buildEvent);
+        // prevent physics update
+        block.setBlockData(blockData, false);
         return !buildEvent.isCancelled();
     }
 }

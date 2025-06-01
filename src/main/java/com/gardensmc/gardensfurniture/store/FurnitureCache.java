@@ -54,7 +54,11 @@ public class FurnitureCache {
         furnitureCache.refresh(chunkKey);
     }
 
-    public record ChunkKey(String world, int x, int z) {}
+    public record ChunkKey(String world, int x, int z) {
+        public ChunkKey(Chunk chunk) {
+            this(chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
+        }
+    }
 
     public record BlockKey(int x, int y, int z) {}
 

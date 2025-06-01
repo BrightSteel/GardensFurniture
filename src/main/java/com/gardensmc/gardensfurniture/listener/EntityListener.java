@@ -2,17 +2,13 @@ package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
-import com.gardensmc.gardensfurniture.custom.block.CustomCrystalBlock;
-import com.gardensmc.gardensfurniture.custom.block.CustomDisplayBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
-import com.gardensmc.gardensfurniture.itementity.DisplayItemEntity;
 import com.gardensmc.gardensfurniture.itementity.FrameItemEntity;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import de.tr7zw.nbtapi.NBTEntity;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.ItemFrame;
@@ -70,10 +66,6 @@ public class EntityListener implements Listener {
                         Bukkit.getPluginManager().callEvent(ev);
                         if (ev.isCancelled()) {
                             return;
-                        }
-
-                        if (customBlockItem.getCustomBlock() instanceof CustomCrystalBlock) {
-                            return; // only breakable by removing amethyst block
                         }
 
                         NBTEntity nbtEntity = new NBTEntity(itemFrame);
