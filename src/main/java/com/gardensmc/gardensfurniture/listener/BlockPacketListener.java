@@ -8,11 +8,13 @@ import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerAbstract;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
+import com.github.retrooper.packetevents.protocol.item.instrument.Instruments;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.world.chunk.BaseChunk;
 import com.github.retrooper.packetevents.protocol.world.chunk.Column;
 import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
 import com.github.retrooper.packetevents.protocol.world.states.enums.East;
+import com.github.retrooper.packetevents.protocol.world.states.enums.Instrument;
 import com.github.retrooper.packetevents.protocol.world.states.enums.North;
 import com.github.retrooper.packetevents.protocol.world.states.enums.South;
 import com.github.retrooper.packetevents.protocol.world.states.enums.West;
@@ -23,6 +25,7 @@ import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBl
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChunkData;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerMultiBlockChange;
 import org.bukkit.*;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 
 import javax.annotation.Nullable;
@@ -138,6 +141,15 @@ public class BlockPacketListener {
                                 baseChunk.set(x, y, z, getNormalLeaveState(blockState.getType()));
                             }
                         }
+                        else if (blockState.getType() == StateTypes.NOTE_BLOCK) {
+                            CustomItem customItem = getCustomItemFromPos(player.getWorld(), realX, realY, realZ);
+                            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomNoteBlock) {
+                                var customNoteBlock = getCustomNoteBlock(placeable, world, realX, realY, realZ);
+                                baseChunk.set(x, y, z, getBlockStateFromNoteBlock(customNoteBlock));
+                            } else {
+                                baseChunk.set(x, y, z, getNormalNoteBlockState(blockState));
+                            }
+                        }
                         else if (blockState.getType() == StateTypes.CAVE_VINES_PLANT) {
                             CustomItem customItem = getCustomItemFromPos(player.getWorld(), realX, realY, realZ);
                             if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
@@ -195,6 +207,14 @@ public class BlockPacketListener {
         return (CustomTripwireBlock) customPlaceableItem.getCustomBlock();
     }
 
+    private CustomNoteBlock getCustomNoteBlock(CustomPlaceableItem customPlaceableItem, World world, int x, int y, int z) {
+        if (customPlaceableItem instanceof CustomDirectionalItem customDirectionalItem) {
+            var store = getStoreFromPos(world, x, y, z);
+            return (CustomNoteBlock) customDirectionalItem.getCustomBlock(BlockFace.valueOf(store.getFacing()));
+        }
+        return (CustomNoteBlock) customPlaceableItem.getCustomBlock();
+    }
+
     @Nullable
     private CustomItem getCustomItemFromPos(World world, int x, int y, int z) {
         return GardensFurniture.itemRegistry.getItem(getIdentifierFromPos(world, x, y, z));
@@ -225,6 +245,26 @@ public class BlockPacketListener {
             }
             else {
                 WrappedBlockState blockState1 = getNormalLeaveState(blockState.getType());
+                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
+                        player,
+                        new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
+                );
+                return true;
+            }
+        }
+        if (blockState.getType() == StateTypes.NOTE_BLOCK) {
+            CustomItem customItem = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
+            if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomNoteBlock) {
+                var customNoteBlock = getCustomNoteBlock(customBlockItem, player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
+                WrappedBlockState blockState1 = getBlockStateFromNoteBlock(customNoteBlock);
+                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
+                        player,
+                        new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
+                );
+                return true;
+            }
+            else {
+                WrappedBlockState blockState1 = getNormalNoteBlockState(blockState);
                 PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
                         player,
                         new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
@@ -318,6 +358,17 @@ public class BlockPacketListener {
                     block.setBlockState(getNormalLeaveState(blockState1.getType()));
                 }
             }
+            if (blockState1.getType() == StateTypes.NOTE_BLOCK) {
+                CustomItem customItem = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
+                if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomNoteBlock) {
+                    var customNoteBlock = getCustomNoteBlock(customBlockItem, player.getWorld(), block.getX(), block.getY(), block.getZ());
+                    WrappedBlockState blockState = getBlockStateFromNoteBlock(customNoteBlock);
+                    block.setBlockState(blockState);
+                }
+                else {
+                    block.setBlockState(getNormalNoteBlockState(blockState1));
+                }
+            }
             if (waxedTypes.containsKey(blockState1.getType())) {
                 CustomItem customItem = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
                 if (customItem == null) {
@@ -404,6 +455,25 @@ public class BlockPacketListener {
         return blockState;
     }
 
+    private WrappedBlockState getBlockStateFromNoteBlock(CustomNoteBlock customNoteBlock) {
+        WrappedBlockState blockState = StateTypes.NOTE_BLOCK.createBlockState();
+        blockState.setNote(customNoteBlock.getNote().getId());
+        blockState.setInstrument(getPacketInstrument(customNoteBlock));
+        blockState.setPowered(customNoteBlock.isPowered());
+        return blockState;
+    }
+
+    private Instrument getPacketInstrument(CustomNoteBlock customNoteBlock) {
+        return switch (customNoteBlock.getInstrument()) {
+            case PIANO -> Instrument.HARP;
+            case BASS_DRUM -> Instrument.BASEDRUM;
+            case SNARE_DRUM -> Instrument.SNARE;
+            case BASS_GUITAR -> Instrument.GUITAR;
+            case STICKS -> Instrument.HAT;
+            default -> Instrument.valueOf(customNoteBlock.getInstrument().toString());
+        };
+    }
+
     private WrappedBlockState getBlockStateFromTripwire(CustomTripwireBlock customTripwireBlock) {
         WrappedBlockState blockState = StateTypes.TRIPWIRE.createBlockState();
         blockState.setNorth(North.valueOf(String.valueOf(customTripwireBlock.isNorth()).toUpperCase()));
@@ -427,6 +497,13 @@ public class BlockPacketListener {
         WrappedBlockState blockState = stateType.createBlockState();
         blockState.setDistance(1);
         blockState.setPersistent(false);
+        return blockState;
+    }
+
+    private WrappedBlockState getNormalNoteBlockState(WrappedBlockState blockState) {
+        // strip off un-needed states - keep powered in case RP adds some special state for it
+        blockState.setNote(0);
+        blockState.setInstrument(Instrument.HARP);
         return blockState;
     }
 

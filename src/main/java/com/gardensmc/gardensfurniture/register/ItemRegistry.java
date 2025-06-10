@@ -267,6 +267,12 @@ public class ItemRegistry {
                         }
                         meta.setEquippable(equippable);
                     }
+                    if (!components.isTooltip_display()) {
+                        meta.setHideTooltip(true);
+                    }
+                    if (components.getTooltip_style() != null) {
+                        meta.setTooltipStyle(NamespacedKey.fromString(components.getTooltip_style()));
+                    }
                 }
 
                 itemStack.setItemMeta(meta);

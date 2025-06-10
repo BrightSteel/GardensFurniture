@@ -68,7 +68,7 @@ public class CustomDropUtil {
         }
     }
 
-    public static void dropCustomItem(BlockBreakEvent e, CustomItem customItem, boolean leaves) {
+    public static void dropCustomItem(BlockBreakEvent e, CustomItem customItem, boolean removeFurniture, boolean shearable) {
         if (customItem instanceof CustomPlaceableItem customBlockItem) {
             e.setDropItems(false);
 
@@ -76,7 +76,7 @@ public class CustomDropUtil {
                 ItemStack itemStack = GardensFurniture.itemRegistry.buildItem(customItem);
                 if (itemStack != null) {
                     boolean drop;
-                    if (leaves) {
+                    if (shearable) {
                         ItemStack held = e.getPlayer().getInventory().getItemInMainHand();
                         drop = held.getType() == Material.SHEARS || held.containsEnchantment(Enchantment.SILK_TOUCH);
                     } else {
@@ -106,12 +106,8 @@ public class CustomDropUtil {
             }
 
             Bukkit.getPluginManager().callEvent(new CustomBlockBreakEvent(e.getPlayer(), customBlockItem, e.getBlock()));
-            if (leaves) {
-                try {
-                    FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
+            if (removeFurniture) {
+                FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
             }
         }
     }

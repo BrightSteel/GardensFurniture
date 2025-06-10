@@ -61,11 +61,7 @@ public class CustomLeavesBlock extends CustomBlock {
     public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions) {
         Block block = location.getBlock();
         block.setType(getLeavesType().getMaterial());
-        try {
-            FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, new FurnitureStore(customItem.getIdentifier()), heldItem != null);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+        FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, new FurnitureStore(customItem.getIdentifier()), heldItem != null);
         if (block.getBlockData() instanceof Leaves leaves) {
             if (persistent) {
                 leaves.setPersistent(true);

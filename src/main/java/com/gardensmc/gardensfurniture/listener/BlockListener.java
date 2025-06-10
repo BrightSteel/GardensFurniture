@@ -13,14 +13,13 @@ import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.CaveVines;
+import org.bukkit.block.data.type.Comparator;
 import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
-import org.bukkit.event.world.GenericGameEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.util.RayTraceResult;
 
@@ -28,6 +27,7 @@ import java.util.*;
 import java.util.stream.Stream;
 
 import static com.gardensmc.gardensfurniture.custom.CustomBlockManager.getDisplayEntity;
+import static com.gardensmc.gardensfurniture.custom.CustomBlockManager.packetTypes;
 import static com.gardensmc.gardensfurniture.util.CustomDropUtil.dropCustomItem;
 
 public class BlockListener implements Listener {
@@ -41,107 +41,16 @@ public class BlockListener implements Listener {
             return;
         }
 
-        Material[] packetTypes = new Material[] {
-                Material.SPRUCE_LEAVES,
-                Material.CHERRY_LEAVES,
-                Material.CAVE_VINES,
-                Material.CAVE_VINES_PLANT
-        };
-
-        if (e.getBlock().getType() == Material.NOTE_BLOCK && e.getBlock().getBlockData() instanceof NoteBlock noteBlock) {
-            CustomItem customItem = CustomBlockManager.getItemFromNoteBlock(noteBlock);
-            dropCustomItem(e, customItem, false);
-        }
-        else if (e.getBlock().getType() == Material.TRIPWIRE) {
+        if (e.getBlock().getType() == Material.TRIPWIRE) {
             CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getBlock());
             if (customItem instanceof CustomPlaceableItem placeableItem && placeableItem.getCustomBlock() instanceof CustomTripwireBlock customTripwireBlock) {
                 dropCustomItem(e, customItem, customTripwireBlock);
             }
-        }
-        else if (Stream.concat(Arrays.stream(packetTypes), CustomWaxedBlock.WaxedType.materials().stream()).toList().contains(e.getBlock().getType())) {
+        } else if (Stream.concat(Arrays.stream(packetTypes), CustomWaxedBlock.WaxedType.materials().stream()).toList().contains(e.getBlock().getType())) {
             CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getBlock());
-            dropCustomItem(e, customItem, true);
+            dropCustomItem(e, customItem, true, e.getBlock().getType().toString().toLowerCase().endsWith("leaves"));
         }
 
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onBlockPhysics(final BlockPhysicsEvent event) {
-        final Block block = event.getBlock();
-        final Block aboveBlock = block.getRelative(BlockFace.UP);
-        final Block belowBlock = block.getRelative(BlockFace.DOWN);
-        // If block below is NoteBlock, it will be affected by the break
-        // Call updateAndCheck from it to fix vertical stack of NoteBlocks
-        // if belowBlock is not a NoteBlock we must ensure the above is not, if it is call updateAndCheck from block
-        if (belowBlock.getType() == Material.NOTE_BLOCK) {
-            event.setCancelled(true);
-            updateAndCheck(belowBlock);
-        } else if (aboveBlock.getType() == Material.NOTE_BLOCK) {
-            event.setCancelled(true);
-            updateAndCheck(aboveBlock);
-        }
-        if (block.getType() == Material.NOTE_BLOCK) {
-            event.setCancelled(true);
-            updateAndCheck(block);
-        }
-    }
-
-    public void updateAndCheck(Block block) {
-        final Block blockAbove = block.getRelative(BlockFace.UP);
-        if (blockAbove.getType() == Material.NOTE_BLOCK)
-            blockAbove.getState().update(true, true);
-        Block nextBlock = blockAbove.getRelative(BlockFace.UP);
-        if (nextBlock.getType() == Material.NOTE_BLOCK) updateAndCheck(blockAbove);
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onNoteblockPowered(final GenericGameEvent event) {
-        Block block = event.getLocation().getBlock();
-
-        Location eLoc = block.getLocation();
-        if (!isLoaded(event.getLocation()) || !isLoaded(eLoc)) return;
-
-
-        if (event.getEvent() != GameEvent.NOTE_BLOCK_PLAY) return;
-        if (block.getType() != Material.NOTE_BLOCK) return;
-        NoteBlock data = (NoteBlock) block.getBlockData().clone();
-        if (CustomBlockManager.getItemFromNoteBlock(data) != null) {
-            Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> block.setBlockData(data, false), 1L);
-        }
-    }
-
-    public static boolean isLoaded(World world, Location loc) {
-        return world.isChunkLoaded(loc.getBlockX() >> 4, loc.getBlockZ() >> 4);
-    }
-
-    public static boolean isLoaded(Location loc) {
-        return loc.getWorld() != null && isLoaded(loc.getWorld(), loc);
-    }
-
-    @EventHandler
-    public void placeNoteBlock(BlockPlaceEvent e) {
-        if (e.isCancelled()) return;
-
-        if (e.getBlockPlaced().getType() == Material.NOTE_BLOCK) {
-            e.getBlockPlaced().setType(Material.NOTE_BLOCK, false);
-//            CustomItem customItem = CustomBlockManager.getItemFromNoteBlock((NoteBlock) e.getBlockPlaced().getBlockData());
-//            if (customItem == null) {
-//
-//            }
-        }
-    }
-
-    // If block is not a custom block, play the correct sound according to the below block or default
-    @EventHandler(priority = EventPriority.NORMAL)
-    public void onNotePlayed(final NotePlayEvent event) {
-        if (event.getInstrument() != Instrument.PIANO) event.setCancelled(true);
-        else {
-            if (instrumentMap.isEmpty()) instrumentMap = getInstrumentMap();
-            String blockType = event.getBlock().getRelative(BlockFace.DOWN).getType().toString().toLowerCase(Locale.ROOT);
-            Instrument fakeInstrument = instrumentMap.entrySet().stream().filter(e -> e.getValue().contains(blockType)).map(Map.Entry::getKey).findFirst().orElse(Instrument.PIANO);
-            // This is deprecated, but seems to be without reason
-            event.setInstrument(fakeInstrument);
-        }
     }
 
     @EventHandler
@@ -202,14 +111,21 @@ public class BlockListener implements Listener {
 
     private boolean cancelNoteBlockExtend(List<Block> blocks) {
         for (Block block : blocks) {
-            if (block.getType() == Material.NOTE_BLOCK && block.getBlockData() instanceof NoteBlock noteBlock) {
-                CustomItem customItem = CustomBlockManager.getItemFromNoteBlock(noteBlock);
+            if (block.getType() == Material.NOTE_BLOCK && block.getBlockData() instanceof NoteBlock) {
+                CustomItem customItem = CustomBlockManager.getItemFromLeaves(block);
                 if (customItem != null) {
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onNotePlayed(final NotePlayEvent e) {
+        if (CustomBlockManager.getItemFromLeaves(e.getBlock()) != null) {
+            e.setCancelled(true);
+        }
     }
 
     @EventHandler
@@ -261,29 +177,5 @@ public class BlockListener implements Listener {
             }
         }
 
-    }
-
-    // Used to determine what instrument to use when playing a note depending on below block
-    public static Map<Instrument, List<String>> instrumentMap = new HashMap<>();
-
-    private static Map<Instrument, List<String>> getInstrumentMap() {
-        Map<Instrument, List<String>> map = new HashMap<>();
-        map.put(Instrument.BELL, List.of("gold_block"));
-        map.put(Instrument.BASS_DRUM, Arrays.asList("stone", "netherrack", "bedrock", "observer", "coral", "obsidian", "anchor", "quartz"));
-        map.put(Instrument.FLUTE, List.of("clay"));
-        map.put(Instrument.CHIME, List.of("packed_ice"));
-        map.put(Instrument.GUITAR, List.of("wool"));
-        map.put(Instrument.XYLOPHONE, List.of("bone_block"));
-        map.put(Instrument.IRON_XYLOPHONE, List.of("iron_block"));
-        map.put(Instrument.COW_BELL, List.of("soul_sand"));
-        map.put(Instrument.DIDGERIDOO, List.of("pumpkin"));
-        map.put(Instrument.BIT, List.of("emerald_block"));
-        map.put(Instrument.BANJO, List.of("hay_bale"));
-        map.put(Instrument.PLING, List.of("glowstone"));
-        map.put(Instrument.BASS_GUITAR, List.of("wood"));
-        map.put(Instrument.SNARE_DRUM, Arrays.asList("sand", "gravel", "concrete_powder", "soul_soil"));
-        map.put(Instrument.STICKS, Arrays.asList("glass", "sea_lantern", "beacon"));
-
-        return map;
     }
 }

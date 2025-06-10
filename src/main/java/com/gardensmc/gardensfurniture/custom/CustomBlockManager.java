@@ -76,17 +76,6 @@ public class CustomBlockManager {
     }
 
     @Nullable
-    public static CustomItem getItemFromNoteBlock(NoteBlock noteBlock) {
-        int note = noteBlock.getNote().getId();
-        String instrument = noteBlock.getInstrument().toString();
-        boolean powered = noteBlock.isPowered();
-        String key = note + "," + instrument + "," + powered;
-//        System.out.println("looking up " + note);
-
-        return GardensFurniture.itemRegistry.getCustomItem(key);
-    }
-
-    @Nullable
     public static ItemEntity getItemEntity(Location location) {
         var displayEntity = getDisplayEntity(location);
         if (displayEntity != null) {
@@ -130,7 +119,7 @@ public class CustomBlockManager {
     }
 
     public static void breakFurniture(Player player, Location location) {
-       if (!ProtectionUtil.canBuild(location, player)) {
+       if (player != null && !ProtectionUtil.canBuild(location, player)) {
            return;
        }
         ItemEntity itemEntity = getItemEntity(location);
@@ -171,21 +160,18 @@ public class CustomBlockManager {
     }
 
     public static Material[] packetTypes = new Material[] {
+            Material.OAK_LEAVES,
             Material.SPRUCE_LEAVES,
             Material.CHERRY_LEAVES,
+            Material.NOTE_BLOCK,
             Material.CAVE_VINES,
-            Material.CAVE_VINES_PLANT
+            Material.CAVE_VINES_PLANT,
+            Material.TRIPWIRE
     };
 
     @Nullable
     public static CustomItem getCustomItemFromBlock(Block block) {
-        if (block.getType() == Material.NOTE_BLOCK && block.getBlockData() instanceof NoteBlock noteBlock) {
-            return CustomBlockManager.getItemFromNoteBlock(noteBlock);
-        }
-        else if (block.getType() == Material.TRIPWIRE) {
-            return CustomBlockManager.getItemFromLeaves(block);
-        }
-        else if (Arrays.asList(packetTypes).contains(block.getType())) {
+        if (Arrays.asList(packetTypes).contains(block.getType())) {
             return CustomBlockManager.getItemFromLeaves(block);
         }
 

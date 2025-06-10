@@ -4,6 +4,7 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.loader.ChunkFurnitureLoader;
 import com.gardensmc.gardensfurniture.menu.FurnitureMenu;
 import com.gardensmc.gardensfurniture.permission.Permissions;
+import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.CommandSenderUtil;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.gardensmc.gardensfurniture.util.PlayerUtil;
@@ -50,8 +51,8 @@ public class FurnitureCommand implements TabExecutor {
         } else if (arguments.length == 1) {
             PlayerUtil.sendError(player, "Please specify the name of the desired structure");
         } else {
-            String structureName = arguments[1].toUpperCase();
-            if (GardensFurniture.structureHandler.spawnStructure(structureName, player.getLocation())) {
+            String structureName = arguments[1].toLowerCase();
+            if (StructureHandler.INSTANCE.spawnStructure(structureName, player.getLocation())) {
                 PlayerUtil.sendSuccess(player, "Spawned " + structureName + " successfully!");
             } else {
                 PlayerUtil.sendError(player, "Failed to spawn " + structureName + ". Check console for details");

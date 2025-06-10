@@ -3,7 +3,10 @@ package com.gardensmc.gardensfurniture.custom.item;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomNoteBlock;
+import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.Location;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -26,14 +29,8 @@ public class CustomDirectionalItem extends CustomPlaceableItem {
     @Override
     public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions) {
         if (!super.placeBlock(player, heldItem, location, placeOptions)) return false;
-        CustomBlock customBlock;
-        switch (placeOptions.getBlockFace()) {
-                case UP, DOWN -> customBlock = getY();
-                case EAST, WEST -> customBlock = getX();
-                case NORTH, SOUTH -> customBlock = getZ();
-                default -> throw new RuntimeException("Unknown block face: " + placeOptions.getBlockFace());
-            }
-        return customBlock.placeBlock(player, heldItem, this, location, placeOptions);
+        CustomBlock customBlock = getCustomBlock(placeOptions.getBlockFace());
+        return customBlock.placeBlock(player, heldItem, this, location, placeOptions.setFacing(placeOptions.getBlockFace().toString()));
     }
 
     @Override
@@ -41,12 +38,12 @@ public class CustomDirectionalItem extends CustomPlaceableItem {
         return getX();
     }
 
-    public CustomBlock getCustomBlock(String direction) {
-        return switch (direction) {
-            case "x" -> x;
-            case "y" -> y;
-            case "z" -> z;
-            default -> null;
+    public CustomBlock getCustomBlock(BlockFace facing) {
+        return switch (facing) {
+            case UP, DOWN -> getY();
+            case EAST, WEST -> getX();
+            case NORTH, SOUTH -> getZ();
+            default -> throw new RuntimeException("Unknown block face: " + facing);
         };
     }
 
@@ -62,18 +59,13 @@ public class CustomDirectionalItem extends CustomPlaceableItem {
         return z;
     }
 
-    // only applicable for CustomNoteBlocks, otherwise null
+    // only applicable for blocks with furniture store facing
     @Nullable
-    public String getBlockDirection(NoteBlock noteBlock) {
-        return Map.of(
-                "x", x,
-                "y", y,
-                "z", z
-        ).entrySet()
-                .stream()
-                .filter(entry -> entry.getValue() instanceof CustomNoteBlock entryNoteBlock && entryNoteBlock.isNoteBlock(noteBlock))
-                .findFirst()
-                .map(Map.Entry::getKey)
-                .orElse(null);
+    public BlockFace getBlockDirection(Block block) {
+        var furnitureStore = FurnitureStoreHandler.INSTANCE.getFurnitureStore(block);
+        if (furnitureStore == null) {
+            return null;
+        }
+        return BlockFace.valueOf(furnitureStore.getFacing());
     }
 }

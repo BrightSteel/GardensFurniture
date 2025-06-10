@@ -50,7 +50,7 @@ public class PlayerListener implements Listener {
 
         // cancel all note block right clicks that are custom blocks
         if (e.getClickedBlock().getType() == Material.NOTE_BLOCK && e.getClickedBlock().getBlockData() instanceof NoteBlock noteBlock) {
-            CustomItem customItem = CustomBlockManager.getItemFromNoteBlock(noteBlock);
+            CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getClickedBlock());
             if (customItem != null) {
                 e.setCancelled(true);
                 if (!ProtectionUtil.canBuild(e.getClickedBlock().getLocation(), e.getPlayer())) {
@@ -67,18 +67,15 @@ public class PlayerListener implements Listener {
                         var mechanics = customItem.getMechanics();
                         if (mechanics != null && mechanics.getStripped_log() != null) {
                             System.out.println("Stripped log mechanic found: " + mechanics.getStripped_log());
-                            // todo helper method for noteblock replacement ? then we can just be like replace this block and it will internally do so in the fast way
                             var strippedLog = GardensFurniture.itemRegistry.getItem(mechanics.getStripped_log());
                             if (customItem instanceof CustomDirectionalItem directionalItem && strippedLog instanceof CustomDirectionalItem blockItem) {
                                 System.out.println("Found directional item");
-                                var direction = directionalItem.getBlockDirection(noteBlock);
+                                var direction = directionalItem.getBlockDirection(e.getClickedBlock());
                                 if (direction != null) {
                                     System.out.println("Found direction: " + direction);
                                     if (blockItem.getCustomBlock(direction) instanceof CustomNoteBlock customNoteBlock) {
-                                        noteBlock.setInstrument(customNoteBlock.getInstrument());
-                                        noteBlock.setNote(customNoteBlock.getNote());
-                                        noteBlock.setPowered(customNoteBlock.isPowered());
-                                        e.getClickedBlock().setBlockData(noteBlock);
+                                        CustomBlockManager.breakFurniture(null, e.getClickedBlock().getLocation());
+                                        customNoteBlock.placeBlock(null, stack, blockItem, e.getClickedBlock().getLocation());
                                         e.getInteractionPoint().getWorld().playSound(
                                                 e.getInteractionPoint(), Sound.ITEM_AXE_STRIP, 1, 1
                                         );

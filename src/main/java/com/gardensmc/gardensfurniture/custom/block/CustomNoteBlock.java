@@ -3,6 +3,8 @@ package com.gardensmc.gardensfurniture.custom.block;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
+import com.gardensmc.gardensfurniture.store.FurnitureStore;
+import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.LightUtil;
 import lombok.Getter;
 import org.bukkit.*;
@@ -41,12 +43,13 @@ public class CustomNoteBlock extends CustomBlock {
         if (event.isCancelled()) return false;
 
         block.setType(Material.NOTE_BLOCK);
-        if (block.getBlockData() instanceof NoteBlock noteBlock) {
-            noteBlock.setNote(note);
-            noteBlock.setInstrument(instrument);
-            noteBlock.setPowered(powered);
-            block.setBlockData(noteBlock);
-        }
+        FurnitureStoreHandler.INSTANCE.addFurnitureStore(
+                block,
+                new FurnitureStore.FurnitureStoreBuilder(customItem.getIdentifier())
+                        .withFacing(placeOptions.getFacing())
+                        .build(),
+                heldItem != null
+        );
 
         if (getLight() > 0) {
             LightUtil.placeLight(location, getLight(), true);

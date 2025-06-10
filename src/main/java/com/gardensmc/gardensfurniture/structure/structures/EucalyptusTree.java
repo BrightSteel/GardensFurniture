@@ -13,7 +13,6 @@ public class EucalyptusTree extends TStructure {
         var pi = 3.14159;
 
         var trunkHeight = 9+randomInt(7);
-        var trunkBlock = "minecraft:note_block[instrument=custom_head,note=20]";
         var rootBlock = "minecraft:acacia_wood";
 
         double sideBranchInterval = 0;
@@ -22,7 +21,7 @@ public class EucalyptusTree extends TStructure {
         var sideBranchLengthVariation = 2;
         var sideBranchVerticalVariation = 0;
         var sideBranchVerticalDirection = 0.5+randomInt(randPrecision)/randPrecision/2;
-        var sideBranchLeafRadiusMin = 4;
+        var sideBranchLeafRadiusMin = 3;
         var sideBranchLeafTranslate = 0;
         var sideBranchLeafTopFlatness = 0.5;
         var sideBranchLeafBottomFlatness = 2;
@@ -35,7 +34,7 @@ public class EucalyptusTree extends TStructure {
         var topBranchLengthUpwardsMin = 7+randomInt(3);
         var topBranchLengthOutwardsMin = 0;
         var topBranchVerticalDirection = 1;
-        var topBranchLeafRadiusMin = 4;
+        var topBranchLeafRadiusMin = 3;
         var topBranchLeafTranslate = 0;
         var topBranchLeafTopFlatness = 0.7;
         var topBranchLeafBottomFlatness = 1.5;
@@ -109,7 +108,7 @@ public class EucalyptusTree extends TStructure {
                                 double squashFactor = sideBranchLeafBottomFlatness;
                                 if (cy > 0) squashFactor = sideBranchLeafTopFlatness;
                                 var distanceSquared = pow(cx,2)+pow(cy*squashFactor,2)+pow(cz,2);
-                                if (distanceSquared < radiusSquared && (double) randomInt(randPrecision) /randPrecision < sideBranchLeafDensity) {
+                                if (distanceSquared < radiusSquared) {
                                     furniture(lox+cx, loy+cy, loz+cz, "eucalyptus_leaves");
                                 }
                             }
@@ -117,7 +116,7 @@ public class EucalyptusTree extends TStructure {
                     }
                 }
             }
-            block(0, i, 0, trunkBlock);
+            furniture(0, i, 0, "eucalyptus_log");
         }
 
         for (var b = 1; b <= topBranches; b = b + 1) {
@@ -160,7 +159,7 @@ public class EucalyptusTree extends TStructure {
                         var squashFactor = topBranchLeafBottomFlatness;
                         if (cy > 0) squashFactor = topBranchLeafTopFlatness;
                         var distanceSquared = pow(cx,2)+pow(cy*squashFactor,2)+pow(cz,2);
-                        if (distanceSquared < radiusSquared && (double) randomInt(randPrecision) /randPrecision < topBranchLeafDensity) {
+                        if (distanceSquared < radiusSquared && randomInt(25) != 0) {
                             furniture(lox+cx, loy+cy, loz+cz, "eucalyptus_leaves");
                         }
                     }

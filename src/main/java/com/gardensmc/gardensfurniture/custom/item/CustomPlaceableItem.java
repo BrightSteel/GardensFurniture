@@ -66,8 +66,8 @@ public abstract class CustomPlaceableItem extends CustomItem {
         if (!placeTags.isEmpty()) {
             return placeTags.stream().anyMatch(materialTag -> materialTag.isTagged(target.getType()));
         }
-        if (player == null && !getIdentifier().equals("log_mushroom") && !getIdentifier().contains("leaves")) { // world-gen, avoid placing in air or on each other
-            return target.isSolid() && target.getType() != Material.TRIPWIRE && target.getType() != Material.NOTE_BLOCK;
+        if (player == null && !getIdentifier().equals("log_mushroom") && !getIdentifier().contains("leaves")) { // world-gen, avoid placing in air
+            return target.isSolid();
         }
         return true;
     }

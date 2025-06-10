@@ -18,13 +18,12 @@ public class PalmTree extends TStructure {
         double z = 0;
         double dx = (double) (randomInt(11) - 5) /15;
         double dz = (double) (randomInt(11) - 5) /15;
-        var trunkBlock = "minecraft:note_block[instrument=basedrum,note=19]";
         var leafBlock = "palm_leaves";
 
         // Generate trunk
         for (var unused = 0; y < height; y = y + 1) {
-            block(x, y, z, trunkBlock);
-            block(x, y+1, z, trunkBlock);
+            furniture(x, y, z, "eucalyptus_log");
+            furniture(x, y+1, z, "eucalyptus_log");
             x = x + dx;
             z = z + dz;
         }

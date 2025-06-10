@@ -11,12 +11,14 @@ import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Pattern;
 
 /**
  * Utility class for easy implementation of structure gen from terra files (.tesf)
@@ -48,22 +50,32 @@ public abstract class TStructure {
     }
 
     protected void furniture(double x, double y, double z, String identifier) {
+        furniture(x, y, z, identifier, new PlaceOptions().setForce(true));
+    }
+
+    protected void furniture(double x, double y, double z, String identifier, BlockFace blockFace) {
+        furniture(x, y, z, identifier, new PlaceOptions().setBlockFace(blockFace).setForce(true));
+    }
+
+    protected void furniture(double x, double y, double z, String identifier, PlaceOptions placeOptions) {
         if (origin == null) {
             throwOriginException();
         }
         Location loc = origin.clone().add(x, y, z);
         CustomItem customItem = GardensFurniture.itemRegistry.getItem(identifier);
         if (customItem instanceof CustomPlaceableItem placeableItem) {
-            placeableItem.placeBlock(null, null, loc, new PlaceOptions().setPersistentLeaves(false).setForce(true));
+            placeableItem.placeBlock(null, null, loc, placeOptions);
             furnitureAffectedChunks.add(loc.getChunk());
         }
     }
 
-    protected void furnitureChecked(double x, double y, double z, String identifier) {
-        if (origin.getWorld().getBlockAt((int) x, (int) y, (int) z).isSolid()) {
-            return;
+    protected boolean furnitureChecked(double x, double y, double z, String identifier) {
+        var loc = origin.clone().add(x, y, z);
+        if (origin.getWorld().getBlockAt(loc).getType().isSolid()) {
+            return false;
         }
         furniture(x, y, z, identifier);
+        return true;
     }
 
     protected int randomInt(int bound) {

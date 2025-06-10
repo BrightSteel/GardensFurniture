@@ -14,6 +14,8 @@ public class Components {
     private final Food food;
     private final Consumable consumable;
     private final Equippable equippable;
+    private final String tooltip_style;
+    private final boolean tooltip_display;
 
     public Components(ConfigurationSection componentSection) {
         this.item_model = componentSection.getString("item_model");
@@ -35,6 +37,8 @@ public class Components {
         this.consumable = consumableSection == null ? null : new Consumable(consumableSection);
         var equippableSection = componentSection.getConfigurationSection("equippable");
         this.equippable = equippableSection == null ? null : new Equippable(equippableSection);
+        this.tooltip_style = componentSection.getString("tooltip_style");
+        this.tooltip_display = componentSection.getBoolean("tooltip_display", true);
     }
 
 }

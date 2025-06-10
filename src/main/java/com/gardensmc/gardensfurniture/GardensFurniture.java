@@ -21,7 +21,6 @@ public class GardensFurniture extends JavaPlugin {
 
     public static GardensFurniture plugin;
 
-    public static StructureHandler structureHandler;
     public static ItemRegistry itemRegistry;
 
     public static ProtocolManager protocolManager;
