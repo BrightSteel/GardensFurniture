@@ -29,7 +29,7 @@ public class CustomLeavesBlock extends CustomBlock {
         ConfigurationSection leavesSection = getConfigSectionOrThrow(blockSection, "leaves_data", customBlockName);
         this.distance = leavesSection.getInt("distance");
         this.persistent = leavesSection.getBoolean("persistent");
-        this.sapling = blockSection.getString("sapling"); // want this under block section ??
+        this.sapling = leavesSection.getString("sapling");
         this.leavesType = leavesSection.contains("type")
                 ? LeavesType.valueOf(leavesSection.getString("type").toUpperCase())
                 : LeavesType.SPRUCE;
@@ -63,7 +63,7 @@ public class CustomLeavesBlock extends CustomBlock {
         block.setType(getLeavesType().getMaterial());
         FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, new FurnitureStore(customItem.getIdentifier()), heldItem != null);
         if (block.getBlockData() instanceof Leaves leaves) {
-            if (persistent) {
+            if (placeOptions.isPersistentLeaves()) {
                 leaves.setPersistent(true);
             }
             else {

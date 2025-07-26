@@ -10,6 +10,7 @@ import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.gardensmc.gardensfurniture.util.PlayerUtil;
 import de.tr7zw.nbtapi.NBTItem;
 import org.bukkit.Bukkit;
+import org.bukkit.GameRule;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -26,6 +27,9 @@ public class FurnitureCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender commandSender, Command command, String s, String[] args) {
+        if (!commandSender.hasPermission("gardensfurniture.furniture")) {
+            return false;
+        }
         if (args.length > 0) {
             switch (args[0].toUpperCase()) {
                 case "STRUCTURE" -> executeSpawnStructure(commandSender, args);
@@ -139,16 +143,18 @@ public class FurnitureCommand implements TabExecutor {
             CommandSenderUtil.sendPlayerOnly(commandSender);
         } else {
             commandSender.sendMessage("Loading spawn furniture...");
-            var centerChunk = player.getLocation().getChunk();
+            var centerChunk = player.getWorld().getSpawnLocation().getChunk();
+            var radius = 2;
             int i = 1;
-            for (int x = -2; x <= 2; x++) {
-                for (int z = -2; z <= 2; z++) {
+            var area = Math.pow(radius*2 + 1, 2);
+            for (int x = -radius; x <= radius; x++) {
+                for (int z = -radius; z <= radius; z++) {
                     var chunk = centerChunk.getWorld().getChunkAt(centerChunk.getX() + x, centerChunk.getZ() + z);
                     var snapshot = chunk.getChunkSnapshot();
                     int finalI = i;
                     CompletableFuture
-                            .runAsync(() -> ChunkFurnitureLoader.INSTANCE.processSnapshot(snapshot))
-                            .thenRun(() -> player.sendMessage("Loaded chunk furniture " + finalI + "/25"));
+                            .runAsync(() -> ChunkFurnitureLoader.INSTANCE.processSnapshot(snapshot, player.getWorld().getEnvironment()))
+                            .thenRun(() -> player.sendMessage("Loaded chunk furniture " + finalI + "/" + area));
                     i++;
                 }
             }

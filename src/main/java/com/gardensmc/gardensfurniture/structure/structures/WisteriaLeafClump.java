@@ -4,6 +4,8 @@ import com.gardensmc.gardensfurniture.store.FurnitureCache;
 import com.gardensmc.gardensfurniture.structure.TStructure;
 import com.gardensmc.gardensfurniture.util.ProbabilityUtil;
 import lombok.AllArgsConstructor;
+import org.bukkit.Material;
+import org.bukkit.block.BlockFace;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -38,20 +40,25 @@ public class WisteriaLeafClump extends TStructure {
             placeLeaf(1, y, -1);
         }
         queuedVines.forEach(queuedVine -> {
-            var loc = origin.add(queuedVine.blockKey.x(), queuedVine.blockKey.y(), queuedVine.blockKey.z());
-            var topBlock = loc.getWorld().getBlockAt(loc);
-            // avoid placing underneath log since those won't get replaced by half leaves
-            if (topBlock.getType().toString().toLowerCase().endsWith("leaves")) {
-                var placed = furnitureChecked(queuedVine.blockKey.x(), queuedVine.blockKey.y(), queuedVine.blockKey.z(), queuedVine.blockId);
-                if (placed && queuedVine.blockId.contains("vine")) {
-                    for (int i = 1; i < ThreadLocalRandom.current().nextInt(1, 4); i++) {
-                        if (!furnitureChecked(queuedVine.blockKey.x(), queuedVine.blockKey.y() - i, queuedVine.blockKey.z(), queuedVine.blockId)) {
-                            break;
-                        }
+            var placed = vineChecked(queuedVine.blockKey.x(), queuedVine.blockKey.y(), queuedVine.blockKey.z(), queuedVine.blockId);
+            if (placed && queuedVine.blockId.contains("vine")) {
+                for (int i = 1; i < ThreadLocalRandom.current().nextInt(1, 4); i++) {
+                    if (!vineChecked(queuedVine.blockKey.x(), queuedVine.blockKey.y() - i, queuedVine.blockKey.z(), queuedVine.blockId)) {
+                        break;
                     }
                 }
             }
         });
+    }
+
+    private boolean vineChecked(int x, int y, int z, String vineId) {
+        var topLoc = origin.clone().add(x, y + 1, z);
+        var topBlock = topLoc.getWorld().getBlockAt(topLoc);
+        var topType = topBlock.getType().toString().toLowerCase();
+        if (!topType.endsWith("leaves") && !topType.contains("cave_vines")) {
+            return false;
+        }
+        return furnitureChecked(x, y, z, vineId);
     }
 
     private void placeLeaf(int x, int y, int z) {

@@ -3,6 +3,7 @@ package com.gardensmc.gardensfurniture.custom.item;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomCaveVineBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomSaplingBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomWaxedBlock;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -22,6 +23,8 @@ public class CustomBlockItem extends CustomPlaceableItem {
             this.material = customWaxedBlock.getWaxedType().getMaterial();
         } else if (this.customBlock instanceof CustomCaveVineBlock) {
             this.material = Material.GLOW_BERRIES;
+        } else if (this.customBlock instanceof CustomSaplingBlock customSaplingBlock) {
+            this.material = customSaplingBlock.getSaplingType().getMaterial();
         }
     }
 

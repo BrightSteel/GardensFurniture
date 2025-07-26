@@ -1,7 +1,6 @@
 package com.gardensmc.gardensfurniture.events;
 
-import com.gardensmc.gardensfurniture.custom.item.CustomItem;
-import org.bukkit.entity.ItemFrame;
+import lombok.Getter;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -10,18 +9,16 @@ import javax.annotation.Nullable;
 
 public class FurniturePlaceEvent extends Event {
 
-    private Player player;
-    private CustomItem customItem;
-
-    private ItemFrame itemFrame;
+    private final Player player;
+    @Getter
+    private final Furniture furniture;
 
     private static final HandlerList HANDLERS = new HandlerList();
 
 
-    public FurniturePlaceEvent(Player player, CustomItem customItem, ItemFrame itemFrame) {
+    public FurniturePlaceEvent(Player player, Furniture furniture) {
         this.player = player;
-        this.customItem = customItem;
-        this.itemFrame = itemFrame;
+        this.furniture = furniture;
     }
 
     @Override
@@ -33,16 +30,9 @@ public class FurniturePlaceEvent extends Event {
         return HANDLERS;
     }
 
-    public CustomItem getCustomItem() {
-        return customItem;
-    }
-
     @Nullable
     public Player getPlayer() {
         return player;
     }
 
-    public ItemFrame getItemFrame() {
-        return itemFrame;
-    }
 }

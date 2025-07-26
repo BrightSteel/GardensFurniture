@@ -11,3 +11,6 @@ depend: [GSit, NBTAPI, ProtocolLib, packetevents, HibiscusCommons]
 softdepend:
   - packetevents
   - ProtocolLib
+  - FastAsyncWorldEdit
+  - ShopGUIPlus
+  - GriefPrevention

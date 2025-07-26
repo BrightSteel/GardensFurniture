@@ -1,8 +1,12 @@
 package com.gardensmc.gardensfurniture.custom;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.custom.block.CustomDisplayBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomWaxedBlock;
 import com.gardensmc.gardensfurniture.custom.item.*;
+import com.gardensmc.gardensfurniture.events.Furniture;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
+import com.gardensmc.gardensfurniture.events.FurnitureInteractEvent;
 import com.gardensmc.gardensfurniture.itementity.DisplayItemEntity;
 import com.gardensmc.gardensfurniture.itementity.FrameItemEntity;
 import com.gardensmc.gardensfurniture.itementity.ItemEntity;
@@ -23,6 +27,7 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.logging.Level;
+import java.util.stream.Stream;
 
 public class CustomBlockManager {
 
@@ -51,7 +56,8 @@ public class CustomBlockManager {
                 || material == Material.LIGHT
                 || material == Material.WATER
                 || material == Material.SHORT_GRASS
-                || material == Material.TALL_GRASS;
+                || material == Material.TALL_GRASS
+                || material == Material.SNOW;
     }
 
     private static boolean entityBlocking(Location loc) {
@@ -161,17 +167,20 @@ public class CustomBlockManager {
 
     public static Material[] packetTypes = new Material[] {
             Material.OAK_LEAVES,
+            Material.BIRCH_LEAVES,
             Material.SPRUCE_LEAVES,
             Material.CHERRY_LEAVES,
             Material.NOTE_BLOCK,
             Material.CAVE_VINES,
             Material.CAVE_VINES_PLANT,
-            Material.TRIPWIRE
+            Material.TRIPWIRE,
+            Material.OAK_SAPLING,
+            Material.DARK_OAK_SAPLING
     };
 
     @Nullable
     public static CustomItem getCustomItemFromBlock(Block block) {
-        if (Arrays.asList(packetTypes).contains(block.getType())) {
+        if (Stream.concat(Arrays.stream(packetTypes), CustomWaxedBlock.WaxedType.materials().stream()).toList().contains(block.getType())) {
             return CustomBlockManager.getItemFromLeaves(block);
         }
 
@@ -191,15 +200,21 @@ public class CustomBlockManager {
         if (override != null) {
             return GardensFurniture.itemRegistry.buildItem(override);
         }
-        return itemEntity.getItem();
+        var item = itemEntity.getItem();
+        if (block instanceof CustomDisplayBlock displayBlock && displayBlock.getModel_override() != null) {
+            // re-place original item model
+            item.editMeta(meta -> meta.setItemModel(NamespacedKey.fromString(customPlaceableItem.getComponents().getItem_model())));
+        }
+        return item;
     }
 
-    public static void onInteractFurniture(Player player, EquipmentSlot hand, ItemEntity itemEntity) {
+    public static void onInteractFurniture(Player player, EquipmentSlot hand, ItemEntity itemEntity, Interaction interaction) {
         ItemStack heldItem = player.getInventory().getItem(hand);
         CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
         if (!(customItem instanceof CustomPlaceableItem customBlockItem)) {
             return;
         }
+        Bukkit.getPluginManager().callEvent(new FurnitureInteractEvent(player, new Furniture(customItem, (ItemDisplay) itemEntity.getEntity(), interaction), hand, heldItem));
         if (player.isSneaking()) {
             itemEntity.rotate(45);
         } else if (heldItem.getType().toString().toUpperCase().endsWith("DYE") && customItem.isDyeable() && itemEntity.getItem().getItemMeta() instanceof LeatherArmorMeta leatherMeta) {
@@ -226,9 +241,6 @@ public class CustomBlockManager {
             } else {
                 player.getInventory().setItem(hand, mapleSyrup);
             }
-        } else {
-            // todo update this to accept itemEntity
-//                    Bukkit.getPluginManager().callEvent(new FurnitureInteractEvent(e.getPlayer(), customItem, itemEntity, e.getHand(), heldItem));
         }
     }
 

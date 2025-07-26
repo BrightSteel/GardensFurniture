@@ -1,5 +1,7 @@
 package com.gardensmc.gardensfurniture.listener.sounds;
 
+import com.gardensmc.gardensfurniture.GardensFurniture;
+import org.bukkit.Bukkit;
 import org.bukkit.GameEvent;
 import org.bukkit.Material;
 import org.bukkit.SoundCategory;
@@ -8,6 +10,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
@@ -31,7 +34,7 @@ public class VanillaBlockSoundListener implements Listener {
 
     public static final String WOOD_SOUND_GROUP = Material.NOTE_BLOCK.createBlockData().getSoundGroup().toString();
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent e) {
         var block = e.getBlock();
         if (block.getBlockData().getSoundGroup().toString().equals(WOOD_SOUND_GROUP)) {
@@ -39,7 +42,7 @@ public class VanillaBlockSoundListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent e) {
         var block = e.getBlockPlaced();
         if (block.getBlockData().getSoundGroup().toString().equals(WOOD_SOUND_GROUP)) {
@@ -47,7 +50,7 @@ public class VanillaBlockSoundListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     public void onBlockStep(GenericGameEvent e) {
         Entity entity = e.getEntity();
         GameEvent gameEvent = e.getEvent();

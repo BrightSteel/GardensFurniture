@@ -21,6 +21,8 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.Container;
+import org.bukkit.block.data.Openable;
 import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
@@ -31,8 +33,10 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 
@@ -52,37 +56,35 @@ public class PlayerListener implements Listener {
         if (e.getClickedBlock().getType() == Material.NOTE_BLOCK && e.getClickedBlock().getBlockData() instanceof NoteBlock noteBlock) {
             CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getClickedBlock());
             if (customItem != null) {
-                e.setCancelled(true);
+                Bukkit.getPluginManager().callEvent(new CustomBlockInteractEvent(e.getPlayer(), customItem, e.getHand(), e.getItem(), e.getClickedBlock()));
                 if (!ProtectionUtil.canBuild(e.getClickedBlock().getLocation(), e.getPlayer())) {
                     return;
                 }
-                Bukkit.getPluginManager().callEvent(new CustomBlockInteractEvent(e.getPlayer(), customItem, e.getHand(), e.getItem(), e.getClickedBlock()));
+                e.setCancelled(true);
                 // if player is holding an item with an action, lets place it
                 if (e.getHand() != null) {
                     ItemStack stack = e.getPlayer().getInventory().getItem(e.getHand());
-                    if (stack == null || stack.getType() == Material.AIR) return;
+                    if (stack == null || stack.getType() == Material.AIR || stack.getType() == Material.BONE_MEAL) return;
 
                     if (stack.getType().toString().endsWith("AXE")) {
-                        System.out.println("Axe hit");
                         var mechanics = customItem.getMechanics();
                         if (mechanics != null && mechanics.getStripped_log() != null) {
-                            System.out.println("Stripped log mechanic found: " + mechanics.getStripped_log());
                             var strippedLog = GardensFurniture.itemRegistry.getItem(mechanics.getStripped_log());
                             if (customItem instanceof CustomDirectionalItem directionalItem && strippedLog instanceof CustomDirectionalItem blockItem) {
-                                System.out.println("Found directional item");
                                 var direction = directionalItem.getBlockDirection(e.getClickedBlock());
                                 if (direction != null) {
-                                    System.out.println("Found direction: " + direction);
                                     if (blockItem.getCustomBlock(direction) instanceof CustomNoteBlock customNoteBlock) {
-                                        CustomBlockManager.breakFurniture(null, e.getClickedBlock().getLocation());
+                                        e.getClickedBlock().setType(Material.AIR);
                                         customNoteBlock.placeBlock(null, stack, blockItem, e.getClickedBlock().getLocation());
                                         e.getInteractionPoint().getWorld().playSound(
                                                 e.getInteractionPoint(), Sound.ITEM_AXE_STRIP, 1, 1
                                         );
 
                                         // decrement axe durability
-                                        if (e.getPlayer().getGameMode() != GameMode.CREATIVE && stack.getItemMeta() instanceof Damageable damageable) {
-                                            damageable.setDamage(damageable.getDamage() + 2);
+                                        var damageEvent = new PlayerItemDamageEvent(e.getPlayer(), stack, 2, 2);
+                                        Bukkit.getPluginManager().callEvent(damageEvent);
+                                        if (!damageEvent.isCancelled() && e.getPlayer().getGameMode() != GameMode.CREATIVE && stack.getItemMeta() instanceof Damageable damageable) {
+                                            damageable.setDamage(damageable.getDamage() + damageEvent.getDamage());
                                             stack.setItemMeta(damageable);
                                         }
                                         return;
@@ -126,8 +128,16 @@ public class PlayerListener implements Listener {
 
         // handle placement of custom items
         Location clickedLocation = e.getClickedBlock().getLocation();
-        Location location = getLocationFromBlockFace(clickedLocation, e.getBlockFace());
+        Location location = CustomBlockManager.isPlaceableMaterial(clickedLocation.getBlock().getType())
+                ? clickedLocation
+                : getLocationFromBlockFace(clickedLocation, e.getBlockFace());
         if (!CustomBlockManager.isPlaceableMaterial(location.getBlock().getType())) return;
+
+
+
+        if (!e.getPlayer().isSneaking() && (e.getClickedBlock().getBlockData() instanceof Openable || e.getClickedBlock().getState() instanceof InventoryHolder)) {
+            return;
+        }
 
         CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
         if (customItem != null) {
@@ -155,6 +165,19 @@ public class PlayerListener implements Listener {
                 }
             }
         }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onRemoveWaxed(PlayerInteractEvent e) {
+        if (e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        if (e.getClickedBlock() == null) return;
+        if (e.getItem() == null || !e.getItem().getType().toString().toLowerCase().endsWith("axe")) return;
+        if (CustomWaxedBlock.WaxedType.materials().contains(e.getClickedBlock().getType())) {
+            if (CustomBlockManager.getCustomItemFromBlock(e.getClickedBlock()) != null) {
+                e.setCancelled(true);
+            }
+        }
+
     }
 
 //    @EventHandler
@@ -187,21 +210,21 @@ public class PlayerListener implements Listener {
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onRightClickBarrier(PlayerInteractEvent e) {
-        if (e.getAction() == Action.RIGHT_CLICK_BLOCK && e.getHand() == EquipmentSlot.HAND) { // called for each hand
-            var block = e.getClickedBlock();
-            if (block != null && block.getType() == Material.BARRIER) {
-                if (!ProtectionUtil.canBuild(block.getLocation(), e.getPlayer())) return;
-                var itemEntity = CustomBlockManager.getItemEntity(block.getLocation());
-                if (itemEntity == null) return;
-                CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
-                Bukkit.getPluginManager().callEvent(new CustomBlockInteractEvent(
-                        e.getPlayer(), customItem, e.getHand(), e.getItem(), block
-                ));
-            }
-        }
-    }
+//    @EventHandler(ignoreCancelled = true)
+//    public void onRightClickBarrier(PlayerInteractEvent e) {
+//        if (e.getAction() == Action.RIGHT_CLICK_BLOCK && e.getHand() == EquipmentSlot.HAND) { // called for each hand
+//            var block = e.getClickedBlock();
+//            if (block != null && block.getType() == Material.BARRIER) {
+//                if (!ProtectionUtil.canBuild(block.getLocation(), e.getPlayer())) return;
+//                var itemEntity = CustomBlockManager.getItemEntity(block.getLocation());
+//                if (itemEntity == null) return;
+//                CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
+//                Bukkit.getPluginManager().callEvent(new CustomBlockInteractEvent(
+//                        e.getPlayer(), customItem, e.getHand(), e.getItem(), block
+//                ));
+//            }
+//        }
+//    }
 
     private Location getLocationFromBlockFace(Location location, BlockFace blockFace) {
         Location temp = location;
@@ -229,10 +252,13 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void interactFurniture(PlayerInteractEntityEvent e) {
-        if (e.getRightClicked() instanceof ItemFrame || e.getRightClicked() instanceof Interaction) {
+        if (e.getRightClicked() instanceof Interaction interaction) {
             var itemEntity = CustomBlockManager.getItemEntity(e.getRightClicked().getLocation());
             if (itemEntity == null) return;
-            CustomBlockManager.onInteractFurniture(e.getPlayer(), e.getHand(), itemEntity);
+            if (GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem()) == null) {
+                return;
+            }
+            CustomBlockManager.onInteractFurniture(e.getPlayer(), e.getHand(), itemEntity, interaction);
             e.setCancelled(true);
         }
     }
@@ -262,7 +288,7 @@ public class PlayerListener implements Listener {
         if (block != null && block.getType() == Material.BARRIER) {
             var itemEntity = CustomBlockManager.getItemEntity(block.getLocation());
             if (itemEntity == null) return;
-            CustomBlockManager.onInteractFurniture(e.getPlayer(), e.getHand(), itemEntity);
+            CustomBlockManager.onInteractFurniture(e.getPlayer(), e.getHand(), itemEntity, null);
             e.setCancelled(true);
         }
     }

@@ -1,5 +1,12 @@
 package com.gardensmc.gardensfurniture.listener;
 
+import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
+import com.gardensmc.gardensfurniture.custom.block.CustomLeavesBlock;
+import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
+import com.gardensmc.gardensfurniture.util.CustomDropUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.type.Leaves;
@@ -7,28 +14,26 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.LeavesDecayEvent;
 
+import java.util.Arrays;
+
 public class LeafListener implements Listener {
 
     @EventHandler
-    public void neverLeafDecay(LeavesDecayEvent e) {
+    public void leafDecay(LeavesDecayEvent e) {
         if (e.isCancelled()) return;
-        e.setCancelled(true);
-    }
 
-    // Commenting out since just cancelling all decay for now
-//    @EventHandler
-//    public void leafDecay(LeavesDecayEvent e) {
-//        if (e.isCancelled()) return;
-//
-//        Block leafBlock = e.getBlock();
-//        if (leafBlock.getBlockData() instanceof Leaves leaf && leafBlock.getType() == Material.SPRUCE_LEAVES) {
-//            CustomItem customItem = CustomBlockManager.getItemFromLeaves(leafBlock);
-//            if (customItem == null) return;
-//            if (preventDecay(leafBlock, leaf)) {
-//                e.setCancelled(true);
-//            }
-//        }
-//    }
+        Block leafBlock = e.getBlock();
+        if (leafBlock.getBlockData() instanceof Leaves leaf) {
+            var customItem = CustomBlockManager.getItemFromLeaves(leafBlock);
+            if (!(customItem instanceof CustomPlaceableItem placeable)) return;
+            if (!preventDecay(leafBlock, leaf)) {
+                FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
+                e.getBlock().setType(Material.AIR);
+                CustomDropUtil.leafDrop(leafBlock.getLocation(), (CustomLeavesBlock) placeable.getCustomBlock());
+            }
+            e.setCancelled(true);
+        }
+    }
 
     private boolean preventDecay(Block leafBlock, Leaves leaf) {
         int distance = leaf.getDistance();

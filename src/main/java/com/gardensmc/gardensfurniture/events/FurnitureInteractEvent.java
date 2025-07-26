@@ -1,30 +1,29 @@
 package com.gardensmc.gardensfurniture.events;
 
-import com.gardensmc.gardensfurniture.custom.item.CustomItem;
-import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
-public class FurnitureInteractEvent extends Event {
+public class FurnitureInteractEvent extends Event implements Cancellable {
     private Player player;
-    private CustomItem customItem;
 
-    private ItemFrame itemFrame;
+    private Furniture furniture;
 
     private EquipmentSlot hand;
 
     private ItemStack heldItem;
 
+    private boolean cancelled;
+
     private static final HandlerList HANDLERS = new HandlerList();
 
 
-    public FurnitureInteractEvent(Player player, CustomItem customItem, ItemFrame itemFrame, EquipmentSlot hand, ItemStack heldItem) {
+    public FurnitureInteractEvent(Player player, Furniture furniture, EquipmentSlot hand, ItemStack heldItem) {
         this.player = player;
-        this.customItem = customItem;
-        this.itemFrame = itemFrame;
+        this.furniture = furniture;
         this.hand = hand;
         this.heldItem = heldItem;
     }
@@ -38,16 +37,12 @@ public class FurnitureInteractEvent extends Event {
         return HANDLERS;
     }
 
-    public CustomItem getCustomItem() {
-        return customItem;
-    }
-
     public Player getPlayer() {
         return player;
     }
 
-    public ItemFrame getItemFrame() {
-        return itemFrame;
+    public Furniture getFurniture() {
+        return furniture;
     }
 
     public ItemStack getHeldItem() {
@@ -56,5 +51,15 @@ public class FurnitureInteractEvent extends Event {
 
     public EquipmentSlot getHand() {
         return hand;
+    }
+
+    @Override
+    public boolean isCancelled() {
+        return cancelled;
+    }
+
+    @Override
+    public void setCancelled(boolean b) {
+        this.cancelled = b;
     }
 }

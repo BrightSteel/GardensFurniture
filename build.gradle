@@ -34,6 +34,10 @@ repositories {
         url = "https://repo.minebench.de/"
     }
     maven { url 'https://mvn.lumine.io/repository/maven-public/' }
+    maven {
+        name "groupez"
+        url "https://repo.groupez.dev/releases"
+    }
 }
 
 dependencies {
@@ -44,9 +48,16 @@ dependencies {
     compileOnly("com.github.Gecolay.GSit:core:2.2.1")
     compileOnly('com.comphenix.protocol:ProtocolLib:5.3.0')
     compileOnly(fileTree("${project.rootDir}/dependencies") { include("*.jar") })
-    implementation("de.themoep:inventorygui:1.6.5-SNAPSHOT")
+    implementation("de.themoep:inventorygui:1.6.4-SNAPSHOT")
     compileOnly("com.github.retrooper:packetevents-spigot:2.7.0")
     compileOnly 'com.ticxo.modelengine:ModelEngine:R4.0.7'
+    implementation(platform("com.intellectualsites.bom:bom-newest:1.52")) // Ref: https://github.com/IntellectualSites/bom
+    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core")
+    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Bukkit")
+    compileOnly('com.github.brcdev-minecraft:shopgui-api:3.0.0') {
+        exclude(group: "org.spigotmc")
+    }
+    compileOnly("com.github.GriefPrevention:GriefPrevention:16.18.4")
     compileOnly 'org.projectlombok:lombok:1.18.36'
     annotationProcessor 'org.projectlombok:lombok:1.18.36'
 
@@ -78,7 +89,7 @@ tasks {
     }
 
     shadowJar {
-        relocate("de.themoep", "com.gardensmc.shaded.inventorygui")
+        relocate("de.themoep", "com.gardensmc.furniture.shaded.inventorygui")
     }
 
 }

@@ -2,6 +2,7 @@ package com.gardensmc.gardensfurniture.custom.item;
 
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomNoteBlock;
 import org.bukkit.*;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
@@ -66,9 +67,9 @@ public abstract class CustomPlaceableItem extends CustomItem {
         if (!placeTags.isEmpty()) {
             return placeTags.stream().anyMatch(materialTag -> materialTag.isTagged(target.getType()));
         }
-        if (player == null && !getIdentifier().equals("log_mushroom") && !getIdentifier().contains("leaves")) { // world-gen, avoid placing in air
-            return target.isSolid();
-        }
+//        if (player == null && !getIdentifier().equals("log_mushroom") && getCustomBlock().isSolid()) { // world-gen, avoid placing in air
+//            return target.isSolid();
+//        }
         return true;
     }
 

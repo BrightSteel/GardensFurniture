@@ -11,6 +11,7 @@ import com.gardensmc.gardensfurniture.events.CustomBlockBreakEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -18,6 +19,8 @@ import org.bukkit.block.data.type.Leaves;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CustomDropUtil {
 
@@ -72,8 +75,11 @@ public class CustomDropUtil {
         if (customItem instanceof CustomPlaceableItem customBlockItem) {
             e.setDropItems(false);
 
-            if (e.getPlayer().getGameMode() != GameMode.CREATIVE && !customBlockItem.getCustomBlock().cancelDrop()){
-                ItemStack itemStack = GardensFurniture.itemRegistry.buildItem(customItem);
+            if (e.getPlayer().getGameMode() != GameMode.CREATIVE && !customBlockItem.getCustomBlock().cancelDrop()) {
+                var dropOverride = customBlockItem.getCustomBlock().getDropOverride();
+                ItemStack itemStack = dropOverride != null
+                        ? GardensFurniture.itemRegistry.buildItem(dropOverride)
+                        : GardensFurniture.itemRegistry.buildItem(customItem);
                 if (itemStack != null) {
                     boolean drop;
                     if (shearable) {
@@ -87,19 +93,7 @@ public class CustomDropUtil {
                     }
                     else if (e.getBlock().getBlockData() instanceof Leaves leaves1 && customBlockItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
                         if (!leaves1.isPersistent()) { // need 2 be non-persistent server-side to drop sapling
-                            // chance of dropping sapling
-                            if (ProbabilityUtil.roll(5)) {
-                                String saplingId = customLeavesBlock.getSapling();
-                                if (saplingId != null) {
-                                    CustomItem saplingItem = GardensFurniture.itemRegistry.getItem(saplingId);
-                                    if (saplingItem != null) {
-                                        ItemStack sapling = GardensFurniture.itemRegistry.buildItem(saplingItem);
-                                        if (sapling != null) {
-                                            e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), sapling);
-                                        }
-                                    }
-                                }
-                            }
+                            leafDrop(e.getBlock().getLocation(), customLeavesBlock);
                         }
                     }
                 }
@@ -109,6 +103,24 @@ public class CustomDropUtil {
             if (removeFurniture) {
                 FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
             }
+        }
+    }
+
+    public static void leafDrop(Location location, CustomLeavesBlock customLeavesBlock) {
+        if (ProbabilityUtil.roll(5)) {
+            String saplingId = customLeavesBlock.getSapling();
+            if (saplingId != null) {
+                CustomItem saplingItem = GardensFurniture.itemRegistry.getItem(saplingId);
+                if (saplingItem != null) {
+                    ItemStack sapling = GardensFurniture.itemRegistry.buildItem(saplingItem);
+                    if (sapling != null) {
+                        location.getWorld().dropItemNaturally(location, sapling);
+                    }
+                }
+            }
+        }
+        if (ProbabilityUtil.roll(2)) {
+            location.getWorld().dropItem(location, new ItemStack(Material.STICK));
         }
     }
 }

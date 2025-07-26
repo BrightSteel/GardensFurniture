@@ -1,10 +1,13 @@
 package com.gardensmc.gardensfurniture.custom.block;
 
+import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.custom.type.Facing;
 import com.gardensmc.gardensfurniture.custom.type.Rotation;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
+import com.gardensmc.gardensfurniture.events.Furniture;
+import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
 import com.gardensmc.gardensfurniture.util.LightUtil;
 import com.ticxo.modelengine.api.ModelEngineAPI;
 import de.tr7zw.nbtapi.NBT;
@@ -12,6 +15,7 @@ import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.*;
@@ -35,6 +39,8 @@ public class CustomDisplayBlock extends CustomBlock {
     @Getter
     private String modelengine_id;
     private String itemIdentifier;
+    @Getter
+    private String model_override;
     @Getter
     private boolean connectable;
 
@@ -81,6 +87,7 @@ public class CustomDisplayBlock extends CustomBlock {
             }
         }
         this.modelengine_id = displaySection.getString("modelengine_id");
+        this.model_override = displaySection.getString("model_override");
         this.itemIdentifier = identifier;
         this.connectable = displaySection.getBoolean("connectable");
     }
@@ -92,18 +99,33 @@ public class CustomDisplayBlock extends CustomBlock {
 
     @Override
     public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions) {
-        CustomBlockPlaceEvent event = new CustomBlockPlaceEvent(player, customItem, location.getBlock());
-        Bukkit.getPluginManager().callEvent(event);
-        if (event.isCancelled()) return false;
 
 //        Color color = null;
 //        if (heldItem != null && heldItem.getItemMeta() instanceof LeatherArmorMeta leather) {
 //            color = leather.getColor();
 //        }
-        return placeDisplay(heldItem, player, location, placeOptions.getBlockFace());
+
+        return placeDisplay(customItem, getItemToDisplay(heldItem), player, location, placeOptions.getBlockFace());
     }
 
-    protected boolean placeDisplay(ItemStack item, Player player, Location location, BlockFace blockFace) {
+    private ItemStack getItemToDisplay(ItemStack heldItem) {
+        ItemStack itemStack;
+        var heldCustomItem = GardensFurniture.itemRegistry.getCustomItem(heldItem);
+        if (heldCustomItem != null && heldCustomItem.getIdentifier().equals(itemIdentifier)) {
+            // use held item if possible to conserve display name, lore, etc
+            itemStack = heldItem.clone();
+            itemStack.setAmount(1);
+        } else {
+            itemStack = GardensFurniture.itemRegistry.buildItem(itemIdentifier);
+        }
+        if (itemStack != null && model_override != null) {
+            var override = GardensFurniture.itemRegistry.getItem(model_override);
+            itemStack.editMeta(meta -> meta.setItemModel(NamespacedKey.fromString(override.getComponents().getItem_model())));
+        }
+        return itemStack;
+    }
+
+    protected boolean placeDisplay(CustomPlaceableItem customItem, ItemStack item, Player player, Location location, BlockFace blockFace) {
         var world = location.getWorld();
         if (world == null) return false;
 
@@ -165,6 +187,7 @@ public class CustomDisplayBlock extends CustomBlock {
         if (getLight() > 0) {
             LightUtil.placeLight(location, getLight(), hitbox == Hitbox.BARRIER);
         }
+        Bukkit.getPluginManager().callEvent(new FurniturePlaceEvent(player, new Furniture(customItem, display, null)));
         return true;
     }
 

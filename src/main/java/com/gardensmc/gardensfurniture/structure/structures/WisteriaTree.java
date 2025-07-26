@@ -13,7 +13,6 @@ import static java.lang.Math.*;
 
 public class WisteriaTree extends TStructure {
 
-
     @Override
     public void generate() {
         Color color = Color.random();

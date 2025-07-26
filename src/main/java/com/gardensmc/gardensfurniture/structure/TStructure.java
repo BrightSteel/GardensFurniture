@@ -1,13 +1,10 @@
 package com.gardensmc.gardensfurniture.structure;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
-import com.gardensmc.gardensfurniture.custom.block.CustomLeavesBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.store.FurnitureCache;
-import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -18,7 +15,6 @@ import org.bukkit.block.data.BlockData;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.regex.Pattern;
 
 /**
  * Utility class for easy implementation of structure gen from terra files (.tesf)
@@ -50,11 +46,11 @@ public abstract class TStructure {
     }
 
     protected void furniture(double x, double y, double z, String identifier) {
-        furniture(x, y, z, identifier, new PlaceOptions().setForce(true));
+        furniture(x, y, z, identifier, new PlaceOptions().setPersistentLeaves(false).setForce(true));
     }
 
     protected void furniture(double x, double y, double z, String identifier, BlockFace blockFace) {
-        furniture(x, y, z, identifier, new PlaceOptions().setBlockFace(blockFace).setForce(true));
+        furniture(x, y, z, identifier, new PlaceOptions().setPersistentLeaves(false).setBlockFace(blockFace).setForce(true));
     }
 
     protected void furniture(double x, double y, double z, String identifier, PlaceOptions placeOptions) {
@@ -71,7 +67,7 @@ public abstract class TStructure {
 
     protected boolean furnitureChecked(double x, double y, double z, String identifier) {
         var loc = origin.clone().add(x, y, z);
-        if (origin.getWorld().getBlockAt(loc).getType().isSolid()) {
+        if (origin.getWorld().getBlockAt(loc).getType() != Material.AIR) {
             return false;
         }
         furniture(x, y, z, identifier);

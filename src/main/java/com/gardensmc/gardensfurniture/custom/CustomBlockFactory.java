@@ -26,7 +26,6 @@ public class CustomBlockFactory {
                 GardensFurniture.itemRegistry.customNoteBlocks.put(customLeavesBlock.getDistance() + "," + customLeavesBlock.isPersistent(), item_identifier);
                 customBlock = customLeavesBlock;
             }
-            case ITEM_FRAME -> customBlock = new CustomItemFrameBlock(blockSection);
             case DISPLAY -> customBlock = new CustomDisplayBlock(blockSection, item_identifier);
             case SAPLING -> customBlock = new CustomSaplingBlock(blockSection, item_identifier);
             case WAXED -> customBlock = new CustomWaxedBlock(blockSection, item_identifier);

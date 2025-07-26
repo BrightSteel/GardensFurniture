@@ -24,6 +24,7 @@ public class CustomItem implements Comparable<CustomItem> {
 
     @Getter
     private final String identifier;
+    @Getter
     private final String display;
     @Getter
     private final List<String> lore;
