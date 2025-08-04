@@ -15,6 +15,7 @@ import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.gardensmc.gardensfurniture.util.ProbabilityUtil;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
+import io.papermc.paper.configuration.GlobalConfiguration;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -309,6 +310,7 @@ public class BlockListener implements Listener {
 
     private void handleFeature(String feature, Location location) throws ExecutionException, InterruptedException {
         var intersectingChunks = location.getWorld().getIntersectingChunks(BoundingBox.of(location, 20, 1, 20)).stream().toList();
+        GlobalConfiguration.get().blockUpdates.disableNoteblockUpdates = true;
         var chunkSnapshots = toChunkSnapshot(intersectingChunks);
         List<ChunkSnapshot> finalChunkSnapshots = chunkSnapshots;
         var existingNoteBlocks = CompletableFuture.supplyAsync(() -> finalChunkSnapshots.stream()
@@ -329,6 +331,7 @@ public class BlockListener implements Listener {
                         .get();
                 replacements.forEach(replacement -> ChunkFurnitureLoader.INSTANCE.placeFurnitureBlock(replacement));
                 intersectingChunks.forEach(chunk -> FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(chunk)));
+                GlobalConfiguration.get().blockUpdates.disableNoteblockUpdates = false;
             } catch (Exception ex) {
                 ex.printStackTrace();
             }

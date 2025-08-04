@@ -214,9 +214,16 @@ public class CustomBlockManager {
         if (!(customItem instanceof CustomPlaceableItem customBlockItem)) {
             return;
         }
-        Bukkit.getPluginManager().callEvent(new FurnitureInteractEvent(player, new Furniture(customItem, (ItemDisplay) itemEntity.getEntity(), interaction), hand, heldItem));
+        var event = new FurnitureInteractEvent(player, new Furniture(customItem, (ItemDisplay) itemEntity.getEntity(), interaction), hand, heldItem);
+        Bukkit.getPluginManager().callEvent(event);
+        if (event.isCancelled()) {
+            return;
+        }
+        if (!ProtectionUtil.canBuild(itemEntity.getEntity().getLocation(), player)) {
+            return;
+        }
         if (player.isSneaking()) {
-            itemEntity.rotate(45);
+//            itemEntity.rotate(45);
         } else if (heldItem.getType().toString().toUpperCase().endsWith("DYE") && customItem.isDyeable() && itemEntity.getItem().getItemMeta() instanceof LeatherArmorMeta leatherMeta) {
             leatherMeta.setColor(getColorFromDye(heldItem.getType()));
             var item = itemEntity.getItem();

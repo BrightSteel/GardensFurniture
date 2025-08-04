@@ -46,8 +46,6 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onItemInteract(PlayerInteractEvent e) {
-
-
         if (e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         if (e.isCancelled()) return;
         if (e.getClickedBlock() == null) return;
@@ -56,7 +54,11 @@ public class PlayerListener implements Listener {
         if (e.getClickedBlock().getType() == Material.NOTE_BLOCK && e.getClickedBlock().getBlockData() instanceof NoteBlock noteBlock) {
             CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getClickedBlock());
             if (customItem != null) {
-                Bukkit.getPluginManager().callEvent(new CustomBlockInteractEvent(e.getPlayer(), customItem, e.getHand(), e.getItem(), e.getClickedBlock()));
+                var event = new CustomBlockInteractEvent(e.getPlayer(), customItem, e.getHand(), e.getItem(), e.getClickedBlock());
+                Bukkit.getPluginManager().callEvent(event);
+                if (event.isCancelled()) {
+                    return;
+                }
                 if (!ProtectionUtil.canBuild(e.getClickedBlock().getLocation(), e.getPlayer())) {
                     return;
                 }

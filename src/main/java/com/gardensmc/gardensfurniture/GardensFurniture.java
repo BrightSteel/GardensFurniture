@@ -24,6 +24,8 @@ import com.sk89q.worldedit.util.eventbus.Subscribe;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import me.lojosho.hibiscuscommons.hooks.Hooks;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
+import net.coreprotect.CoreProtect;
+import net.coreprotect.CoreProtectAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -40,6 +42,7 @@ public class GardensFurniture extends JavaPlugin {
 
     public static ProtocolManager protocolManager;
     public static boolean isGriefPreventionHooked;
+    public static CoreProtectAPI coreProtectAPI;
 
     @Override
     public void onLoad() {
@@ -93,6 +96,7 @@ public class GardensFurniture extends JavaPlugin {
         });
         hookIntoShopGUIPlus();
         hookIntoGriefPrevention();
+        hookIntoCoreProtect();
     }
 
     private void hookIntoShopGUIPlus() {
@@ -106,5 +110,20 @@ public class GardensFurniture extends JavaPlugin {
         if (Bukkit.getPluginManager().getPlugin("GriefPrevention") != null) {
             isGriefPreventionHooked = true;
         }
+    }
+
+    private void hookIntoCoreProtect() {
+        var plugin = getServer().getPluginManager().getPlugin("CoreProtect");
+        // Check that CoreProtect is loaded
+        if (!(plugin instanceof CoreProtect)) {
+            return;
+        }
+
+        // Check that the API is enabled
+        var coreProtect = ((CoreProtect) plugin).getAPI();
+        if (!coreProtect.isEnabled()) {
+            return;
+        }
+        coreProtectAPI = coreProtect;
     }
 }

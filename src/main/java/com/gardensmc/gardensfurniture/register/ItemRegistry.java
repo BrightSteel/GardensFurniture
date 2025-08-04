@@ -91,7 +91,7 @@ public class ItemRegistry {
                                 } else if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomLeavesBlock leaves && leaves.getLeavesType() == CustomLeavesBlock.LeavesType.OAK) {
                                     tint = Tint.CONSTANT;
                                 }
-                                writeOutModelFile(itemModel, tint);
+                                writeOutModelFile(itemModel, tint, customItem.getMaterial() == Material.PLAYER_HEAD);
 //                                var outerFolder = OUTER_DIR_PATTERN.matcher(itemModel);
 //                                if (outerFolder.find()) {
 //                                    outerFolders.add(outerFolder.group(1));
@@ -128,16 +128,25 @@ public class ItemRegistry {
     }
 
     // todo use POJOs to be cleaner
-    private void writeOutModelFile(String itemModel, Tint tint) throws IOException {
+    private void writeOutModelFile(String itemModel, Tint tint, boolean isPlayerHead) throws IOException {
         JsonMapper mapper = new JsonMapper();
         var node = mapper.createObjectNode();
         var modelNode = mapper.createObjectNode();
-        modelNode.put("type", "minecraft:model");
-        modelNode.put("model", itemModel);
-        if (tint != null) {
-            var tints = mapper.createArrayNode();
-            tints.add(tint.getNode());
-            modelNode.set("tints", tints);
+        if (isPlayerHead) {
+            modelNode.put("type", "minecraft:special");
+            modelNode.put("base", itemModel);
+            var subModel = mapper.createObjectNode();
+            subModel.put("type", "minecraft:head");
+            subModel.put("kind", "player");
+            modelNode.put("model", subModel);
+        } else {
+            modelNode.put("type", "minecraft:model");
+            modelNode.put("model", itemModel);
+            if (tint != null) {
+                var tints = mapper.createArrayNode();
+                tints.add(tint.getNode());
+                modelNode.set("tints", tints);
+            }
         }
         node.set("model", modelNode);
 

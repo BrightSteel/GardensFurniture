@@ -22,8 +22,8 @@ public class PalmTree extends TStructure {
 
         // Generate trunk
         for (var unused = 0; y < height; y = y + 1) {
-            furniture(x, y, z, "eucalyptus_log");
-            furniture(x, y+1, z, "eucalyptus_log");
+            furniture(x, y, z, "palm_log");
+            furniture(x, y+1, z, "palm_log");
             x = x + dx;
             z = z + dz;
         }
