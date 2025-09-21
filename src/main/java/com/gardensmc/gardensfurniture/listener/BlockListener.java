@@ -29,7 +29,9 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
 import org.bukkit.event.entity.ItemSpawnEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.world.StructureGrowEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
@@ -74,28 +76,16 @@ public class BlockListener implements Listener {
     }
 
     @EventHandler
-    public void onSaplingBreak(BlockPhysicsEvent e) {
+    public void onSaplingOrTripwireBreak(BlockPhysicsEvent e) {
         var type = e.getBlock().getType();
-//        if (e.getBlock().getRelative(BlockFace.DOWN).getType() == Material.AIR && (type == Material.OAK_SAPLING || type == Material.DARK_OAK_SAPLING)) {
-//            CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getBlock());
-//            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomSaplingBlock) {
-//                e.setCancelled(true);
-//                // remove manually
-//                e.getBlock().setType(Material.AIR);
-//                ItemEntity itemEntity = getItemEntity(e.getBlock().getLocation());
-//                if (itemEntity != null) {
-//                    itemEntity.getEntity().remove();
-//                }
-//                FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
-//                e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), GardensFurniture.itemRegistry.buildItem(placeable));
-//            }
-//        }
-        if (type == Material.OAK_SAPLING || type == Material.DARK_OAK_SAPLING) {
+        if (type == Material.OAK_SAPLING || type == Material.DARK_OAK_SAPLING || type == Material.TRIPWIRE) {
             Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> {
                 if (e.getBlock().getType() != type) {
-                    ItemEntity itemEntity = getItemEntity(e.getBlock().getLocation());
-                    if (itemEntity != null) {
-                        itemEntity.getEntity().remove();
+                    if (type.toString().toLowerCase().endsWith("sapling")) {
+                        ItemEntity itemEntity = getItemEntity(e.getBlock().getLocation());
+                        if (itemEntity != null) {
+                            itemEntity.getEntity().remove();
+                        }
                     }
                     FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
                 }
@@ -112,20 +102,15 @@ public class BlockListener implements Listener {
     }
 
     @EventHandler
-    public void onSaplingDrop(ItemSpawnEvent e) {
+    public void onSaplingOrStringDrop(ItemSpawnEvent e) {
         var itemStack = e.getEntity().getItemStack();
-        if (itemStack.getType() == Material.OAK_SAPLING || itemStack.getType() == Material.DARK_OAK_SAPLING) {
+        if (itemStack.getType() == Material.OAK_SAPLING || itemStack.getType() == Material.DARK_OAK_SAPLING || itemStack.getType() == Material.STRING) {
             CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getLocation().getBlock());
-            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomSaplingBlock) {
+            if (customItem instanceof CustomPlaceableItem placeable && (placeable.getCustomBlock() instanceof CustomSaplingBlock || placeable.getCustomBlock() instanceof CustomTripwireBlock)) {
                 e.getEntity().setItemStack(GardensFurniture.itemRegistry.buildItem(placeable));
             }
         }
     }
-
-//    private boolean willBreak(ItemSpawnEvent block) {
-//        return block.getRelative(BlockFace.DOWN).getType() == Material.AIR
-//                || block.getType()
-//    }
 
     @EventHandler
     public void onPick(PlayerPickItemEvent e) {
@@ -251,6 +236,32 @@ public class BlockListener implements Listener {
             }
         }
 
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onSaplingPlace(BlockPlaceEvent e) {
+        var blockType = e.getBlockPlaced().getType();
+        if (blockType == Material.OAK_SAPLING || blockType == Material.DARK_OAK_SAPLING) {
+            var customItem = GardensFurniture.itemRegistry.getCustomItem(e.getItemInHand());
+            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomSaplingBlock saplingBlock) {
+                saplingBlock.onSaplingPlace(e.getPlayer(), e.getItemInHand(), placeable, e.getBlock().getLocation());
+            }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onCaveVineFertilize(PlayerInteractEvent e) {
+        if (e.getClickedBlock() == null) return;
+        if (e.getHand() == null) return;
+        if (e.getPlayer().getInventory().getItem(e.getHand()).getType() == Material.BONE_MEAL) {
+            var type = e.getClickedBlock().getType();
+            if (type == Material.CAVE_VINES || type == Material.CAVE_VINES_PLANT) {
+                var customItem = CustomBlockManager.getItemFromLeaves(e.getClickedBlock());
+                if (customItem != null) {
+                    e.setCancelled(true);
+                }
+            }
+        }
     }
 
     @EventHandler(ignoreCancelled = true)

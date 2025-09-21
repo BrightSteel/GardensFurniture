@@ -17,6 +17,8 @@ import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.settings.PacketEventsSettings;
+import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
+import com.hibiscusmc.hmccosmetics.api.HMCCosmeticsAPI;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.event.extent.EditSessionEvent;
@@ -27,11 +29,6 @@ import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import net.coreprotect.CoreProtect;
 import net.coreprotect.CoreProtectAPI;
 import org.bukkit.Bukkit;
-import org.bukkit.block.data.type.NoteBlock;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class GardensFurniture extends JavaPlugin {
@@ -42,6 +39,7 @@ public class GardensFurniture extends JavaPlugin {
 
     public static ProtocolManager protocolManager;
     public static boolean isGriefPreventionHooked;
+    public static boolean isCosmeticsHooked;
     public static CoreProtectAPI coreProtectAPI;
 
     @Override
@@ -96,6 +94,7 @@ public class GardensFurniture extends JavaPlugin {
         });
         hookIntoShopGUIPlus();
         hookIntoGriefPrevention();
+        hookIntoCosmetics();
         hookIntoCoreProtect();
     }
 
@@ -109,6 +108,14 @@ public class GardensFurniture extends JavaPlugin {
     private void hookIntoGriefPrevention() {
         if (Bukkit.getPluginManager().getPlugin("GriefPrevention") != null) {
             isGriefPreventionHooked = true;
+        }
+    }
+
+    private void hookIntoCosmetics() {
+        if (Bukkit.getPluginManager().getPlugin("HMCCosmetics") != null) {
+            isCosmeticsHooked = true;
+            // reload cosmetics now that our items are registered
+            HMCCosmeticsPlugin.setup();
         }
     }
 

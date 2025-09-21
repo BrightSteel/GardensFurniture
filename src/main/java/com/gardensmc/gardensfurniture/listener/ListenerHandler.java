@@ -28,7 +28,10 @@ public class ListenerHandler {
                 new LeafListener(),
                 new PlayerListener(),
                 new CustomBlockBreakListener(),
-                new VanillaBlockSoundListener()
+                new VanillaBlockSoundListener(),
+                new AnvilListener(),
+                new CraftListener(),
+                new BackpackGuiListener()
         );
     }
 }

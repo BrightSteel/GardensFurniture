@@ -4,9 +4,13 @@ import com.destroystokyo.paper.block.BlockSoundGroup;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.loader.ChunkFurnitureLoader;
+import com.gardensmc.gardensfurniture.store.FurnitureCache;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.BiomeUtil;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import de.tr7zw.nbtapi.NBTChunk;
 import org.bukkit.*;
 import org.bukkit.block.*;
 import org.bukkit.block.data.BlockData;
@@ -29,8 +33,13 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 public class ChunkListener implements Listener {
+
+    private static final String CHUNK_FIXER_KEY = "GardensChunkFixer";
+    private static final int CHUNK_FIXER_VERSION = 1;
+    private static final boolean ENABLE_CHUNK_FIXER = false; // change to true after incrementing version
 
     @EventHandler
     public void onLoadChunk(ChunkLoadEvent e) {
@@ -46,12 +55,17 @@ public class ChunkListener implements Listener {
         }
     }
 
-    // fix palm log
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent e) {
-        if (!e.isNewChunk() && e.getWorld().getEnvironment() == World.Environment.NORMAL && GardensFurniture.coreProtectAPI != null) {
-            var snapshot = e.getChunk().getChunkSnapshot();
-            Bukkit.getScheduler().runTaskAsynchronously(GardensFurniture.plugin, () -> worldGenFixer(e.getWorld(), snapshot));
+        if (ENABLE_CHUNK_FIXER) {
+            if (!e.isNewChunk() && e.getWorld().getEnvironment() == World.Environment.NORMAL && GardensFurniture.coreProtectAPI != null) {
+                var chunkNBT = new NBTChunk(e.getChunk()).getPersistentDataContainer();
+                if (!Objects.equals(chunkNBT.getInteger(CHUNK_FIXER_KEY), CHUNK_FIXER_VERSION)) {
+                    chunkNBT.setInteger(CHUNK_FIXER_KEY, CHUNK_FIXER_VERSION);
+                    var snapshot = e.getChunk().getChunkSnapshot();
+                    Bukkit.getScheduler().runTaskAsynchronously(GardensFurniture.plugin, () -> worldGenFixer(e.getWorld(), snapshot));
+                }
+            }
         }
     }
 
@@ -90,6 +104,7 @@ public class ChunkListener implements Listener {
                                     var block = world.getBlockAt(realX, finalY, realZ);
                                     if (block.getBlockData() instanceof Leaves l1) {
                                         l1.setPersistent(false);
+                                        block.setBlockData(l1);
                                     }
                                 });
                             }
@@ -102,6 +117,7 @@ public class ChunkListener implements Listener {
 
     private Block toWrappedBlockData(BlockData blockData, int x, int y, int z, World world) {
         return new Block() {
+
             @Override
             public byte getData() {
                 return 0;
@@ -334,6 +350,11 @@ public class ChunkListener implements Listener {
 
             @Override
             public boolean breakNaturally(@NotNull ItemStack itemStack, boolean b, boolean b1) {
+                return false;
+            }
+
+            @Override
+            public boolean breakNaturally(@NotNull ItemStack itemStack, boolean b, boolean b1, boolean b2) {
                 return false;
             }
 

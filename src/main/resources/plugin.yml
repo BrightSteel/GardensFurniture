@@ -7,6 +7,9 @@ commands:
   furniture:
     description: Furniture command
     usage: /<command>
+  unwrap:
+    description: Unwrap held item
+    usage: /<command>
 depend: [GSit, NBTAPI, ProtocolLib, packetevents, HibiscusCommons]
 softdepend:
   - packetevents
@@ -15,3 +18,4 @@ softdepend:
   - ShopGUIPlus
   - GriefPrevention
   - CoreProtect
+  - HMCCosmetics

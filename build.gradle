@@ -38,18 +38,21 @@ repositories {
         name "groupez"
         url "https://repo.groupez.dev/releases"
     }
+    maven {
+        url "https://repo.hibiscusmc.com/releases"
+    }
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21.5-R0.1-SNAPSHOT")
-    paperweight.paperDevBundle("1.21.5-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT")
+    paperweight.paperDevBundle("1.21.8-R0.1-SNAPSHOT")
 
-    compileOnly("de.tr7zw:item-nbt-api-plugin:2.14.1")
+    compileOnly("de.tr7zw:item-nbt-api-plugin:2.15.2-SNAPSHOT")
     compileOnly("com.github.Gecolay.GSit:core:2.2.1")
     compileOnly('com.comphenix.protocol:ProtocolLib:5.3.0')
     compileOnly(fileTree("${project.rootDir}/dependencies") { include("*.jar") })
     implementation("de.themoep:inventorygui:1.6.4-SNAPSHOT")
-    compileOnly("com.github.retrooper:packetevents-spigot:2.7.0")
+    compileOnly("com.github.retrooper:packetevents-spigot:2.9.4")
     compileOnly 'com.ticxo.modelengine:ModelEngine:R4.0.7'
     implementation(platform("com.intellectualsites.bom:bom-newest:1.52")) // Ref: https://github.com/IntellectualSites/bom
     compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core")
@@ -57,6 +60,7 @@ dependencies {
     compileOnly('com.github.brcdev-minecraft:shopgui-api:3.0.0') {
         exclude(group: "org.spigotmc")
     }
+    compileOnly("com.hibiscusmc:HMCCosmetics:2.8.0-f56d5c90")
     compileOnly("com.github.GriefPrevention:GriefPrevention:16.18.4")
     compileOnly 'org.projectlombok:lombok:1.18.36'
     annotationProcessor 'org.projectlombok:lombok:1.18.36'

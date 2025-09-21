@@ -15,6 +15,8 @@ public class CustomItemFactory {
             case MULTIPLIER_BLOCK -> customItem = new CustomMultiplierItem(identifier, itemSection);
             case BLOCK_FACING -> customItem = new CustomFacingItem(identifier, itemSection);
             case POTION -> customItem = new CustomPotionItem(identifier, itemSection);
+            case BACKPACK -> customItem = new CustomBackpackItem(identifier, itemSection);
+            case WRAP -> customItem = new CustomWrapItem(identifier, itemSection);
             default -> customItem = new CustomItem(identifier, itemSection);
         }
         return customItem;

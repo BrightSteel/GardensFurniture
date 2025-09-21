@@ -5,12 +5,14 @@ import de.themoep.inventorygui.InventoryGui;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 public class Menu {
 
     protected Player viewer;
 
     protected InventoryGui gui;
+    protected ItemStack blankItem, blankHiddenItem;
 
     public Menu(String[] layout, String title, Player viewer) {
         this(layout, MiniMessage.miniMessage().deserialize(title), viewer);
@@ -30,6 +32,8 @@ public class Menu {
                 "",
                 layout
         );
+        this.blankItem = GardensFurniture.itemRegistry.buildItem("blank");
+        this.blankHiddenItem = GardensFurniture.itemRegistry.buildItem("blank_hidden");
         initializeElements();
     }
 

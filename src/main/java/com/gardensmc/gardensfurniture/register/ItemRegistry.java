@@ -136,9 +136,8 @@ public class ItemRegistry {
             modelNode.put("type", "minecraft:special");
             modelNode.put("base", itemModel);
             var subModel = mapper.createObjectNode();
-            subModel.put("type", "minecraft:head");
-            subModel.put("kind", "player");
-            modelNode.put("model", subModel);
+            subModel.put("type", "minecraft:player_head");
+            modelNode.set("model", subModel);
         } else {
             modelNode.put("type", "minecraft:model");
             modelNode.put("model", itemModel);

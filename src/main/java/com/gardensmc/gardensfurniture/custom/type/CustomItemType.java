@@ -7,5 +7,7 @@ public enum CustomItemType {
     CAVE_VINE_BLOCK,
     MULTIPLIER_BLOCK,
     BLOCK_FACING,
-    POTION
+    POTION,
+    BACKPACK,
+    WRAP
 }

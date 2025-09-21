@@ -515,6 +515,9 @@ public class BlockPacketListener {
             state.setHalf(blockState.getHalf());
             state.setShape(blockState.getShape());
             state.setWaterlogged(blockState.isWaterlogged());
+        } else if (typeName.endsWith("_SLAB")) {
+            state.setTypeData(blockState.getTypeData());
+            state.setWaterlogged(blockState.isWaterlogged());
         }
         return state;
     }

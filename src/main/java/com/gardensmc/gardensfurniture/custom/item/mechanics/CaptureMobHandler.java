@@ -31,6 +31,7 @@ public class CaptureMobHandler {
     private static final String CAPTURED_GROUP_KEY = "CaptureMob";
     private static final String ENTITY_TYPE_KEY = "EntityType";
     private static final String ENTITY_NBT_KEY = "EntityNBT";
+    private static final String USES_KEY = "CaptureBallUses";
     private static final Set<String> ENTITY_NBT_FILTER = Set.of(
             "id",
             "UUID",
@@ -70,6 +71,7 @@ public class CaptureMobHandler {
             lore.add(MiniMessage.miniMessage().deserialize("<!italic><blue>Captured Mob: <gray>" + mobType));
             lore.add(MiniMessage.miniMessage().deserialize("<!italic><gray>Right click to release"));
             meta.lore(lore);
+            meta.setEnchantmentGlintOverride(true);
         });
         NBT.modify(egg, nbt -> {
             var capturedGroupNBT = nbt.getOrCreateCompound(CAPTURED_GROUP_KEY);
@@ -95,11 +97,36 @@ public class CaptureMobHandler {
         });
         removeStoredCaptureNBT();
         // replace with default egg
-        var egg = GardensFurniture.itemRegistry.buildItem(heldItem.customItem());
-        egg.editMeta(meta -> {
-            meta.displayName(heldItem.itemStack().getItemMeta().displayName());
-        });
-       player.getInventory().setItemInMainHand(egg);
+        var usesLeft = updateTimesUsed();
+        ItemStack replacementEgg;
+        if (usesLeft != 0) {
+            replacementEgg = GardensFurniture.itemRegistry.buildItem(heldItem.customItem());
+            replacementEgg.editMeta(meta -> {
+                meta.displayName(heldItem.itemStack().getItemMeta().displayName());
+                var lore = new ArrayList<Component>();
+                lore.add(MiniMessage.miniMessage().deserialize("<!italic><gray>Uses: <green>" + (usesLeft == -1 ? "Unlimited" : usesLeft)));
+                lore.add(MiniMessage.miniMessage().deserialize("<!italic><gray>Right click to capture mob"));
+                meta.lore(lore);
+            });
+        } else {
+            replacementEgg = new ItemStack(Material.AIR);
+        }
+       player.getInventory().setItemInMainHand(replacementEgg);
+    }
+
+    // return uses left
+    private Integer updateTimesUsed() {
+        var timesUsed = getTimesUsed();
+        var maxUses = heldItem.customItem().getMechanics().getCapture_mobs().getUses();
+        if (maxUses == null) {
+            return -1;
+        }
+        var updatedUses = timesUsed + 1;
+        if (updatedUses < maxUses) {
+            setTimesUsed(updatedUses);
+            return maxUses - updatedUses;
+        }
+        return 0;
     }
 
     private ReadWriteNBT getEntityNBT(Entity entity) {
@@ -116,6 +143,16 @@ public class CaptureMobHandler {
             var entityNBT = NBT.createNBTObject();
             entityNBT.mergeCompound(captureGroupNBT.getCompound(ENTITY_NBT_KEY));
             return new StoredCapture(captureGroupNBT.getString(ENTITY_TYPE_KEY), entityNBT);
+        });
+    }
+
+    private int getTimesUsed() {
+        return NBT.get(heldItem.itemStack(), nbt -> nbt.hasTag(USES_KEY) ? nbt.getInteger(USES_KEY) : 0);
+    }
+
+    private void setTimesUsed(int timesUsed) {
+        NBT.modify(heldItem.itemStack(), nbt -> {
+            nbt.setInteger(USES_KEY, timesUsed);
         });
     }
 
