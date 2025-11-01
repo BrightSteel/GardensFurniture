@@ -49,9 +49,8 @@ public class BlockListener implements Listener {
 
     private static final Set<Material> DISPLAY_BLOCK_TYPES = Set.of(Material.AIR, Material.BARRIER);
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
     public void onBlockBreak(BlockBreakEvent e) {
-        if (e.isCancelled()) return;
         if (!ProtectionUtil.canBuild(e.getBlock().getLocation(), e.getPlayer())) {
             return;
         }

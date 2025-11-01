@@ -10,6 +10,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.List;
 import java.util.Set;
 
 public class CustomFacingItem extends CustomPlaceableItem {
@@ -21,10 +22,10 @@ public class CustomFacingItem extends CustomPlaceableItem {
 
     public CustomFacingItem(String identifier, ConfigurationSection itemSection) {
         super(identifier, itemSection);
-        this.north = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("north"));
-        this.south = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("south"));
-        this.east = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("east"));
-        this.west = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("west"));
+        this.north = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("north"), identifier + "_north");
+        this.south = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("south"), identifier + "_south");
+        this.east = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("east"), identifier + "_east");
+        this.west = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("west"), identifier + "_west");
     }
 
     @Override
@@ -87,5 +88,10 @@ public class CustomFacingItem extends CustomPlaceableItem {
 
     public CustomBlock getWest() {
         return west;
+    }
+
+    @Override
+    public List<CustomBlock> getPlaceableBlocks() {
+        return List.of(north, south, east, west);
     }
 }

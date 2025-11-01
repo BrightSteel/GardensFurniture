@@ -29,7 +29,7 @@ public class LeafListener implements Listener {
             if (!preventDecay(leafBlock, leaf)) {
                 FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
                 e.getBlock().setType(Material.AIR);
-                CustomDropUtil.leafDrop(leafBlock.getLocation(), (CustomLeavesBlock) placeable.getCustomBlock());
+                Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> CustomDropUtil.leafDrop(leafBlock.getLocation().add(0.5, 0.1, 0.5), (CustomLeavesBlock) placeable.getCustomBlock()), 1);
             }
             e.setCancelled(true);
         }

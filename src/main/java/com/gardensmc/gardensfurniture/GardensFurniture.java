@@ -9,7 +9,6 @@ import com.gardensmc.gardensfurniture.hook.GardensWorldEditExtent;
 import com.gardensmc.gardensfurniture.hook.HookGardensFurniture;
 import com.gardensmc.gardensfurniture.hook.ShopGuiPlusHook;
 import com.gardensmc.gardensfurniture.listener.ListenerHandler;
-import com.gardensmc.gardensfurniture.listener.sounds.DigSoundListener;
 import com.gardensmc.gardensfurniture.loader.ChunkFurnitureLoader;
 import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
 import com.gardensmc.gardensfurniture.register.ItemRegistry;
@@ -57,7 +56,7 @@ public class GardensFurniture extends JavaPlugin {
     public void onEnable() {
         plugin = this;
         protocolManager = ProtocolLibrary.getProtocolManager();
-        new DigSoundListener().registerListener();
+//        new DigSoundListener().registerListener();
 
         // load custom item configs
         ConfigUtil.loadConfigs();

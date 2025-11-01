@@ -27,7 +27,7 @@ public class CustomMultiplierItem extends CustomPlaceableItem {
             if (multiplierSection == null) {
                 break;
             }
-            blocks.add(GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, multiplierSection));
+            blocks.add(GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, multiplierSection, identifier + "_" + i));
         }
     }
 
@@ -83,5 +83,10 @@ public class CustomMultiplierItem extends CustomPlaceableItem {
             throw new RuntimeException("Invalid multiplier");
         }
         return blocks.get(multiplier - 1);
+    }
+
+    @Override
+    public List<CustomBlock> getPlaceableBlocks() {
+        return blocks;
     }
 }

@@ -13,7 +13,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class CustomDirectionalItem extends CustomPlaceableItem {
 
@@ -21,9 +23,9 @@ public class CustomDirectionalItem extends CustomPlaceableItem {
 
     public CustomDirectionalItem(String identifier, ConfigurationSection itemSection) {
         super(identifier, itemSection);
-        this.x = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("x"));
-        this.y = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("y"));
-        this.z = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("z"));
+        this.x = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("x"), identifier + "_x");
+        this.y = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("y"), identifier + "_y");
+        this.z = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection.getConfigurationSection("z"), identifier + "_z");
     }
 
     @Override
@@ -43,7 +45,7 @@ public class CustomDirectionalItem extends CustomPlaceableItem {
             case UP, DOWN -> getY();
             case EAST, WEST -> getX();
             case NORTH, SOUTH -> getZ();
-            default -> throw new RuntimeException("Unknown block face: " + facing);
+            default -> throw new RuntimeException("Unknown block face: " + facing) ;
         };
     }
 
@@ -67,5 +69,21 @@ public class CustomDirectionalItem extends CustomPlaceableItem {
             return null;
         }
         return BlockFace.valueOf(furnitureStore.getFacing());
+    }
+
+    @Override
+    public List<CustomBlock> getPlaceableBlocks() {
+        return List.of(x, y, z);
+    }
+
+    @Override
+    public CustomBlock getPlacedBlock(Block block) {
+        var blockFace = getBlockDirection(block);
+        return switch (Objects.requireNonNull(blockFace)) {
+            case UP, DOWN -> y;
+            case EAST, WEST -> x;
+            case NORTH, SOUTH -> z;
+            default -> throw new RuntimeException("Unknown block face: " + blockFace);
+        };
     }
 }

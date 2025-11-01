@@ -18,7 +18,7 @@ public class CustomBlockItem extends CustomPlaceableItem {
 
     public CustomBlockItem(String identifier, ConfigurationSection itemSection) {
         super(identifier, itemSection);
-        this.customBlock = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection);
+        this.customBlock = GardensFurniture.itemRegistry.customBlockFactory.createCustomBlock(identifier, blockSection, identifier);
         if (this.customBlock instanceof CustomWaxedBlock customWaxedBlock) {
             this.material = customWaxedBlock.getWaxedType().getMaterial();
         } else if (this.customBlock instanceof CustomCaveVineBlock) {

@@ -209,7 +209,7 @@ public class PlayerListener implements Listener {
 
         if (e.getClickedBlock().getType() == Material.BARRIER && !e.getPlayer().getInventory().getItem(e.getHand() == null ? EquipmentSlot.HAND : e.getHand()).getType().toString().endsWith("sword")) {
             if (!ProtectionUtil.canBuild(e.getClickedBlock().getLocation(), e.getPlayer())) return;
-            CustomBlockManager.breakFurniture(e.getPlayer(), e.getClickedBlock().getLocation());
+            CustomBlockManager.breakFurniture(e.getPlayer(), e.getClickedBlock().getLocation(), false);
         }
     }
 

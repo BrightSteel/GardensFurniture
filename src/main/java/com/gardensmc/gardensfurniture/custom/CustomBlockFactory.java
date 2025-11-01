@@ -7,7 +7,7 @@ import org.bukkit.configuration.ConfigurationSection;
 
 public class CustomBlockFactory {
 
-    public CustomBlock createCustomBlock(String item_identifier, ConfigurationSection blockSection) {
+    public CustomBlock createCustomBlock(String item_identifier, ConfigurationSection blockSection, String blockId) {
         String type = blockSection.getString("type");
         if (type == null) {
             throw new RuntimeException("No type specified for customBlock: " + item_identifier);
@@ -15,21 +15,21 @@ public class CustomBlockFactory {
 
         CustomBlock customBlock;
         switch(CustomBlockType.valueOf(type.toUpperCase())) {
-            case TRIPWIRE -> customBlock = new CustomTripwireBlock(blockSection, item_identifier);
+            case TRIPWIRE -> customBlock = new CustomTripwireBlock(blockSection, item_identifier, blockId);
             case NOTE -> {
-                CustomNoteBlock customNoteBlock = new CustomNoteBlock(blockSection, item_identifier);
+                CustomNoteBlock customNoteBlock = new CustomNoteBlock(blockSection, item_identifier, blockId);
                 GardensFurniture.itemRegistry.customNoteBlocks.put(customNoteBlock.getNote().getId() + "," + customNoteBlock.getInstrument().toString() + "," + customNoteBlock.isPowered(), item_identifier);
                 customBlock = customNoteBlock;
             }
             case LEAVES -> {
-                CustomLeavesBlock customLeavesBlock = new CustomLeavesBlock(blockSection, item_identifier);
+                CustomLeavesBlock customLeavesBlock = new CustomLeavesBlock(blockSection, item_identifier, blockId);
                 GardensFurniture.itemRegistry.customNoteBlocks.put(customLeavesBlock.getDistance() + "," + customLeavesBlock.isPersistent(), item_identifier);
                 customBlock = customLeavesBlock;
             }
-            case DISPLAY -> customBlock = new CustomDisplayBlock(blockSection, item_identifier);
-            case SAPLING -> customBlock = new CustomSaplingBlock(blockSection, item_identifier);
-            case WAXED -> customBlock = new CustomWaxedBlock(blockSection, item_identifier);
-            case CAVE_VINE -> customBlock = new CustomCaveVineBlock(blockSection, item_identifier);
+            case DISPLAY -> customBlock = new CustomDisplayBlock(blockSection, item_identifier, blockId);
+            case SAPLING -> customBlock = new CustomSaplingBlock(blockSection, item_identifier, blockId);
+            case WAXED -> customBlock = new CustomWaxedBlock(blockSection, item_identifier, blockId);
+            case CAVE_VINE -> customBlock = new CustomCaveVineBlock(blockSection, item_identifier, blockId);
             default -> throw new RuntimeException("Un-implemented customBlockType: " + type);
         }
         return customBlock;

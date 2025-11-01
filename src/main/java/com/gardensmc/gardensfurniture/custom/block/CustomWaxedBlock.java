@@ -21,8 +21,8 @@ public class CustomWaxedBlock extends CustomBlock {
 
     private final WaxedType waxedType;
 
-    public CustomWaxedBlock(ConfigurationSection blockSection, String identifier) {
-        super(blockSection);
+    public CustomWaxedBlock(ConfigurationSection blockSection, String identifier, String blockId) {
+        super(blockSection, blockId);
         var waxedSection = blockSection.getConfigurationSection("waxed_data");
         if (waxedSection == null) {
             throw new IllegalStateException("Missing waxed_data for block " + identifier);

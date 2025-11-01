@@ -14,6 +14,8 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import static com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener.*;
+
 @Getter
 public class CustomNoteBlock extends CustomBlock {
 
@@ -21,8 +23,8 @@ public class CustomNoteBlock extends CustomBlock {
     private final Instrument instrument;
     private final boolean powered;
 
-    public CustomNoteBlock(ConfigurationSection blockSection, String blockName) {
-        super(blockSection);
+    public CustomNoteBlock(ConfigurationSection blockSection, String blockName, String blockId) {
+        super(blockSection, blockId);
         ConfigurationSection noteSection = getConfigSectionOrThrow(blockSection, "note_data", blockName);
         this.note = new Note(noteSection.getInt("note"));
         this.instrument = Instrument.valueOf(noteSection.getString("instrument").toUpperCase());
@@ -50,6 +52,11 @@ public class CustomNoteBlock extends CustomBlock {
                         .build(),
                 heldItem != null
         );
+        // play place sound
+        var sound = getSoundToPlay(block, "place");
+        if (sound != null) {
+            block.getWorld().playSound(block.getLocation(), sound, SoundCategory.BLOCKS, VANILLA_PLACE_VOLUME, VANILLA_PLACE_PITCH);
+        }
 
         if (getLight() > 0) {
             LightUtil.placeLight(location, getLight(), true);

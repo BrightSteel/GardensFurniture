@@ -21,8 +21,8 @@ public class CustomSaplingBlock extends CustomDisplayBlock {
     private SaplingType saplingType = SaplingType.SMALL;
     private final String identifier;
 
-    public CustomSaplingBlock(ConfigurationSection blockSection, String identifier) {
-        super(blockSection, identifier);
+    public CustomSaplingBlock(ConfigurationSection blockSection, String identifier, String blockId) {
+        super(blockSection, identifier, blockId);
         var saplingSection = blockSection.getConfigurationSection("sapling_data");
         if (saplingSection != null) {
             var saplingTypeStr = saplingSection.getString("type");

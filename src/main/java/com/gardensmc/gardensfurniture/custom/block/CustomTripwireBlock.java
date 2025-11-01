@@ -9,11 +9,14 @@ import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+
+import static com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener.*;
 
 public class CustomTripwireBlock extends CustomBlock {
 
@@ -26,8 +29,8 @@ public class CustomTripwireBlock extends CustomBlock {
     private final boolean disarmed;
     private final boolean large;
 
-    public CustomTripwireBlock(ConfigurationSection blockSection, String customBlockName) {
-        super(blockSection);
+    public CustomTripwireBlock(ConfigurationSection blockSection, String customBlockName, String blockId) {
+        super(blockSection, blockId);
         ConfigurationSection tripWireSection = getConfigSectionOrThrow(blockSection, "tripwire_data", customBlockName);
         this.north = tripWireSection.getBoolean("north");
         this.south = tripWireSection.getBoolean("south");
@@ -113,6 +116,11 @@ public class CustomTripwireBlock extends CustomBlock {
         );
 
         Bukkit.getPluginManager().callEvent(new CustomBlockPlaceEvent(player, customItem, block));
+        // play place sound
+        var sound = getSoundToPlay(block, "place");
+        if (sound != null) {
+            block.getWorld().playSound(block.getLocation(), sound, SoundCategory.BLOCKS, VANILLA_PLACE_VOLUME, VANILLA_PLACE_PITCH);
+        }
         return true;
     }
 }

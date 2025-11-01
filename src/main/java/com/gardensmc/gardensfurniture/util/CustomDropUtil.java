@@ -89,11 +89,12 @@ public class CustomDropUtil {
                         drop = true;
                     }
                     if (drop) {
-                        e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), itemStack);
+                        // drop after block is removed to avoid it colliding and gaining velocity
+                        Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation().add(0.5, 0.1, 0.5), itemStack), 1);
                     }
                     else if (e.getBlock().getBlockData() instanceof Leaves leaves1 && customBlockItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
                         if (!leaves1.isPersistent()) { // need 2 be non-persistent server-side to drop sapling
-                            leafDrop(e.getBlock().getLocation(), customLeavesBlock);
+                            Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> leafDrop(e.getBlock().getLocation().add(0.5, 0.1, 0.5), customLeavesBlock), 1);
                         }
                     }
                 }
@@ -101,7 +102,9 @@ public class CustomDropUtil {
 
             Bukkit.getPluginManager().callEvent(new CustomBlockBreakEvent(e.getPlayer(), customBlockItem, e.getBlock()));
             if (removeFurniture) {
-                FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
+                // run later for other listeners to see furniture data before removal
+                Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock()), 1);
+
             }
         }
     }

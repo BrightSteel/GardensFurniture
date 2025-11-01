@@ -8,6 +8,7 @@ import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.type.Leaves;
 import org.bukkit.configuration.ConfigurationSection;
@@ -15,6 +16,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import javax.annotation.Nullable;
+
+import static com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener.*;
 
 public class CustomLeavesBlock extends CustomBlock {
 
@@ -24,8 +27,8 @@ public class CustomLeavesBlock extends CustomBlock {
     private final String sapling;
     private final LeavesType leavesType;
 
-    public CustomLeavesBlock(ConfigurationSection blockSection, String customBlockName) {
-        super(blockSection);
+    public CustomLeavesBlock(ConfigurationSection blockSection, String customBlockName, String blockId) {
+        super(blockSection, blockId);
         ConfigurationSection leavesSection = getConfigSectionOrThrow(blockSection, "leaves_data", customBlockName);
         this.distance = leavesSection.getInt("distance");
         this.persistent = leavesSection.getBoolean("persistent");
@@ -74,6 +77,12 @@ public class CustomLeavesBlock extends CustomBlock {
         }
 
         Bukkit.getPluginManager().callEvent(new CustomBlockPlaceEvent(player, customItem, block));
+        // play place sound
+        var sound = getSoundToPlay(block, "place");
+        if (sound == null) {
+            sound = "vanilla.grass.place";
+        }
+        block.getWorld().playSound(block.getLocation(), sound, SoundCategory.BLOCKS, VANILLA_PLACE_VOLUME, VANILLA_PLACE_PITCH);
 
         return true;
     }

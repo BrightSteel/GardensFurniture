@@ -12,16 +12,15 @@ import com.gardensmc.gardensfurniture.util.LightUtil;
 import com.ticxo.modelengine.api.ModelEngineAPI;
 import de.tr7zw.nbtapi.NBT;
 import lombok.Getter;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
+import org.bukkit.*;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+
+import static com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener.*;
 
 public class CustomDisplayBlock extends CustomBlock {
 
@@ -44,8 +43,8 @@ public class CustomDisplayBlock extends CustomBlock {
     @Getter
     private boolean connectable;
 
-    public CustomDisplayBlock(ConfigurationSection blockSection, String identifier) {
-        super(blockSection);
+    public CustomDisplayBlock(ConfigurationSection blockSection, String identifier, String blockId) {
+        super(blockSection, blockId);
         ConfigurationSection displaySection = blockSection.getConfigurationSection("display_data");
         if (displaySection == null) return;
 
@@ -104,8 +103,15 @@ public class CustomDisplayBlock extends CustomBlock {
 //        if (heldItem != null && heldItem.getItemMeta() instanceof LeatherArmorMeta leather) {
 //            color = leather.getColor();
 //        }
-
-        return placeDisplay(customItem, getItemToDisplay(heldItem), player, location, placeOptions.getBlockFace());
+        var placed = placeDisplay(customItem, getItemToDisplay(heldItem), player, location, placeOptions.getBlockFace());
+        if (placed) {
+            var block = location.getBlock();
+            var sound = getSoundToPlay(block, "place");
+            if (sound != null) {
+                block.getWorld().playSound(block.getLocation(), sound, SoundCategory.BLOCKS, VANILLA_PLACE_VOLUME, VANILLA_PLACE_PITCH);
+            }
+        }
+        return placed;
     }
 
     private ItemStack getItemToDisplay(ItemStack heldItem) {

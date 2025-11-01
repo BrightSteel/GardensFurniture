@@ -7,11 +7,14 @@ import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import lombok.Getter;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+
+import static com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener.*;
 
 @Getter
 public class CustomCaveVineBlock extends CustomBlock {
@@ -22,8 +25,8 @@ public class CustomCaveVineBlock extends CustomBlock {
     private final boolean grow;
     private final double growthRate;
 
-    public CustomCaveVineBlock(ConfigurationSection blockSection, String customBlockName) {
-        super(blockSection);
+    public CustomCaveVineBlock(ConfigurationSection blockSection, String customBlockName, String blockId) {
+        super(blockSection, blockId);
         ConfigurationSection caveVineSection = getConfigSectionOrThrow(blockSection, "cave_vine_data", customBlockName);
         this.age = caveVineSection.getInt("age");
         this.growBerries = blockSection.getBoolean("grow_berries", false);
@@ -48,6 +51,13 @@ public class CustomCaveVineBlock extends CustomBlock {
             return false; // place naturally (if not placed by terrain mapping)
         }
         block.setType(Material.CAVE_VINES, true);
+        // play place sound
+        var sound = getSoundToPlay(block, "place");
+        if (sound == null) {
+            sound = "block.cave_vines.place";
+        }
+        block.getWorld().playSound(block.getLocation(), sound, SoundCategory.BLOCKS, VANILLA_PLACE_VOLUME, VANILLA_PLACE_PITCH);
+
         return true;
     }
 }

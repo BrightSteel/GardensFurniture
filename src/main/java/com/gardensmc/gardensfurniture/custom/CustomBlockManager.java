@@ -124,7 +124,7 @@ public class CustomBlockManager {
         return null;
     }
 
-    public static void breakFurniture(Player player, Location location) {
+    public static void breakFurniture(Player player, Location location, boolean isBreakingSystem) {
        if (player != null && !ProtectionUtil.canBuild(location, player)) {
            return;
        }
@@ -132,16 +132,14 @@ public class CustomBlockManager {
         if (itemEntity == null) return;
 
         CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
+        var placeable = (CustomPlaceableItem) customItem;
+        if (!isBreakingSystem && location.getBlock().getType() == Material.BARRIER && placeable != null && placeable.getCustomBlock().getMaterialTraits() != null) {
+            return; // breaks with breaking handler
+        }
         FurnitureBreakEvent e = new FurnitureBreakEvent(player, (CustomPlaceableItem) customItem, itemEntity);
         Bukkit.getPluginManager().callEvent(e);
         if (e.isCancelled()) {
             return;
-        }
-
-        var placeable = (CustomPlaceableItem) customItem;
-        ItemStack itemStack = getDrop(itemEntity, placeable);
-        if (player != null && player.getGameMode() != GameMode.CREATIVE && itemStack != null) {
-            location.getWorld().dropItemNaturally(location, itemStack);
         }
 
         // remove furniture entities / hitbox
@@ -153,6 +151,11 @@ public class CustomBlockManager {
         Block block = location.getBlock();
         if (block.getType() == Material.BARRIER) {
             block.setType(Material.AIR);
+        }
+
+        ItemStack itemStack = getDrop(itemEntity, placeable);
+        if (player != null && player.getGameMode() != GameMode.CREATIVE && itemStack != null) {
+            location.getWorld().dropItemNaturally(location.add(0.5, 0.1, 0.5), itemStack);
         }
     }
 

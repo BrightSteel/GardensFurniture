@@ -39,6 +39,7 @@ public class ItemRegistry {
     public CustomBlockFactory customBlockFactory;
 
     private final Map<String, Set<CustomItem>> customItemByCategory = new HashMap<>();
+    @Getter
     private final Map<String, CustomItem> customItems = new HashMap<>();
 
     // also can be for leaves too: distance,persistent -> identifier

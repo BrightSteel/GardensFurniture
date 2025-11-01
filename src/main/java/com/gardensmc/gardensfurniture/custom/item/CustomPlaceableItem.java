@@ -4,6 +4,7 @@ import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomNoteBlock;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -75,4 +76,12 @@ public abstract class CustomPlaceableItem extends CustomItem {
 
     // used to get general properties of the block, if multiple blocks return main one
     public abstract CustomBlock getCustomBlock();
+
+    public List<CustomBlock> getPlaceableBlocks() {
+        return List.of(getCustomBlock());
+    }
+
+    public CustomBlock getPlacedBlock(Block block) {
+        return getCustomBlock();
+    }
 }
