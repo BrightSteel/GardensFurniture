@@ -1,6 +1,7 @@
 package com.gardensmc.gardensfurniture.custom.block;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.custom.type.Facing;
@@ -17,8 +18,12 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+
+import java.util.Collections;
+import java.util.List;
 
 import static com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener.*;
 
@@ -42,6 +47,7 @@ public class CustomDisplayBlock extends CustomBlock {
     private String model_override;
     @Getter
     private boolean connectable;
+    private List<Vector> barriers = Collections.emptyList();
 
     public CustomDisplayBlock(ConfigurationSection blockSection, String identifier, String blockId) {
         super(blockSection, blockId);
@@ -84,6 +90,10 @@ public class CustomDisplayBlock extends CustomBlock {
             if (hitboxSection.contains("height")) {
                 this.hitboxHeight = hitboxSection.getDouble("height");
             }
+            this.barriers = hitboxSection.getStringList("barriers").stream().map(s -> {
+                var nums = s.split(",");
+                return new Vector(Double.parseDouble(nums[0]), Double.parseDouble(nums[1]), Double.parseDouble(nums[2]));
+            }).toList();
         }
         this.modelengine_id = displaySection.getString("modelengine_id");
         this.model_override = displaySection.getString("model_override");
@@ -131,9 +141,32 @@ public class CustomDisplayBlock extends CustomBlock {
         return itemStack;
     }
 
+    public static Vector offsetVector(Vector vector, Player player) {
+        var offsetVector = vector.clone();
+        var rotation = Rotation.fromPlayerFacing(player.getYaw());
+        return switch ((int) rotation.getYaw()) {
+            case 90 -> new Vector(-offsetVector.getZ(), offsetVector.getY(), offsetVector.getX());
+            case 180 -> new Vector(-offsetVector.getX(), offsetVector.getY(), -offsetVector.getZ());
+            case -90 -> new Vector(offsetVector.getZ(), offsetVector.getY(), -offsetVector.getX());
+            default -> new Vector(offsetVector.getX(), offsetVector.getY(), offsetVector.getZ());
+        };
+    }
+
     protected boolean placeDisplay(CustomPlaceableItem customItem, ItemStack item, Player player, Location location, BlockFace blockFace) {
         var world = location.getWorld();
         if (world == null) return false;
+
+        List<Vector> barrierVectors;
+        if (hitbox == Hitbox.BARRIER && !barriers.isEmpty()) {
+            var remappedVectors = barriers.stream().map(v -> offsetVector(v, player)).toList();
+            if (remappedVectors.stream().allMatch(vector -> CustomBlockManager.isPlaceableMaterial(location.clone().add(vector).getBlock().getType()))) {
+                barrierVectors = remappedVectors;
+            } else {
+                return false;
+            }
+        } else {
+            barrierVectors = Collections.emptyList();
+        }
 
         var rotation = facePlayer ? Rotation.fromPlayerFacing(player.getYaw()) : Rotation.fromBlockFace(blockFace);
         var locationOffset = location.clone().add(0.5, 0.0, 0.5); // move to center of block
@@ -189,9 +222,17 @@ public class CustomDisplayBlock extends CustomBlock {
             display.setBrightness(new Display.Brightness(light, 0));
         }
 
-        spawnHitbox(locationOffset);
+        // hitbox data
+        if (!barrierVectors.isEmpty()) {
+            NBT.modifyPersistentData(display, nbt -> {
+                var stringList = nbt.getStringList("FurnitureBarriers");
+                barrierVectors.forEach(barrierVector -> stringList.add(barrierVector.toString()));
+            });
+        }
+
+        spawnHitbox(locationOffset, barrierVectors);
         if (getLight() > 0) {
-            LightUtil.placeLight(location, getLight(), hitbox == Hitbox.BARRIER);
+            LightUtil.placeLight(location.add(0, getLightOffset(), 0), getLight(), hitbox == Hitbox.BARRIER);
         }
         Bukkit.getPluginManager().callEvent(new FurniturePlaceEvent(player, new Furniture(customItem, display, null)));
         return true;
@@ -207,9 +248,13 @@ public class CustomDisplayBlock extends CustomBlock {
         };
     }
 
-    private void spawnHitbox(Location location) {
+    private void spawnHitbox(Location location, List<Vector> barrierVectors) {
         if (hitbox == Hitbox.BARRIER) {
-            location.getBlock().setType(Material.BARRIER);
+            if (barrierVectors.isEmpty()) {
+                location.getBlock().setType(Material.BARRIER);
+            } else {
+                barrierVectors.forEach(barrierVector -> location.clone().add(barrierVector).getBlock().setType(Material.BARRIER));
+            }
         } else if (hitbox == Hitbox.INTERACTION) {
             Interaction interaction = (Interaction) location.getWorld().spawnEntity(location, EntityType.INTERACTION);
             interaction.setInteractionWidth((float) hitboxWidth);

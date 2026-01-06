@@ -2,20 +2,19 @@ package com.gardensmc.gardensfurniture.custom.item;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
-import com.gardensmc.gardensfurniture.custom.block.CustomNoteBlock;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
+import org.geysermc.geyser.api.block.custom.CustomBlockPermutation;
+import org.geysermc.geyser.api.block.custom.CustomBlockState;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public class CustomDirectionalItem extends CustomPlaceableItem {
 
@@ -85,5 +84,48 @@ public class CustomDirectionalItem extends CustomPlaceableItem {
             case NORTH, SOUTH -> z;
             default -> throw new RuntimeException("Unknown block face: " + blockFace);
         };
+    }
+
+    @Override
+    public void onBuildGeyserBlockState(CustomBlockState.Builder builder, Block block) {
+        var blockFace = getBlockDirection(block);
+        switch (Objects.requireNonNull(blockFace)) {
+            case UP, DOWN -> {
+                builder.stringProperty("axis", "y");
+                y.onBuildGeyserBlockState(builder, block);
+            }
+            case EAST, WEST -> {
+                builder.stringProperty("axis", "x");
+                x.onBuildGeyserBlockState(builder, block);
+            }
+            case NORTH, SOUTH -> {
+                builder.stringProperty("axis", "z");
+                z.onBuildGeyserBlockState(builder, block);
+            }
+            default -> throw new RuntimeException("Unknown block face: " + blockFace);
+        }
+    }
+
+    @Override
+    public List<CustomBlockPermutation> getPermutations() {
+        var permutations = new ArrayList<CustomBlockPermutation>();
+        if (y.getBedrock() != null) {
+            permutations.add(new CustomBlockPermutation(y.getBedrock().toCustomBlockComponents(), "q.block_property('%s') == '%s'".formatted("axis", "y")));
+        }
+        if (x.getBedrock() != null) {
+            permutations.add(new CustomBlockPermutation(x.getBedrock().toCustomBlockComponents(), "q.block_property('%s') == '%s'".formatted("axis", "x")));
+        }
+        if (z.getBedrock() != null) {
+            permutations.add(new CustomBlockPermutation(z.getBedrock().toCustomBlockComponents(), "q.block_property('%s') == '%s'".formatted("axis", "z")));
+        }
+        permutations.addAll(x.getPermutations());
+        permutations.addAll(y.getPermutations());
+        permutations.addAll(z.getPermutations());
+        return permutations;
+    }
+
+    @Override
+    public void onBuildGeyserBlockData(CustomBlockData.Builder builder) {
+        builder.stringProperty("axis", List.of("y", "x", "z"));
     }
 }

@@ -21,5 +21,6 @@ public class CommandHandler {
     private static void createCommands() {
         commands.put("furniture", new FurnitureCommand());
         commands.put("unwrap", new UnwrapCommand());
+        commands.put("paint", new DyeCommand());
     }
 }

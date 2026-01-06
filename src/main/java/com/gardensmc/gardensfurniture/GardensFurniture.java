@@ -2,9 +2,8 @@ package com.gardensmc.gardensfurniture;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
-import com.fastasyncworldedit.core.event.extent.PasteEvent;
 import com.gardensmc.gardensfurniture.command.CommandHandler;
-import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import com.gardensmc.gardensfurniture.dye.DyeColorGroups;
 import com.gardensmc.gardensfurniture.hook.GardensWorldEditExtent;
 import com.gardensmc.gardensfurniture.hook.HookGardensFurniture;
 import com.gardensmc.gardensfurniture.hook.ShopGuiPlusHook;
@@ -12,19 +11,15 @@ import com.gardensmc.gardensfurniture.listener.ListenerHandler;
 import com.gardensmc.gardensfurniture.loader.ChunkFurnitureLoader;
 import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
 import com.gardensmc.gardensfurniture.register.ItemRegistry;
-import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.settings.PacketEventsSettings;
 import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
-import com.hibiscusmc.hmccosmetics.api.HMCCosmeticsAPI;
 import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.event.extent.EditSessionEvent;
 import com.sk89q.worldedit.util.eventbus.Subscribe;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import me.lojosho.hibiscuscommons.hooks.Hooks;
-import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import net.coreprotect.CoreProtect;
 import net.coreprotect.CoreProtectAPI;
 import org.bukkit.Bukkit;
@@ -35,6 +30,8 @@ public class GardensFurniture extends JavaPlugin {
     public static GardensFurniture plugin;
 
     public static ItemRegistry itemRegistry;
+
+    public static DyeColorGroups dyeColorGroups;
 
     public static ProtocolManager protocolManager;
     public static boolean isGriefPreventionHooked;
@@ -60,6 +57,7 @@ public class GardensFurniture extends JavaPlugin {
 
         // load custom item configs
         ConfigUtil.loadConfigs();
+        dyeColorGroups = new DyeColorGroups(ConfigUtil.dyeColors);
 
         // load registry
         itemRegistry = new ItemRegistry();
@@ -132,4 +130,6 @@ public class GardensFurniture extends JavaPlugin {
         }
         coreProtectAPI = coreProtect;
     }
+
+
 }

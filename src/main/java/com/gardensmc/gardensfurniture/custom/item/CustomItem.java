@@ -50,6 +50,10 @@ public class CustomItem implements Comparable<CustomItem> {
     private final boolean template;
     @Getter
     private final List<String> basedOn;
+    @Getter
+    private final String cosmeticId;
+    @Getter
+    private final boolean isGenerateModel;
 
     public CustomItem(String identifier, ConfigurationSection itemSection) {
         this.identifier = identifier;
@@ -77,6 +81,8 @@ public class CustomItem implements Comparable<CustomItem> {
                 .toList();
         this.template = itemSection.getBoolean("template");
         this.basedOn = itemSection.getStringList("basedOn");
+        this.cosmeticId = itemSection.getString("cosmetic_id");
+        this.isGenerateModel = itemSection.getBoolean("generate_model", true);
     }
 
     public int getCustomModel() {
@@ -144,6 +150,11 @@ public class CustomItem implements Comparable<CustomItem> {
 
     public Component getDisplayName() {
         return MiniMessage.miniMessage().deserialize(getDisplayRawFormatted());
+    }
+
+    // for geyser registration
+    public String getMaterialName() {
+        return material.toString();
     }
 }
 

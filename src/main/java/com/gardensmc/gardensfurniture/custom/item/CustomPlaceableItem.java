@@ -2,15 +2,22 @@ package com.gardensmc.gardensfurniture.custom.item;
 
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
-import com.gardensmc.gardensfurniture.custom.block.CustomNoteBlock;
+import com.gardensmc.gardensfurniture.custom.block.bedrock.BedrockBlock;
+import lombok.Getter;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
+import org.geysermc.geyser.api.block.custom.CustomBlockPermutation;
+import org.geysermc.geyser.api.block.custom.CustomBlockState;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public abstract class CustomPlaceableItem extends CustomItem {
@@ -19,6 +26,9 @@ public abstract class CustomPlaceableItem extends CustomItem {
     private final List<String> placeTargets;
     private final List<Tag<Material>> placeTags;
     private final List<String> placeDirections;
+    @Nullable
+    @Getter
+    private final BedrockBlock bedrockBlock;
 
     public CustomPlaceableItem(String identifier, ConfigurationSection itemSection) {
         super(identifier, itemSection);
@@ -38,6 +48,8 @@ public abstract class CustomPlaceableItem extends CustomItem {
         if (placeDirections.contains("SIDES")) {
             placeDirections.addAll(List.of("NORTH", "SOUTH", "EAST", "WEST"));
         }
+        var bedrockSection = itemSection.getConfigurationSection("bedrock");
+        this.bedrockBlock = bedrockSection == null ? null : new BedrockBlock(bedrockSection, identifier);
     }
 
     public void placeBlock(Location location) {
@@ -83,5 +95,17 @@ public abstract class CustomPlaceableItem extends CustomItem {
 
     public CustomBlock getPlacedBlock(Block block) {
         return getCustomBlock();
+    }
+
+    public void onBuildGeyserBlockState(CustomBlockState.Builder builder, Block block) {
+        getCustomBlock().onBuildGeyserBlockState(builder, block);
+    }
+
+    public void onBuildGeyserBlockData(CustomBlockData.Builder builder) {
+        getCustomBlock().onBuildGeyserBlockData(builder);
+    }
+
+    public List<CustomBlockPermutation> getPermutations() {
+        return getCustomBlock().getPermutations();
     }
 }

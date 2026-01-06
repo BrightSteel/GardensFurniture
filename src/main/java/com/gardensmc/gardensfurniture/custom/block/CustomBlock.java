@@ -1,14 +1,24 @@
 package com.gardensmc.gardensfurniture.custom.block;
 
 import com.gardensmc.gardensfurniture.custom.block.bedrock.BedrockBlock;
+import com.gardensmc.gardensfurniture.custom.item.BedrockBlockState;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import lombok.Getter;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
+import org.geysermc.geyser.api.block.custom.CustomBlockPermutation;
+import org.geysermc.geyser.api.block.custom.CustomBlockState;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
 
 public abstract class CustomBlock {
 
@@ -20,11 +30,13 @@ public abstract class CustomBlock {
     private final double seat_offset;
     @Getter
     private final int light;
+    @Getter
+    private final int lightOffset;
     private final String drop_override;
     @Getter
     private final Material materialTraits;
     @Getter
-    private final BedrockBlock bedrockBlock;
+    private final BedrockBlock bedrock;
     @Getter
     private final String blockId;
 
@@ -34,11 +46,12 @@ public abstract class CustomBlock {
         this.cancel_drop = blockSection.getBoolean("cancel_drop");
         this.seat_offset = blockSection.getDouble("seat_offset");
         this.light = blockSection.getInt("light");
+        this.lightOffset = blockSection.getInt("light_offset");
         this.drop_override = blockSection.getString("drop_override");
         var materialTraitsStr = blockSection.getString("material_traits");
         this.materialTraits = materialTraitsStr == null ? null : Material.valueOf(materialTraitsStr.toUpperCase());
         var bedrockSection = blockSection.getConfigurationSection("bedrock");
-        this.bedrockBlock = bedrockSection == null ? null : new BedrockBlock(bedrockSection);
+        this.bedrock = bedrockSection == null ? null : new BedrockBlock(bedrockSection, identifier);
         this.blockId = identifier;
     }
 
@@ -74,5 +87,15 @@ public abstract class CustomBlock {
     public abstract boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem placeableItem, Location location, PlaceOptions placeOptions);
 
     public void onBreak(Location location) {
+    }
+
+    public void onBuildGeyserBlockData(CustomBlockData.Builder builder) {
+    }
+
+    public void onBuildGeyserBlockState(CustomBlockState.Builder builder, Block block) {
+    }
+
+    public List<CustomBlockPermutation> getPermutations() {
+        return Collections.emptyList();
     }
 }

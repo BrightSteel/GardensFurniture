@@ -120,6 +120,7 @@ public class BlockPacketListener {
                 if (event.getPacketType() == PacketType.Play.Server.CHUNK_DATA) {
                     // editing this packet directly takes too long and causes ping spikes to the client.
                     // instead we can allow the packet to proceed unedited, edit a copy of it asynchronously, then send it to the client
+                    event.setCancelled(true);
                     var packet = new WrapperPlayServerChunkData(event);
                     var copy = new WrapperPlayServerChunkData(packet.getColumn(), packet.getLightData(), packet.isIgnoreOldData());
                     Bukkit.getScheduler().runTaskAsynchronously(GardensFurniture.plugin, () -> sendChunkDataPacket(player, copy));
@@ -137,14 +138,16 @@ public class BlockPacketListener {
     }
 
     private void sendChunkDataPacket(Player player, WrapperPlayServerChunkData packet) {
-        var key = makeRecentPacketKey(player, packet);
-        int packetsSentCount = recentPacketsSent.getUnchecked(key);
-        if (packetsSentCount == 2) {
-            return;
-        }
-        recentPacketsSent.put(key, packetsSentCount + 1);
+//        var key = makeRecentPacketKey(player, packet);
+//        int packetsSentCount = recentPacketsSent.getUnchecked(key);
+//        if (packetsSentCount >= 1) {
+//            return;
+//        }
+//        recentPacketsSent.put(key, packetsSentCount + 1);
         handleChunkChange(packet, player);
-        PacketEvents.getAPI().getPlayerManager().sendPacketSilently(player, packet);
+//        if (modified) {
+            PacketEvents.getAPI().getPlayerManager().sendPacketSilently(player, packet);
+//        }
     }
 
     private String makeRecentPacketKey(Player player, WrapperPlayServerChunkData packet) {
@@ -152,7 +155,9 @@ public class BlockPacketListener {
         return player.getUniqueId() + "-" + column.getX() + "-" + column.getZ();
     }
 
-    private void handleChunkChange(WrapperPlayServerChunkData packet, Player player) {
+    // returns true if modified packet otherwise false
+    private boolean handleChunkChange(WrapperPlayServerChunkData packet, Player player) {
+        boolean modified = false;
         Column column = packet.getColumn();
         BaseChunk[] chunks = column.getChunks();
         World world = player.getWorld();
@@ -170,6 +175,7 @@ public class BlockPacketListener {
                         int realY = y + (16 * i) - Math.abs(worldMinHeight);
 
                         if (leavesTypes.contains(blockState.getType())) {
+                            modified = true;
                             CustomItem customItem = getCustomItemFromPos(player.getWorld(), realX, realY, realZ);
                             if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
                                 baseChunk.set(x, y, z, getBlockStateFromLeaves(customLeavesBlock, blockState));
@@ -179,6 +185,7 @@ public class BlockPacketListener {
                             }
                         }
                         else if (blockState.getType() == StateTypes.NOTE_BLOCK) {
+                            modified = true;
                             CustomItem customItem = getCustomItemFromPos(player.getWorld(), realX, realY, realZ);
                             if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomNoteBlock) {
                                 var customNoteBlock = getCustomNoteBlock(placeable, world, realX, realY, realZ);
@@ -188,14 +195,15 @@ public class BlockPacketListener {
                             }
                         }
                         else if (blockState.getType() == StateTypes.CAVE_VINES_PLANT) {
+                            modified = true;
                             CustomItem customItem = getCustomItemFromPos(player.getWorld(), realX, realY, realZ);
                             if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
                                 CustomCaveVineBlock customCaveVineBlock = customCaveVineItem.getPlant();
                                 baseChunk.set(x, y, z, getBlockStateFromVine(customCaveVineBlock, blockState.isBerries()));
                             }
-
                         }
                         else if (blockState.getType() == StateTypes.CAVE_VINES) {
+                            modified = true;
                             CustomItem customItem = getCustomItemFromPos(world, realX, realY, realZ);
                             if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
                                 CustomCaveVineBlock customCaveVineBlock;
@@ -212,6 +220,7 @@ public class BlockPacketListener {
                             }
                         }
                         else if (blockState.getType() == StateTypes.TRIPWIRE) {
+                            modified = true;
                             CustomItem customItem = getCustomItemFromPos(world, realX, realY, realZ);
                             if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomTripwireBlock) {
                                 var customTripwireBlock = getCustomTripwireBlock(customBlockItem, world, realX, realY, realZ);
@@ -220,11 +229,13 @@ public class BlockPacketListener {
                                 baseChunk.set(x, y, z, getNormalTripwire(blockState));
                             }
                         } else if (waxedTypes.containsKey(blockState.getType())) {
+                            modified = true;
                             CustomItem customItem = getCustomItemFromPos(player.getWorld(), realX, realY, realZ);
                             if (customItem == null) {
                                 baseChunk.set(x, y, z, getUnwaxedState(blockState));
                             }
                         } else if (saplingTypes.contains(blockState.getType())) {
+                            modified = true;
                             CustomItem customItem = getCustomItemFromPos(player.getWorld(), realX, realY, realZ);
                             if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomSaplingBlock) {
                                 baseChunk.set(x, y, z, getBlockStateFromSapling(blockState.getType()));
@@ -236,6 +247,7 @@ public class BlockPacketListener {
                 }
             }
         }
+        return modified;
     }
 
     private CustomTripwireBlock getCustomTripwireBlock(CustomPlaceableItem customPlaceableItem, World world, int x, int y, int z) {

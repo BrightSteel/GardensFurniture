@@ -1,6 +1,7 @@
 package com.gardensmc.gardensfurniture.command;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.dye.DyeColorGroups;
 import com.gardensmc.gardensfurniture.loader.ChunkFurnitureLoader;
 import com.gardensmc.gardensfurniture.menu.FurnitureMenu;
 import com.gardensmc.gardensfurniture.permission.Permissions;
@@ -69,6 +70,7 @@ public class FurnitureCommand implements TabExecutor {
             CommandSenderUtil.sendPermissionError(commandSender);
         } else {
             ConfigUtil.loadConfigs();
+            GardensFurniture.dyeColorGroups = new DyeColorGroups(ConfigUtil.dyeColors);
             GardensFurniture.itemRegistry.reload();
             CommandSenderUtil.sendSuccess(commandSender, "Reloaded Gardens Furniture!");
         }

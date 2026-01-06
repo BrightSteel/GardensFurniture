@@ -10,7 +10,10 @@ commands:
   unwrap:
     description: Unwrap held item
     usage: /<command>
-depend: [GSit, NBTAPI, ProtocolLib, packetevents, HibiscusCommons]
+  paint:
+    description: Open paint menu
+    usage: /<command>
+depend: [GSit, NBTAPI, ProtocolLib, packetevents, HibiscusCommons, Geyser-Spigot]
 softdepend:
   - packetevents
   - ProtocolLib

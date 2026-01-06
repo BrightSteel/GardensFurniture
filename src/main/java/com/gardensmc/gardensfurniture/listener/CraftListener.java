@@ -1,17 +1,21 @@
 package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.backpack.BackpackHandler;
 import com.gardensmc.gardensfurniture.custom.item.CustomBackpackItem;
+import com.gardensmc.gardensfurniture.wrap.WrapHandler;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.ShulkerBox;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
 
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.stream.IntStream;
 
 public class CraftListener implements Listener {
@@ -42,6 +46,53 @@ public class CraftListener implements Listener {
                 }
             }
         }
+    }
+
+    @EventHandler
+    public void onDyeBackpack(PrepareItemCraftEvent e) {
+        var currResult = e.getInventory().getResult();
+        if (currResult == null) {
+            return;
+        }
+        var items = Arrays.stream(e.getInventory().getMatrix()).filter(itemStack -> itemStack != null && itemStack.getType() != Material.AIR).toList();
+        if (items.size() != 2) {
+            return;
+        }
+        ItemStack dye = null;
+        ItemStack backpack = null;
+        if (isDye(items.getFirst())) {
+            dye = items.getFirst();
+            if (isBackpack(items.get(1))) {
+                backpack = items.get(1);
+            }
+        } else if (isDye(items.get(1))) {
+            dye = items.get(1);
+            if (isBackpack(items.getFirst())) {
+                backpack = items.getFirst();
+            }
+        }
+        if (dye == null || backpack == null) {
+            return;
+        }
+        if (new WrapHandler(currResult).getWrapFromItem() != null) {
+            return; // ignore wrapped backpacks
+        }
+        // modify item model
+        var backpackClone = backpack.clone();
+        var desiredBackpack = GardensFurniture.itemRegistry.getItem("backpack_" + dye.getType().toString().toLowerCase().split("_")[0]);
+        if (desiredBackpack == null) {
+            return;
+        }
+        backpackClone.setData(DataComponentTypes.ITEM_MODEL, NamespacedKey.fromString(desiredBackpack.getComponents().getItem_model()));
+        e.getInventory().setResult(backpackClone);
+    }
+
+    private boolean isDye(ItemStack itemStack) {
+        return itemStack.getType().toString().toLowerCase().endsWith("_dye");
+    }
+
+    private boolean isBackpack(ItemStack itemStack) {
+        return GardensFurniture.itemRegistry.getCustomItem(itemStack) instanceof CustomBackpackItem;
     }
 
     private boolean isEqual(ItemStack stack, Material material) {

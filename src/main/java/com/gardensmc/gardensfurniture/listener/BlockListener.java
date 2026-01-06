@@ -318,7 +318,7 @@ public class BlockListener implements Listener {
         }
     }
 
-    private void handleFeature(String feature, Location location) throws ExecutionException, InterruptedException {
+    public static void handleFeature(String feature, Location location) throws ExecutionException, InterruptedException {
         var intersectingChunks = location.getWorld().getIntersectingChunks(BoundingBox.of(location, 20, 1, 20)).stream().toList();
         GlobalConfiguration.get().blockUpdates.disableNoteblockUpdates = true;
         var chunkSnapshots = toChunkSnapshot(intersectingChunks);
@@ -350,13 +350,13 @@ public class BlockListener implements Listener {
 
     }
 
-    private List<ChunkSnapshot> toChunkSnapshot(List<Chunk> chunks) {
+    private static List<ChunkSnapshot> toChunkSnapshot(List<Chunk> chunks) {
         return chunks.stream()
                 .map(Chunk::getChunkSnapshot)
                 .toList();
     }
 
-    private List<ChunkFurnitureLoader.FurnitureReplacement> getReplacements(Set<FurnitureCache.BlockKey> existingNoteBlocks, ChunkSnapshot chunkSnapshot, World world, int yMin) {
+    private static List<ChunkFurnitureLoader.FurnitureReplacement> getReplacements(Set<FurnitureCache.BlockKey> existingNoteBlocks, ChunkSnapshot chunkSnapshot, World world, int yMin) {
         int yMax = yMin + 60;
         if (yMax > world.getMaxHeight()) {
             yMax = world.getMaxHeight();
@@ -393,7 +393,7 @@ public class BlockListener implements Listener {
         return replacements;
     }
 
-    private Set<FurnitureCache.BlockKey> getExistingNoteBlocks(ChunkSnapshot chunkSnapshot, World world, int yMin) {
+    private static Set<FurnitureCache.BlockKey> getExistingNoteBlocks(ChunkSnapshot chunkSnapshot, World world, int yMin) {
         int yMax = yMin + 60;
         if (yMax > world.getMaxHeight()) {
             yMax = world.getMaxHeight();

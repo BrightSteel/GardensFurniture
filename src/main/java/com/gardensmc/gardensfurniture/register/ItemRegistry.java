@@ -82,12 +82,12 @@ public class ItemRegistry {
 
                     // write out custom models
                     var components = customItem.getComponents();
-                    if (components != null) {
+                    if (components != null && customItem.isGenerateModel()) {
                         var itemModel = components.getItem_model();
                         if (itemModel != null) {
                             try {
                                 Tint tint = null;
-                                if (customItem.getMaterial().toString().toUpperCase().startsWith("LEATHER")) {
+                                if (customItem.isDyeable()) {
                                     tint = Tint.DYE;
                                 } else if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomLeavesBlock leaves && leaves.getLeavesType() == CustomLeavesBlock.LeavesType.OAK) {
                                     tint = Tint.CONSTANT;
@@ -221,8 +221,14 @@ public class ItemRegistry {
 
                 // color
                 if (customItem.getColor() != null && meta instanceof LeatherArmorMeta leatherArmorMeta) {
-                    // todo make this actually use the color with manual map of string -> color; or use rgb
-                    leatherArmorMeta.setColor(Color.AQUA);
+                    Color color;
+                    try {
+                        color = (Color) Color.class.getField(customItem.getColor().toUpperCase()).get(null);
+                    } catch (Exception e) {
+                        // parse as RGB
+                        color = Color.fromRGB(Integer.parseInt(customItem.getColor()));
+                    }
+                    leatherArmorMeta.setColor(color);
                 }
 
                 if (customItem instanceof CustomPotionItem potionItem && meta instanceof PotionMeta potionMeta) {

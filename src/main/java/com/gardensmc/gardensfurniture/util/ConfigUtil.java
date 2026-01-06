@@ -13,6 +13,7 @@ public class ConfigUtil {
 
     public static Map<String, Configuration> all_items = new HashMap<>();
     public static Configuration generationMappings;
+    public static Configuration dyeColors;
 
     public static FileConfiguration itemsYaml, itemSaverYaml;
 
@@ -27,6 +28,7 @@ public class ConfigUtil {
 
         File generationMappingFile = getYMLFile("generation_mappings.yml");
         generationMappings = YamlConfiguration.loadConfiguration(generationMappingFile);
+        dyeColors = YamlConfiguration.loadConfiguration(getYMLFile("dye_colors.yml"));
     }
 
     public static void saveItemSaverYaml() {

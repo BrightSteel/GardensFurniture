@@ -13,7 +13,9 @@ import com.gardensmc.gardensfurniture.itementity.ItemEntity;
 import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
+import de.tr7zw.nbtapi.NBT;
 import de.tr7zw.nbtapi.NBTEntity;
+import de.tr7zw.nbtapi.iface.ReadableNBTList;
 import dev.geco.gsit.api.GSitAPI;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -22,10 +24,10 @@ import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 
@@ -83,14 +85,19 @@ public class CustomBlockManager {
 
     @Nullable
     public static ItemEntity getItemEntity(Location location) {
-        var displayEntity = getDisplayEntity(location);
+        return getItemEntity(location, false);
+    }
+
+    @Nullable
+    public static ItemEntity getItemEntity(Location location, boolean isCheckAdjacentEntities) {
+        var displayEntity = getDisplayEntity(location, isCheckAdjacentEntities);
         if (displayEntity != null) {
             return new DisplayItemEntity(displayEntity);
         }
-        var itemFrame = getBlock(location);
-        if (itemFrame != null) {
-            return new FrameItemEntity(itemFrame);
-        }
+//        var itemFrame = getBlock(location);
+//        if (itemFrame != null) {
+//            return new FrameItemEntity(itemFrame);
+//        }
         return null;
     }
 
@@ -101,7 +108,40 @@ public class CustomBlockManager {
 
     @Nullable
     public static ItemDisplay getDisplayEntity(Location location) {
-        return (ItemDisplay) getEntityByClass(location, ItemDisplay.class);
+        return getDisplayEntity(location, false);
+    }
+
+    @Nullable
+    public static ItemDisplay getDisplayEntity(Location location, boolean isCheckAdjacent) {
+        var display = (ItemDisplay) getEntityByClass(location, ItemDisplay.class);
+        if (display != null) {
+            return display;
+        }
+        if (isCheckAdjacent) {
+            return location.getNearbyEntitiesByType(ItemDisplay.class, 5)
+                    .stream()
+                    .filter(entity -> getBarrierVectors(entity).stream().anyMatch(vector -> entity.getLocation().toBlockLocation().toVector().clone().add(vector).equals(location.toBlockLocation().toVector())))
+                    .findFirst()
+                    .orElse(null);
+        }
+        return null;
+    }
+
+    private static List<Vector> getBarrierVectors(Entity entity) {
+        List<String> furnitureBarriers = new ArrayList<>();
+        NBT.getPersistentData(entity, nbt -> {
+            if (nbt.hasTag("FurnitureBarriers")) {
+                nbt.getStringList("FurnitureBarriers").forEach(furnitureBarriers::add);
+            }
+            return null;
+        });
+        if (!furnitureBarriers.isEmpty()) {
+            return furnitureBarriers.stream().map(str -> {
+                var nums = str.split(",");
+                return new Vector(Double.parseDouble(nums[0]), Double.parseDouble(nums[1]), Double.parseDouble(nums[2]));
+            }).toList();
+        }
+        return Collections.emptyList();
     }
 
     @Nullable
@@ -128,12 +168,12 @@ public class CustomBlockManager {
        if (player != null && !ProtectionUtil.canBuild(location, player)) {
            return;
        }
-        ItemEntity itemEntity = getItemEntity(location);
+        ItemEntity itemEntity = getItemEntity(location, true);
         if (itemEntity == null) return;
 
         CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
         var placeable = (CustomPlaceableItem) customItem;
-        if (!isBreakingSystem && location.getBlock().getType() == Material.BARRIER && placeable != null && placeable.getCustomBlock().getMaterialTraits() != null) {
+        if (player != null && player.getGameMode() != GameMode.CREATIVE && !isBreakingSystem && location.getBlock().getType() == Material.BARRIER && placeable != null && placeable.getCustomBlock().getMaterialTraits() != null) {
             return; // breaks with breaking handler
         }
         FurnitureBreakEvent e = new FurnitureBreakEvent(player, (CustomPlaceableItem) customItem, itemEntity);
@@ -143,6 +183,14 @@ public class CustomBlockManager {
         }
 
         // remove furniture entities / hitbox
+        var barriers = getBarrierVectors(itemEntity.getEntity());
+        if (!barriers.isEmpty()) {
+            barriers.stream().map(v -> itemEntity.getEntity().getLocation().add(v).getBlock()).forEach(block -> {
+                if (block.getType() == Material.BARRIER) {
+                    block.setType(Material.AIR);
+                }
+            });
+        }
         itemEntity.getEntity().remove();
         var interactionEntity = getInteractionEntity(location);
         if (interactionEntity != null) {
@@ -187,7 +235,7 @@ public class CustomBlockManager {
             return CustomBlockManager.getItemFromLeaves(block);
         }
 
-        ItemEntity itemEntity = getItemEntity(block.getLocation());
+        ItemEntity itemEntity = getItemEntity(block.getLocation(), true);
         if (itemEntity != null) {
             return GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
         }

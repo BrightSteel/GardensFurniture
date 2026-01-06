@@ -7,8 +7,7 @@ import com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.protocol.world.states.type.StateTypes;
 import com.github.retrooper.packetevents.util.Vector3i;
-import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockBreakAnimation;
-import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockChange;
+import com.github.retrooper.packetevents.wrapper.play.server.*;
 import lombok.Getter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
@@ -28,12 +27,13 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 import java.util.UUID;
 
 public class CustomBreakingBlock {
 
-    private static final int INVISIBLE_LEAVES_ID = getInvisibleLeavesId();
+//    private static final int INVISIBLE_LEAVES_ID = getBreakBlockId();
     private static final int BARRIER_ID = StateTypes.BARRIER.createBlockState().getGlobalId();
 
     private final UUID playerUUID;
@@ -47,18 +47,19 @@ public class CustomBreakingBlock {
     private int ticksPassed;
     @Getter
     private byte lastStageSent = -1;
+    private final ItemStack heldItem;
 
     public CustomBreakingBlock(Player player, Block block, ItemStack heldItem, Material materialTraits) {
         this.playerUUID = player.getUniqueId();
         this.block = block;
         this.breakTimeInTicks = calculateBreakTimeInTicks(player, heldItem, materialTraits);
-//        System.out.println("Calculated break time: " + breakTimeInTicks + " ticks");
         this.task = Bukkit.getScheduler().runTaskTimer(
                 GardensFurniture.plugin, this::tick, 0, 1
         );
         this.entityId = ((block.getX() & 0xFFF) << 20) | ((block.getY() & 0xFFF) << 8) | (block.getZ() & 0xFF); // unique id
         this.materialTraits = materialTraits;
         this.isBarrier = block.getType() == Material.BARRIER;
+        this.heldItem = heldItem;
     }
 
     private void tick() {
@@ -68,12 +69,15 @@ public class CustomBreakingBlock {
             return;
         }
         if (ticksPassed == 0) {
-            player.addPotionEffect(new PotionEffect(
-                    PotionEffectType.MINING_FATIGUE, breakTimeInTicks, 2, false, false, false
-            ));
-            if (isBarrier) {
-                sendBlockChangePacket(player, INVISIBLE_LEAVES_ID); // invisible block for breaking animation to show
+            if (heldItem == null || heldItem.getType() == Material.AIR) {
+                player.addPotionEffect(new PotionEffect(
+                        PotionEffectType.MINING_FATIGUE, breakTimeInTicks, 1, false, false, false
+                ));
             }
+
+//            if (isBarrier) {
+//                sendBlockChangePacket(player, INVISIBLE_LEAVES_ID); // invisible block for breaking animation to show
+//            }
         }
         ticksPassed++;
         byte currStage = (byte) Math.floor(((double) ticksPassed / breakTimeInTicks) * 9.0d); // convert into stage from 0-9
@@ -84,6 +88,10 @@ public class CustomBreakingBlock {
         if (ticksPassed == breakTimeInTicks) {
             breakBlock();
         }
+    }
+
+    public boolean isBreakingInProgress() {
+        return ticksPassed < breakTimeInTicks;
     }
 
     public void close() {
@@ -104,13 +112,18 @@ public class CustomBreakingBlock {
         var player = Bukkit.getPlayer(playerUUID);
         if (player == null || block == null) return;
         block.getWorld().spawnParticle(Particle.BLOCK, block.getLocation().add(0.5, 0.5, 0.5), 100, 0.1, 0.1, 0.1, 4, block.getBlockData());
-        block.getWorld().playSound(block.getLocation(), getBlockSound(), SoundCategory.BLOCKS, 1.0f, 1.0f);
+        var sound = getBlockSound();
+        if (sound != null) {
+            block.getWorld().playSound(block.getLocation(), sound, SoundCategory.BLOCKS, 1.0f, 1.0f);
+        }
         CustomBlockManager.breakFurniture(player, block.getLocation(), true);
         ((CraftPlayer) player).getHandle().gameMode.destroyBlock(new BlockPos(block.getX(), block.getY(), block.getZ()));
     }
 
+    // null if vanilla block that isn't one we need to play a sound for, but still do breaking (like cherry wood and bamboo)
+    @Nullable
     private String getBlockSound() {
-        return Objects.requireNonNull(VanillaBlockSoundListener.getSoundToPlay(block, "break")); // non-null because custom block has material trait
+        return VanillaBlockSoundListener.getSoundToPlay(block, "break");
     }
 
     private void sendBlockDestroyStagePacket(Player player, byte stage) {
@@ -122,7 +135,7 @@ public class CustomBreakingBlock {
     }
 
     private void sendBlockChangePacket(Player player, int blockId) {
-        PacketEvents.getAPI().getPlayerManager().sendPacket(player, new WrapperPlayServerBlockChange(
+        PacketEvents.getAPI().getPlayerManager().sendPacketSilently(player, new WrapperPlayServerBlockChange(
                 new Vector3i(block.getX(), block.getY(), block.getZ()),
                 blockId
         ));
@@ -181,6 +194,7 @@ public class CustomBreakingBlock {
             case WOODEN_AXE, WOODEN_HOE, WOODEN_SHOVEL, WOODEN_PICKAXE -> 2;
             case GOLDEN_AXE, GOLDEN_HOE, GOLDEN_SHOVEL, GOLDEN_PICKAXE -> 12;
             case STONE_AXE, STONE_HOE, STONE_SHOVEL, STONE_PICKAXE -> 4;
+            case COPPER_AXE, COPPER_HOE, COPPER_SHOVEL, COPPER_PICKAXE -> 5;
             case IRON_AXE, IRON_HOE, IRON_SHOVEL, IRON_PICKAXE -> 6;
             case DIAMOND_AXE, DIAMOND_HOE, DIAMOND_SHOVEL, DIAMOND_PICKAXE -> 8;
             case NETHERITE_AXE, NETHERITE_HOE, NETHERITE_SHOVEL, NETHERITE_PICKAXE -> 9;
@@ -204,10 +218,7 @@ public class CustomBreakingBlock {
         };
     }
 
-    private static int getInvisibleLeavesId() {
-        var wrappedState = StateTypes.BIRCH_LEAVES.createBlockState();
-        wrappedState.setPersistent(false);
-        wrappedState.setDistance(6);
-        return wrappedState.getGlobalId();
+    private static int getBreakBlockId() {
+        return StateTypes.TRIPWIRE.createBlockState().getGlobalId();
     }
 }

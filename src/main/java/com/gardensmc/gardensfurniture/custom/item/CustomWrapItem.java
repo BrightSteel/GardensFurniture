@@ -34,8 +34,23 @@ public class CustomWrapItem extends CustomItem {
 
     @AllArgsConstructor
     public enum WrapType {
-        BACKPACK(itemStack -> GardensFurniture.itemRegistry.getCustomItem(itemStack) instanceof CustomBackpackItem);
+        BACKPACK(itemStack -> GardensFurniture.itemRegistry.getCustomItem(itemStack) instanceof CustomBackpackItem),
+        SWORD(itemStack -> isType(itemStack, "sword")),
+        PICKAXE(itemStack -> isType(itemStack, "pickaxe")),
+        AXE(itemStack -> isType(itemStack, "axe")),
+        SHOVEL(itemStack -> isType(itemStack, "shovel")),
+        HOE(itemStack -> isType(itemStack, "hoe")),
+        BOW(itemStack -> isType(itemStack, "bow")),
+        CROSSBOW(itemStack -> isType(itemStack, "crossbow")),
+        ELYTRA(itemStack -> isType(itemStack, "elytra")),
+        FISHING_ROD(itemStack -> isType(itemStack, "fishing_rod")),
+        MACE(itemStack -> isType(itemStack, "mace")),
+        SHIELD(itemStack -> isType(itemStack, "shield"));
 
         public final Predicate<ItemStack> isWrappable;
+    }
+
+    private static boolean isType(ItemStack itemStack, String suffix) {
+        return itemStack.getType().toString().toLowerCase().endsWith(suffix);
     }
 }

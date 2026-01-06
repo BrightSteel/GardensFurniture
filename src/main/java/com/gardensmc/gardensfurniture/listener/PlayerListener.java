@@ -1,23 +1,29 @@
 package com.gardensmc.gardensfurniture.listener;
 
+import com.destroystokyo.paper.event.player.PlayerJumpEvent;
 import com.gardensmc.gardensfurniture.GardensFurniture;
-import com.gardensmc.gardensfurniture.backpack.BackpackHandler;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.CustomNoteBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomWaxedBlock;
 import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.custom.item.mechanics.CaptureMobHandler;
 import com.gardensmc.gardensfurniture.events.CustomBlockInteractEvent;
+import com.gardensmc.gardensfurniture.menu.DyeMenu;
+import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
+import com.gardensmc.gardensfurniture.structure.StructureHandler;
+import com.gardensmc.gardensfurniture.util.ProbabilityUtil;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import com.gardensmc.gardensfurniture.wrap.WrapHandler;
 import com.hibiscusmc.hmccosmetics.api.HMCCosmeticsAPI;
 import com.hibiscusmc.hmccosmetics.cosmetic.CosmeticSlot;
 import io.papermc.paper.event.entity.EntityEquipmentChangedEvent;
+import me.ryanhamshire.GriefPrevention.ClaimPermission;
+import me.ryanhamshire.GriefPrevention.GriefPrevention;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -43,6 +49,8 @@ import org.bukkit.inventory.meta.Damageable;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+
+import static com.gardensmc.gardensfurniture.listener.BlockListener.handleFeature;
 
 public class PlayerListener implements Listener {
 
@@ -95,11 +103,46 @@ public class PlayerListener implements Listener {
         }
     }
 
+    @EventHandler(ignoreCancelled = true)
+    public void onBoneMealTripwire(PlayerInteractEvent e) {
+        if (e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        var heldItem = e.getItem();
+        if (heldItem == null || heldItem.getType() != Material.BONE_MEAL || e.getHand() == null) {
+            return;
+        }
+        var block = e.getClickedBlock();
+        if (block != null && block.getType() == Material.TRIPWIRE) {
+            var customItem = CustomBlockManager.getItemFromLeaves(e.getClickedBlock());
+            if (customItem == null || customItem.getMechanics() == null) {
+                return;
+            }
+            var fungusStructure = customItem.getMechanics().getFungus_structure();
+            if (fungusStructure != null && ProbabilityUtil.roll(40)) {
+                block.setType(Material.AIR);
+                FurnitureStoreHandler.INSTANCE.removeFurnitureStore(block);
+                var itemEntity = CustomBlockManager.getItemEntity(block.getLocation());
+                if (itemEntity != null) {
+                    itemEntity.getEntity().remove();
+                }
+                // deplete bone meal by 1
+                heldItem.setAmount(heldItem.getAmount() - 1);
+                e.getPlayer().getInventory().setItem(e.getHand(), heldItem);
+
+                if (!StructureHandler.INSTANCE.spawnStructure(fungusStructure, block.getLocation())) {
+                    try {
+                        handleFeature(fungusStructure, block.getLocation());
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        }
+    }
+
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
     public void onNoteBlockInteract(PlayerInteractEvent e) {
         if (e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
-        if (e.isCancelled()) return;
         if (e.getClickedBlock() == null) return;
 
         // cancel all note block right clicks that are custom blocks
@@ -111,10 +154,22 @@ public class PlayerListener implements Listener {
                 if (event.isCancelled()) {
                     return;
                 }
+
+                e.setCancelled(true);
+
+                if (customItem.getIdentifier().equals("paint_bench")) {
+                    if (ProtectionUtil.hasClaimPermission(e.getClickedBlock().getLocation(), e.getPlayer(), ClaimPermission.Access)) {
+                        new DyeMenu(e.getPlayer()).open();
+                    } else {
+                        e.getPlayer().sendMessage(MiniMessage.miniMessage().deserialize("<red>You do not have permission to use that here"));
+                    }
+                    return;
+                }
+
                 if (!ProtectionUtil.canBuild(e.getClickedBlock().getLocation(), e.getPlayer())) {
                     return;
                 }
-                e.setCancelled(true);
+
                 // if player is holding an item with an action, lets place it
                 if (e.getHand() != null) {
                     ItemStack stack = e.getPlayer().getInventory().getItem(e.getHand());
@@ -297,54 +352,35 @@ public class PlayerListener implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onPlayerJump(PlayerMoveEvent e) {
+    public void onPlayerJump(PlayerJumpEvent e) {
         if (e.getPlayer().isSneaking()) return;
+        if (!isStandingOnEnderPad(e.getPlayer())) return;
 
-        Player player = e.getPlayer();
-        double velocity = Math.round(player.getVelocity().getY()*100d) / 100d;
-
-
-        // player has jump velocity
-        if (velocity >= 0.42) {
-            if (!isStandingOnEnderPad(e.getPlayer())) return;
-
-            CompletableFuture.supplyAsync(() -> {
-                for (int i = 2; i <= 30; i++) {
-                    Block block = e.getPlayer().getWorld().getBlockAt(e.getPlayer().getLocation().add(0, i, 0));
-                    if (block.getType() == Material.BARRIER) {
-                        return block;
-                    }
+        CompletableFuture.supplyAsync(() -> {
+            for (int i = 2; i <= 30; i++) {
+                Block block = e.getPlayer().getWorld().getBlockAt(e.getPlayer().getLocation().add(0, i, 0));
+                if (block.getType() == Material.BARRIER) {
+                    return block;
                 }
-                return null;
-            }).thenAccept(ender_pad -> runTeleportation(player, ender_pad));
-        }
+            }
+            return null;
+        }).thenAccept(ender_pad -> runTeleportation(e.getPlayer(), ender_pad));
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
-    public void onInteractBackpack(PlayerInteractEvent e) {
-        if (e.getClickedBlock() != null) {
-            if (isInteractableBlock(e.getClickedBlock())) {
-                return;
-            }
-        }
-        // for some reason this event is triggered if you press 'drop' on an item inside an inventory, so lets not run if an inv is open
-        var openInv = e.getPlayer().getOpenInventory().getType();
-        if (openInv == InventoryType.CRAFTING || openInv == InventoryType.CREATIVE) { // no open inventory
-            var item = e.getItem();
-            if (item != null && GardensFurniture.itemRegistry.getCustomItem(item) instanceof CustomBackpackItem backpackItem) {
-                if (item.getAmount() > 1) {
-                    return; // prevent stacked from opening
+    @EventHandler
+    public void onPlayerSneak(PlayerToggleSneakEvent e) {
+        if (!e.isSneaking()) return;
+        if (!isStandingOnEnderPad(e.getPlayer())) return;
+
+        CompletableFuture.supplyAsync(() -> {
+            for (int i = 2; i <= 30; i++) {
+                Block block = e.getPlayer().getWorld().getBlockAt(e.getPlayer().getLocation().subtract(0, i, 0));
+                if (block.getType() == Material.BARRIER) {
+                    return block;
                 }
-                // temporary - forgot to do this at the get-go
-                var meta = item.getItemMeta();
-                if (!meta.hasMaxStackSize()) {
-                    meta.setMaxStackSize(1);
-                    item.setItemMeta(meta);
-                }
-                new BackpackHandler(item, backpackItem).openBackpack(e.getPlayer());
-                e.setCancelled(true);
             }
-        }
+            return null;
+        }).thenAccept(ender_pad -> runTeleportation(e.getPlayer(), ender_pad));
     }
 
     private static final Set<Material> INTERACTABLES = Set.of(
@@ -361,6 +397,10 @@ public class PlayerListener implements Listener {
 
     private boolean isInteractableBlock(Block block) {
         if (block.getBlockData() instanceof Openable || block.getState() instanceof InventoryHolder) {
+            return true;
+        }
+        var customItem = CustomBlockManager.getItemFromLeaves(block);
+        if (customItem != null && customItem.getIdentifier().equals("paint_bench")) {
             return true;
         }
         return INTERACTABLES.contains(block.getType()) || block.getType().toString().toLowerCase().endsWith("bed");
@@ -380,37 +420,37 @@ public class PlayerListener implements Listener {
         }
     }
 
-    @EventHandler
-    public void onOffhand(EntityEquipmentChangedEvent e) {
-        if (!GardensFurniture.isCosmeticsHooked) {
-            return;
-        }
-        if (e.getEntity() instanceof Player player) {
-            var change = e.getEquipmentChanges().entrySet().stream()
-                    .filter(entry -> entry.getKey() == EquipmentSlot.OFF_HAND)
-                    .findFirst()
-                    .orElse(null);
-            if (change != null) {
-                var offhand = change.getValue().newItem();
-                var user = HMCCosmeticsAPI.getUser(player.getUniqueId());
-                if (user == null) {
-                    return;
-                }
-                if (GardensFurniture.itemRegistry.getCustomItem(offhand) instanceof CustomBackpackItem backpackItem) {
-                    var wrapItem = new WrapHandler(offhand).getWrapFromItem();
-                    var cosmeticId = wrapItem != null ? wrapItem.getCosmeticId() : backpackItem.getCosmeticId();
-                    if (cosmeticId != null) {
-                        var cosmetic = HMCCosmeticsAPI.getCosmetic(cosmeticId);
-                        if (cosmetic != null) {
-                            HMCCosmeticsAPI.equipCosmetic(user, cosmetic);
-                        }
-                    }
-                } else if (user.hasCosmeticInSlot(CosmeticSlot.BACKPACK)) {
-                    user.removeCosmeticSlot(CosmeticSlot.BACKPACK);
-                }
-            }
-        }
-    }
+//    @EventHandler
+//    public void onOffhand(EntityEquipmentChangedEvent e) {
+//        if (!GardensFurniture.isCosmeticsHooked) {
+//            return;
+//        }
+//        if (e.getEntity() instanceof Player player) {
+//            var change = e.getEquipmentChanges().entrySet().stream()
+//                    .filter(entry -> entry.getKey() == EquipmentSlot.OFF_HAND)
+//                    .findFirst()
+//                    .orElse(null);
+//            if (change != null) {
+//                var offhand = change.getValue().newItem();
+//                var user = HMCCosmeticsAPI.getUser(player.getUniqueId());
+//                if (user == null) {
+//                    return;
+//                }
+//                if (GardensFurniture.itemRegistry.getCustomItem(offhand) instanceof CustomBackpackItem backpackItem) {
+//                    var wrapItem = new WrapHandler(offhand).getWrapFromItem();
+//                    var cosmeticId = wrapItem != null ? wrapItem.getCosmeticId() : backpackItem.getCosmeticId();
+//                    if (cosmeticId != null) {
+//                        var cosmetic = HMCCosmeticsAPI.getCosmetic(cosmeticId);
+//                        if (cosmetic != null) {
+//                            HMCCosmeticsAPI.equipCosmetic(user, cosmetic);
+//                        }
+//                    }
+//                } else if (user.hasCosmeticInSlot(CosmeticSlot.BACKPACK)) {
+//                    user.removeCosmeticSlot(CosmeticSlot.BACKPACK);
+//                }
+//            }
+//        }
+//    }
 
 //    @EventHandler
 //    public void onOffHand(PlayerSwapHandItemsEvent e) {

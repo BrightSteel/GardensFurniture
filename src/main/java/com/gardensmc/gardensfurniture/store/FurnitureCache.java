@@ -37,7 +37,7 @@ public class FurnitureCache {
                 });
     }
 
-    public FurnitureStore getFurnitureStore(ChunkKey chunkKey, BlockKey blockKey) {
+    public FurnitureStore  getFurnitureStore(ChunkKey chunkKey, BlockKey blockKey) {
         Map<BlockKey, FurnitureStore> chunkData;
         try {
             chunkData = furnitureCache.get(chunkKey);
@@ -48,6 +48,14 @@ public class FurnitureCache {
 
         if (chunkData.isEmpty()) return null;
         return chunkData.get(blockKey);
+    }
+
+    public void loadChunk(ChunkKey chunkKey) {
+        try {
+            furnitureCache.get(chunkKey);
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
     }
 
     public void refreshChunk(ChunkKey chunkKey) {

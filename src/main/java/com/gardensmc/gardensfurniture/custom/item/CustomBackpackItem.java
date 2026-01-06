@@ -7,7 +7,6 @@ import org.bukkit.configuration.ConfigurationSection;
 public class CustomBackpackItem extends CustomItem {
 
     private final int rows;
-    private final String cosmeticId;
 
     public CustomBackpackItem(String identifier, ConfigurationSection itemSection) {
         super(identifier, itemSection);
@@ -15,6 +14,5 @@ public class CustomBackpackItem extends CustomItem {
         if (rows < 1 || rows > 6) {
             throw new IllegalStateException("Rows for backpack %s must be a valid inventory size!");
         }
-        this.cosmeticId = itemSection.getString("cosmetic_id");
     }
 }
