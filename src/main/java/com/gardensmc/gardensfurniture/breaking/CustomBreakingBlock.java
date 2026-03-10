@@ -69,11 +69,11 @@ public class CustomBreakingBlock {
             return;
         }
         if (ticksPassed == 0) {
-            if (heldItem == null || heldItem.getType() == Material.AIR) {
+//            if (heldItem == null || heldItem.getType() == Material.AIR) {
                 player.addPotionEffect(new PotionEffect(
-                        PotionEffectType.MINING_FATIGUE, breakTimeInTicks, 1, false, false, false
+                        PotionEffectType.MINING_FATIGUE, breakTimeInTicks, 2, false, false, false
                 ));
-            }
+//            }
 
 //            if (isBarrier) {
 //                sendBlockChangePacket(player, INVISIBLE_LEAVES_ID); // invisible block for breaking animation to show

@@ -43,14 +43,6 @@ public class BlockBreakingListener implements Listener {
     public static final Map<UUID, CustomBreakingBlock> customBreakingBlocks = new HashMap<>();
     public static final Map<Block, SoundBreakingBlock> soundBreakingBlocks = new HashMap<>();
 
-    // not sure if a better way of identifying all wood blocks
-    private static final Set<SoundGroup> WOOD_SOUND_GROUPS = Set.of(
-            Material.NOTE_BLOCK.createBlockData().getSoundGroup(),
-            Material.CHERRY_LOG.createBlockData().getSoundGroup(),
-            Material.BAMBOO_PLANKS.createBlockData().getSoundGroup(),
-            Material.WARPED_STEM.createBlockData().getSoundGroup()
-    );
-
     @EventHandler
     public void onBeginBreakCustomBlock(BlockDamageEvent e) {
         if (e.getPlayer().getGameMode() == GameMode.CREATIVE) {
@@ -60,8 +52,8 @@ public class BlockBreakingListener implements Listener {
         Material hardnessMaterial;
         if (CustomBlockManager.getCustomItemFromBlock(block) instanceof CustomPlaceableItem placeable) {
             hardnessMaterial = placeable.getCustomBlock().getMaterialTraits();
-        } else if (e.getItemInHand().getType() != Material.AIR && WOOD_SOUND_GROUPS.contains(block.getBlockSoundGroup())) {
-            hardnessMaterial = block.getType();
+//        } else if (e.getItemInHand().getType() != Material.AIR) {
+//            hardnessMaterial = block.getType();
         } else {
             return;
         }
@@ -82,35 +74,43 @@ public class BlockBreakingListener implements Listener {
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onPlayerLogin(PlayerJoinEvent e) {
-        updateToolRule(e.getPlayer());
-    }
+//    @EventHandler
+//    public void onBeginBreakBlockWithShears(BlockDamageEvent e) {
+//        if (e.getItemInHand().getType() == Material.SHEARS) {
+//            // shear speed is dependent on block being broken, so lets refresh that
+//            updateToolRule(e.getPlayer(), e.getBlock().getType());
+//        }
+//    }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onItemChange(EntityEquipmentChangedEvent e) {
-        if (e.getEntity() instanceof Player player && e.getEquipmentChanges().containsKey(EquipmentSlot.HAND)) {
-            updateToolRule(player);
-        }
-    }
+//    @EventHandler(ignoreCancelled = true)
+//    public void onPlayerLogin(PlayerJoinEvent e) {
+//        updateToolRule(e.getPlayer(), null);
+//    }
+//
+//    @EventHandler(ignoreCancelled = true)
+//    public void onItemChange(EntityEquipmentChangedEvent e) {
+//        if (e.getEntity() instanceof Player player && e.getEquipmentChanges().containsKey(EquipmentSlot.HAND)) {
+//            updateToolRule(player, null);
+//        }
+//    }
 
-    private void updateToolRule(Player player) {
-        var inv = player.getInventory();
-        var slot = inv.getHeldItemSlot();
-        var item = inv.getItem(slot);
-        if (item != null && item.getType() != Material.AIR) {
-            // modify new item to break noteblocks slowly
-            var heldClone = item.clone();
-            heldClone.editMeta(meta -> {
-                var tool = meta.getTool();
-                tool.addRule(Material.NOTE_BLOCK, 0.00001f, false);
-                meta.setTool(tool);
-            });
-            sendUpdateItemPacket(player, slot, heldClone);
-        }
-    }
+//    public static void updateToolRule(Player player, Material block) {
+//        var inv = player.getInventory();
+//        var slot = inv.getHeldItemSlot();
+//        var item = inv.getItem(slot);
+//        if (item != null && item.getType() != Material.AIR) {
+//            // modify new item to break noteblocks slowly
+//            var heldClone = item.clone();
+//            heldClone.editMeta(meta -> {
+//                var tool = meta.getTool();
+//                tool.addRule(Material.NOTE_BLOCK, 0.00001f, false);
+//                meta.setTool(tool);
+//            });
+//            sendUpdateItemPacket(player, slot, heldClone);
+//        }
+//    }
 
-    private void sendUpdateItemPacket(Player player, int slot, ItemStack itemStack) {
+    private static void sendUpdateItemPacket(Player player, int slot, ItemStack itemStack) {
         PacketEvents.getAPI().getPlayerManager().sendPacketSilently(player, new WrapperPlayServerSetPlayerInventory(
                 slot,
                 SpigotConversionUtil.fromBukkitItemStack(itemStack)
