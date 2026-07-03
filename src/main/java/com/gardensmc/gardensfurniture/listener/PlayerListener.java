@@ -16,6 +16,7 @@ import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import com.gardensmc.gardensfurniture.wrap.WrapHandler;
 import com.hibiscusmc.hmccosmetics.api.HMCCosmeticsAPI;
 import com.hibiscusmc.hmccosmetics.cosmetic.CosmeticSlot;
+import de.tr7zw.nbtapi.NBT;
 import io.papermc.paper.event.entity.EntityEquipmentChangedEvent;
 import me.ryanhamshire.GriefPrevention.ClaimPermission;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
@@ -39,6 +40,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.*;
@@ -46,9 +48,14 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.util.Transformation;
+import org.joml.AxisAngle4f;
+import org.joml.Vector3f;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.IntStream;
 
 import static com.gardensmc.gardensfurniture.listener.BlockListener.handleFeature;
 
@@ -72,8 +79,9 @@ public class PlayerListener implements Listener {
             if (!e.getPlayer().isSneaking() && isInteractableBlock(e.getClickedBlock())) {
                 return;
             }
-
+            System.out.println(itemStack);
             CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
+            System.out.println(customItem);
             if (customItem != null) {
                 if (ProtectionUtil.canBuild(location, e.getPlayer())) {
                     if (customItem instanceof CustomPlaceableItem placeableItem) {
@@ -226,6 +234,62 @@ public class PlayerListener implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true)
+    public void onPotInteract(PlayerInteractEvent e) {
+        if (e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        if (e.getClickedBlock() == null || e.getClickedBlock().getType() != Material.FLOWER_POT) return;
+
+        var aboveCustomItem = CustomBlockManager.getCustomItemFromBlock(e.getClickedBlock());
+        if (aboveCustomItem != null) {
+            e.setCancelled(true); // cancel placement of normal flower pot if our custom is planted already
+            return;
+        }
+
+        var heldItem = GardensFurniture.itemRegistry.getCustomItem(e.getItem());
+        if (heldItem == null) return;
+        var mechanics = heldItem.getMechanics();
+        if (mechanics == null || mechanics.getPot_item() == null) return;
+
+        var potItem = GardensFurniture.itemRegistry.getItem(mechanics.getPot_item());
+        if (potItem == null) {
+            throw new RuntimeException("Gurl you need to register an actual item for the pot item called: " + mechanics.getPot_item());
+        }
+        // save item to store
+        var itemToStore = e.getItem().clone();
+        itemToStore.setAmount(1);
+        // deplete held amount
+        if (e.getPlayer().getGameMode() != GameMode.CREATIVE) {
+            e.getItem().setAmount(e.getItem().getAmount() - 1);
+        }
+        // plant
+        e.setCancelled(true); // if held item is also a real plant (ie sapling) it'll plant both, so lets cancel
+        ItemDisplay display = (ItemDisplay) e.getClickedBlock().getWorld().spawnEntity(e.getClickedBlock().getLocation().clone().add(0.5, 0, 0.5), EntityType.ITEM_DISPLAY);
+        display.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
+        display.setItemStack(GardensFurniture.itemRegistry.buildItem(potItem));
+//        display.setBrightness(new Display.Brightness(0, 15));
+        display.setTransformation(new Transformation(
+                new Vector3f(0, 0.65f, 0), // translate up to sit on pot nicely
+                new AxisAngle4f(0, 0, 0, 1),
+                new Vector3f(0.75f, 0.75f, 0.75f), // scale down
+                new AxisAngle4f(0, 0, 0, 1)
+        ));
+        NBT.modifyPersistentData(display, nbt -> {
+            nbt.setItemStack("GardensFurniturePotted", itemToStore);
+        });
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPotBreak(BlockBreakEvent e) {
+        if (e.getBlock().getType() != Material.FLOWER_POT) return;
+        var plantedItem = CustomBlockManager.getItemEntity(e.getBlock().getLocation());
+        if (plantedItem == null) return;
+        var plantedHeldItem = NBT.getPersistentData(plantedItem.getEntity(), nbt -> nbt.getItemStack("GardensFurniturePotted"));
+        if (plantedHeldItem == null) return;
+
+        plantedItem.getEntity().remove();
+        e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), plantedHeldItem);
+    }
+
+    @EventHandler(ignoreCancelled = true)
     public void onRemoveWaxed(PlayerInteractEvent e) {
         if (e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         if (e.getClickedBlock() == null) return;
@@ -236,6 +300,25 @@ public class PlayerListener implements Listener {
             }
         }
 
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onInteract(PlayerInteractEvent e) {
+        if (e.getAction() == Action.RIGHT_CLICK_BLOCK &&
+                e.getClickedBlock() != null &&
+                e.getClickedBlock().getType().name().toUpperCase().endsWith("SHULKER_BOX")) {
+
+            // this fires BEFORE the inventory opens
+            // delay 1 tick so server finishes its updates
+            Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> getNearbyPacketFurniture(
+                    e.getClickedBlock()).forEach(block -> e.getPlayer().sendBlockChange(block.getLocation(), block.getBlockData())), 1L);
+        }
+    }
+
+    private List<Block> getNearbyPacketFurniture(Block shulkerBlock) {
+        return IntStream.range(-5, 6).mapToObj(i -> shulkerBlock.getRelative(0, i, 0))
+                .filter(block -> FurnitureStoreHandler.INSTANCE.getFurnitureStore(block) != null)
+                .toList();
     }
 
 //    @EventHandler
@@ -339,7 +422,7 @@ public class PlayerListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
     public void onInteractBarrier(PlayerInteractEvent e) {
         if (e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         var block = e.getClickedBlock();
