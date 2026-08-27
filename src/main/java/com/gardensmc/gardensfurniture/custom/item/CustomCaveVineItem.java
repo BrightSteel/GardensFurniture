@@ -12,7 +12,11 @@ import org.bukkit.block.data.type.CaveVines;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.geysermc.geyser.api.block.custom.CustomBlockData;
+import org.geysermc.geyser.api.block.custom.CustomBlockPermutation;
+import org.geysermc.geyser.api.block.custom.CustomBlockState;
 
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -32,11 +36,11 @@ public class CustomCaveVineItem extends CustomPlaceableItem {
     }
 
     @Override
-    public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions) {
-        if(!super.placeBlock(player, heldItem, location, placeOptions)) {
+    public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions, Block clickedBlock) {
+        if(!super.placeBlock(player, heldItem, location, placeOptions, clickedBlock)) {
             return false;
         }
-        return plant.placeBlock(player, heldItem, this, location, placeOptions);
+        return plant.placeBlock(player, heldItem, this, location, placeOptions, clickedBlock);
     }
 
     @Override
@@ -69,13 +73,55 @@ public class CustomCaveVineItem extends CustomPlaceableItem {
 
     @Override
     public CustomBlock getPlacedBlock(Block block) {
+        return switch (variantOf(block)) {
+            case "vine_25" -> vine_25;
+            case "vine" -> vine;
+            default -> plant;
+        };
+    }
+
+    // discriminator used both for server-side block resolution and the bedrock "variant" property
+    private String variantOf(Block block) {
         if (block.getType() == Material.CAVE_VINES) {
             if (vine_25 != null && block.getBlockData() instanceof CaveVines caveVines && caveVines.getAge() == 25) {
-                return vine_25;
-            } else {
-                return vine;
+                return "vine_25";
             }
+            return "vine";
         }
-        return plant;
+        return "plant";
+    }
+
+    @Override
+    public void onBuildGeyserBlockData(CustomBlockData.Builder builder) {
+        var variants = new ArrayList<String>(List.of("plant", "vine"));
+        if (vine_25 != null) {
+            variants.add("vine_25");
+        }
+        builder.stringProperty("variant", variants);
+    }
+
+    @Override
+    public void onBuildGeyserBlockState(CustomBlockState.Builder builder, Block block) {
+        builder.stringProperty("variant", variantOf(block));
+    }
+
+    @Override
+    public List<CustomBlockPermutation> getPermutations() {
+        var permutations = new ArrayList<CustomBlockPermutation>();
+        addVariantPermutation(permutations, plant, "plant");
+        addVariantPermutation(permutations, vine, "vine");
+        if (vine_25 != null) {
+            addVariantPermutation(permutations, vine_25, "vine_25");
+        }
+        return permutations;
+    }
+
+    private void addVariantPermutation(List<CustomBlockPermutation> permutations, CustomCaveVineBlock block, String variant) {
+        if (block.getBedrock() != null) {
+            permutations.add(new CustomBlockPermutation(
+                    block.getBedrock().toCustomBlockComponents(),
+                    "q.block_property('%s') == '%s'".formatted("variant", variant)
+            ));
+        }
     }
 }

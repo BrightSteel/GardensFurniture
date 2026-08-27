@@ -2,6 +2,7 @@ package com.gardensmc.gardensfurniture.breaking;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
+import com.gardensmc.gardensfurniture.custom.item.mechanics.AirborneBreakPenaltyHandler;
 import com.gardensmc.gardensfurniture.listener.BlockBreakingListener;
 import com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -23,7 +24,6 @@ import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -33,7 +33,7 @@ import java.util.UUID;
 
 public class CustomBreakingBlock {
 
-//    private static final int INVISIBLE_LEAVES_ID = getBreakBlockId();
+    private static final int INVISIBLE_LEAVES_ID = getBreakBlockId();
     private static final int BARRIER_ID = StateTypes.BARRIER.createBlockState().getGlobalId();
 
     private final UUID playerUUID;
@@ -68,16 +68,13 @@ public class CustomBreakingBlock {
             close();
             return;
         }
-        if (ticksPassed == 0) {
-//            if (heldItem == null || heldItem.getType() == Material.AIR) {
-                player.addPotionEffect(new PotionEffect(
-                        PotionEffectType.MINING_FATIGUE, breakTimeInTicks, 2, false, false, false
-                ));
-//            }
-
-//            if (isBarrier) {
-//                sendBlockChangePacket(player, INVISIBLE_LEAVES_ID); // invisible block for breaking animation to show
-//            }
+        if (ticksPassed == 0 && isBarrier && !isInstantBreak()) {
+            // A barrier isn't diggable, so the client would never render a crack overlay on it. Swap it
+            // (for this player only) to the invisible break block so the vanilla client shows the breaking
+            // animation; our tick loop drives the actual stages/speed. The break block's type is in the
+            // tool-rule suppression list, so the client can't dig it out from under the animation - which
+            // is why no Mining Fatigue is needed here. Skip the swap for an instant break (would just flicker).
+            sendBlockChangePacket(player, INVISIBLE_LEAVES_ID);
         }
         ticksPassed++;
         byte currStage = (byte) Math.floor(((double) ticksPassed / breakTimeInTicks) * 9.0d); // convert into stage from 0-9
@@ -94,13 +91,34 @@ public class CustomBreakingBlock {
         return ticksPassed < breakTimeInTicks;
     }
 
+    // A single-tick break time is effectively instant - no crack animation is worth showing,
+    // so we skip the barrier -> break-block swap for it.
+    private boolean isInstantBreak() {
+        return breakTimeInTicks <= 1;
+    }
+
+    // True once this break is showing (or should show) the invisible break block instead of the
+    // barrier, so BlockPacketListener can keep rewriting server barrier re-sends back to the leaf.
+    public boolean isSwappedToBreakBlock() {
+        return isBarrier && !isInstantBreak();
+    }
+
+    public boolean isAtBlock(int x, int y, int z) {
+        return block.getX() == x && block.getY() == y && block.getZ() == z;
+    }
+
+    // The client-side block a broken barrier is shown as (invisible in the resource pack) so the
+    // crack overlay has geometry to render on.
+    public static int getInvisibleBreakBlockId() {
+        return INVISIBLE_LEAVES_ID;
+    }
+
     public void close() {
         task.cancel();
         BlockBreakingListener.customBreakingBlocks.remove(playerUUID);
         var player = Bukkit.getPlayer(playerUUID);
         if (player != null) {
             sendBlockDestroyStagePacket(player, (byte) 10); // invalid stage to remove animation
-            player.removePotionEffect(PotionEffectType.MINING_FATIGUE);
             if (isBarrier) {
                 sendBlockChangePacket(player, BARRIER_ID); // revert to barrier
             }
@@ -141,7 +159,7 @@ public class CustomBreakingBlock {
         ));
     }
 
-    private int calculateBreakTimeInTicks(Player player, ItemStack heldItem, Material hardnessMaterial) {
+    public static int calculateBreakTimeInTicks(Player player, ItemStack heldItem, Material hardnessMaterial) {
         var hardness = hardnessMaterial.getHardness();
         var speedMultiplier = getSpeedMultiplier(player, heldItem, hardnessMaterial);
         double damage = speedMultiplier / hardness;
@@ -153,72 +171,56 @@ public class CustomBreakingBlock {
         return damage > 1 ? 1 : (int) Math.ceil(1 / damage);
     }
 
-    private double getSpeedMultiplier(Player player, ItemStack heldItem, Material blockMaterial) {
-        double multiplier = 1;
-        if (isPreferredTool(heldItem, blockMaterial)) {
-            multiplier = getToolMultiplier(heldItem.getType(), blockMaterial);
+    private static double getSpeedMultiplier(Player player, ItemStack heldItem, Material blockMaterial) {
+        BlockState blockState = ((CraftBlockState) blockMaterial.createBlockData().createBlockState()).getHandle();
+        // Base tool speed straight from vanilla, so it matches what the client itself predicts and correctly
+        // handles tools the "correct tool for drops" check misses - e.g. shears/hoe on leaves, which mine
+        // fast but aren't a drop-gating tool (leaves drop with anything).
+        double multiplier = CraftItemStack.asNMSCopy(heldItem).getDestroySpeed(blockState);
+        if (multiplier > 1) {
             var efficiencyLevel = heldItem.getEnchantmentLevel(Enchantment.EFFICIENCY);
             if (efficiencyLevel > 0) {
-                multiplier += efficiencyLevel ^ 2 + 1;
+                // vanilla: digSpeed += efficiency^2 + 1 (only when the tool is actually effective, i.e. speed > 1)
+                multiplier += efficiencyLevel * efficiencyLevel + 1;
             }
         }
         var hasteEffect = player.getPotionEffect(PotionEffectType.HASTE);
         if (hasteEffect != null) {
-            multiplier *= 0.2 * hasteEffect.getAmplifier() + 1;
+            // vanilla: digSpeed *= 1 + 0.2 * hasteLevel, where hasteLevel = amplifier + 1
+            // (getAmplifier() is 0-based, so Haste I -> amplifier 0).
+            multiplier *= 1 + 0.2 * (hasteEffect.getAmplifier() + 1);
         }
         if (player.isInWater() && !heldItem.containsEnchantment(Enchantment.AQUA_AFFINITY)) {
             multiplier /= 5;
         }
-        if (!player.isOnGround()) {
+        // The disable_airborn_break_penalty mechanic cancels the vanilla airborne slowdown; the client-side
+        // equivalent for normal blocks is handled by AirborneBreakPenaltyHandler.
+        if (!player.isOnGround() && !AirborneBreakPenaltyHandler.hasMechanic(heldItem)) {
             multiplier /= 5;
         }
         return multiplier;
     }
 
-    private boolean isPreferredTool(ItemStack heldItem, Material blockMaterial) {
+    private static boolean isPreferredTool(ItemStack heldItem, Material blockMaterial) {
         BlockState blockState = ((CraftBlockState) blockMaterial.createBlockData().createBlockState()).getHandle();
         var item = CraftItemStack.asNMSCopy(heldItem);
         return item.isCorrectToolForDrops(blockState);
     }
 
-    private boolean isCanHarvest(ItemStack heldItem, Material blockMaterial) {
+    private static boolean isCanHarvest(ItemStack heldItem, Material blockMaterial) {
         var blockData = ((CraftBlockData) blockMaterial.createBlockData());
         return !blockData.requiresCorrectToolForDrops() || isPreferredTool(heldItem, blockMaterial);
     }
 
-    // Uses code from https://git.mythiccraft.io/ASangarin/breaker/
-    public static double getToolMultiplier(Material type, Material block) {
-        return switch (type) {
-            case WOODEN_SWORD, GOLDEN_SWORD, STONE_SWORD, IRON_SWORD, DIAMOND_SWORD, NETHERITE_SWORD -> block == Material.COBWEB ? 15 : 1.5;
-
-            case WOODEN_AXE, WOODEN_HOE, WOODEN_SHOVEL, WOODEN_PICKAXE -> 2;
-            case GOLDEN_AXE, GOLDEN_HOE, GOLDEN_SHOVEL, GOLDEN_PICKAXE -> 12;
-            case STONE_AXE, STONE_HOE, STONE_SHOVEL, STONE_PICKAXE -> 4;
-            case COPPER_AXE, COPPER_HOE, COPPER_SHOVEL, COPPER_PICKAXE -> 5;
-            case IRON_AXE, IRON_HOE, IRON_SHOVEL, IRON_PICKAXE -> 6;
-            case DIAMOND_AXE, DIAMOND_HOE, DIAMOND_SHOVEL, DIAMOND_PICKAXE -> 8;
-            case NETHERITE_AXE, NETHERITE_HOE, NETHERITE_SHOVEL, NETHERITE_PICKAXE -> 9;
-
-            case SHEARS -> calculateShears(block);
-
-            default -> 1;
-        };
-    }
-
-    public static double calculateShears(Material block) {
-        return switch (block) {
-            case VINE, CAVE_VINES, GLOW_LICHEN -> 1;
-            case WHITE_WOOL, BLACK_WOOL, BLUE_WOOL, BROWN_WOOL, CYAN_WOOL, GRAY_WOOL, GREEN_WOOL, LIGHT_BLUE_WOOL,
-                 LIGHT_GRAY_WOOL, LIME_WOOL, MAGENTA_WOOL, ORANGE_WOOL, PINK_WOOL, PURPLE_WOOL, RED_WOOL, YELLOW_WOOL ->
-                    5;
-            case COBWEB, ACACIA_LEAVES, AZALEA_LEAVES, BIRCH_LEAVES, DARK_OAK_LEAVES,
-                 FLOWERING_AZALEA_LEAVES, JUNGLE_LEAVES, MANGROVE_LEAVES, OAK_LEAVES, SPRUCE_LEAVES ->
-                    15;
-            default -> 2;
-        };
-    }
-
+    // The block a barrier is (client-side only) swapped to while it's being broken, so the vanilla
+    // client has a real, diggable surface to render the crack overlay on. Leaves are used rather than
+    // tripwire because their non-zero hardness lets Mining Fatigue actually slow the client-side dig,
+    // keeping it in sync with our server-driven break stages. Birch leaves at distance 6 / persistent
+    // false is the state the resource pack renders invisibly.
     private static int getBreakBlockId() {
-        return StateTypes.TRIPWIRE.createBlockState().getGlobalId();
+        var state = StateTypes.BIRCH_LEAVES.createBlockState();
+        state.setDistance(6);
+        state.setPersistent(false);
+        return state.getGlobalId();
     }
 }

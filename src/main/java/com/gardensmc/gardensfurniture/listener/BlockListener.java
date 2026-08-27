@@ -15,6 +15,7 @@ import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.gardensmc.gardensfurniture.util.ProbabilityUtil;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
+import de.tr7zw.nbtapi.NBT;
 import io.papermc.paper.configuration.GlobalConfiguration;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
 import org.bukkit.*;
@@ -70,23 +71,65 @@ public class BlockListener implements Listener {
                 }
             }
             dropCustomItem(e, customItem, true, e.getBlock().getType().toString().toLowerCase().endsWith("leaves"));
+            // Doors are 2 blocks: vanilla removes both halves, but the other half keeps its furniture store
+            if (customItem instanceof CustomPlaceableItem placeableItem
+                    && placeableItem.getCustomBlock() instanceof CustomWaxedBlock waxedBlock
+                    && waxedBlock.getWaxedType().toString().startsWith("DOOR")
+                    && e.getBlock().getBlockData() instanceof org.bukkit.block.data.type.Door door) {
+                var broken = e.getBlock();
+                var partner = door.getHalf() == org.bukkit.block.data.Bisected.Half.BOTTOM
+                        ? broken.getRelative(BlockFace.UP) : broken.getRelative(BlockFace.DOWN);
+                FurnitureStoreHandler.INSTANCE.removeFurnitureStore(partner);
+            }
         }
 
     }
 
+    // When a waxed slab is combined into a double, the Bedrock client has already predicted the
+    // slab in the block it clicked toward (the neighbour cell) and drew a ghost there; the server
+    // merged it into a double here instead. Resend the neighbouring cells to the player so the
+    // Bedrock client discards its prediction (Java clients just get a harmless redundant update).
+//    @EventHandler(ignoreCancelled = true)
+//    public void onWaxedSlabDoublePlace(BlockPlaceEvent e) {
+//        var block = e.getBlockPlaced();
+//        if (!CustomWaxedBlock.WaxedType.materials().contains(block.getType())
+//                || !(block.getBlockData() instanceof org.bukkit.block.data.type.Slab slab)
+//                || slab.getType() != org.bukkit.block.data.type.Slab.Type.DOUBLE) {
+//            return;
+//        }
+//        var player = e.getPlayer();
+//        System.out.println("Player did a double slab");
+//        Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> {
+//            for (BlockFace face : new BlockFace[]{BlockFace.UP, BlockFace.DOWN, BlockFace.SELF}) {
+//                var b = block.getRelative(face);
+//                player.sendBlockChange(b.getLocation(), b.getBlockData());
+//                System.out.println("Updating anove");
+//            }
+//        }, 2L);
+//    }
+
     @EventHandler
     public void onSaplingOrTripwireBreak(BlockPhysicsEvent e) {
         var type = e.getBlock().getType();
-        if (type == Material.OAK_SAPLING || type == Material.DARK_OAK_SAPLING || type == Material.TRIPWIRE) {
+        if (type == Material.OAK_SAPLING || type == Material.DARK_OAK_SAPLING || type == Material.TRIPWIRE || type == Material.FLOWER_POT) {
             Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> {
                 if (e.getBlock().getType() != type) {
-                    if (type.toString().toLowerCase().endsWith("sapling")) {
+                    if (type != Material.TRIPWIRE) {
                         ItemEntity itemEntity = getItemEntity(e.getBlock().getLocation());
                         if (itemEntity != null) {
+                            if (type == Material.FLOWER_POT) {
+                                // drop potted item
+                                var plantedHeldItem = NBT.getPersistentData(itemEntity.getEntity(), nbt -> nbt.getItemStack("GardensFurniturePotted"));
+                                if (plantedHeldItem != null) {
+                                    e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), plantedHeldItem);
+                                }
+                            }
                             itemEntity.getEntity().remove();
                         }
                     }
-                    FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
+                    if (type != Material.FLOWER_POT) {
+                        FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
+                    }
                 }
             }, getCheckDelay(e.getSourceBlock().getType()));
         }
@@ -321,6 +364,7 @@ public class BlockListener implements Listener {
     public static void handleFeature(String feature, Location location) throws ExecutionException, InterruptedException {
         var intersectingChunks = location.getWorld().getIntersectingChunks(BoundingBox.of(location, 20, 1, 20)).stream().toList();
         GlobalConfiguration.get().blockUpdates.disableNoteblockUpdates = true;
+        location.getWorld().setGameRule(GameRule.SEND_COMMAND_FEEDBACK, false);
         var chunkSnapshots = toChunkSnapshot(intersectingChunks);
         List<ChunkSnapshot> finalChunkSnapshots = chunkSnapshots;
         var existingNoteBlocks = CompletableFuture.supplyAsync(() -> finalChunkSnapshots.stream()
@@ -342,6 +386,7 @@ public class BlockListener implements Listener {
                 replacements.forEach(replacement -> ChunkFurnitureLoader.INSTANCE.placeFurnitureBlock(replacement));
                 intersectingChunks.forEach(chunk -> FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(chunk)));
                 GlobalConfiguration.get().blockUpdates.disableNoteblockUpdates = false;
+                location.getWorld().setGameRule(GameRule.SEND_COMMAND_FEEDBACK, true);
             } catch (Exception ex) {
                 ex.printStackTrace();
             }

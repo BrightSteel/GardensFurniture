@@ -60,7 +60,7 @@ public abstract class TStructure {
         Location loc = origin.clone().add(x, y, z);
         CustomItem customItem = GardensFurniture.itemRegistry.getItem(identifier);
         if (customItem instanceof CustomPlaceableItem placeableItem) {
-            placeableItem.placeBlock(null, null, loc, placeOptions);
+            placeableItem.placeBlock(null, null, loc, placeOptions, null);
             furnitureAffectedChunks.add(loc.getChunk());
         }
     }

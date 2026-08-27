@@ -14,6 +14,7 @@ import com.ticxo.modelengine.api.ModelEngineAPI;
 import de.tr7zw.nbtapi.NBT;
 import lombok.Getter;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.*;
@@ -107,7 +108,7 @@ public class CustomDisplayBlock extends CustomBlock {
     }
 
     @Override
-    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions) {
+    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions, Block clickedBlock) {
 
 //        Color color = null;
 //        if (heldItem != null && heldItem.getItemMeta() instanceof LeatherArmorMeta leather) {

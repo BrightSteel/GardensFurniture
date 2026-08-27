@@ -1,6 +1,7 @@
 package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.breaking.CustomBreakingBlock;
 import com.gardensmc.gardensfurniture.custom.block.*;
 import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
@@ -23,6 +24,10 @@ import com.github.retrooper.packetevents.util.Vector3i;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockChange;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChunkData;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerMultiBlockChange;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSetPlayerInventory;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSetSlot;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerWindowItems;
+import io.github.retrooper.packetevents.util.SpigotConversionUtil;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -133,8 +138,78 @@ public class BlockPacketListener {
                 else if (event.getPacketType() == PacketType.Play.Server.MULTI_BLOCK_CHANGE) {
                     handleMultiBlockChange(new WrapperPlayServerMultiBlockChange(event), player);
                 }
+                else if (event.getPacketType() == PacketType.Play.Server.SET_SLOT) {
+                    handleSetSlot(new WrapperPlayServerSetSlot(event));
+                }
+                else if (event.getPacketType() == PacketType.Play.Server.WINDOW_ITEMS) {
+                    handleWindowItems(new WrapperPlayServerWindowItems(event));
+                }
+                else if (event.getPacketType() == PacketType.Play.Server.SET_PLAYER_INVENTORY) {
+                    handleSetPlayerInventory(new WrapperPlayServerSetPlayerInventory(event));
+                }
             }
         });
+    }
+
+    // Hotbar occupies menu slots 36-44 of the player inventory (window 0).
+    private static final int HOTBAR_FIRST_SLOT = 36;
+    private static final int HOTBAR_LAST_SLOT = 44;
+
+    // The client predicts block breaking from the tool in its hand, so BlockBreakingListener patches the
+    // client's held items with a rule that makes the custom-breaking block types near-unbreakable. Any
+    // real inventory update the server sends (join sync, durability change, item move) would revert that
+    // patch and let the next dig mispredict/insta-break; re-apply the patch to every hotbar slot the server
+    // sends. Slots are patched by index only (no inventory lookup) so this is safe off the main thread.
+    private void handleSetSlot(WrapperPlayServerSetSlot packet) {
+        int slot = packet.getSlot();
+        boolean hotbar;
+        if (packet.getWindowId() == 0) {
+            hotbar = slot >= HOTBAR_FIRST_SLOT && slot <= HOTBAR_LAST_SLOT; // menu slots 36-44
+        } else if (packet.getWindowId() == -2) {
+            hotbar = slot >= 0 && slot <= 8; // direct player-inventory update: raw inventory index
+        } else {
+            return;
+        }
+        if (!hotbar) return;
+        var patched = suppressBreakingFor(packet.getItem());
+        if (patched != null) {
+            packet.setItem(patched);
+        }
+    }
+
+    // Newer per-slot player-inventory update (1.21.2+). Its slot is the raw inventory index, so the
+    // hotbar is 0-8 here (not the 36-44 menu range that SET_SLOT/WINDOW_ITEMS use).
+    private void handleSetPlayerInventory(WrapperPlayServerSetPlayerInventory packet) {
+        if (packet.getSlot() < 0 || packet.getSlot() > 8) return;
+        var patched = suppressBreakingFor(packet.getStack());
+        if (patched != null) {
+            packet.setStack(patched);
+        }
+    }
+
+    private void handleWindowItems(WrapperPlayServerWindowItems packet) {
+        if (packet.getWindowId() != 0) return;
+        var items = packet.getItems();
+        boolean modified = false;
+        for (int slot = HOTBAR_FIRST_SLOT; slot <= HOTBAR_LAST_SLOT && slot < items.size(); slot++) {
+            var patched = suppressBreakingFor(items.get(slot));
+            if (patched != null) {
+                items.set(slot, patched);
+                modified = true;
+            }
+        }
+        if (modified) {
+            packet.setItems(items);
+        }
+    }
+
+    // Returns a patched packet item, or null when there's nothing to change (empty slot).
+    private com.github.retrooper.packetevents.protocol.item.ItemStack suppressBreakingFor(
+            com.github.retrooper.packetevents.protocol.item.ItemStack packetItem) {
+        if (packetItem == null || packetItem.isEmpty()) return null;
+        var bukkit = SpigotConversionUtil.toBukkitItemStack(packetItem);
+        if (bukkit == null || bukkit.getType().isAir()) return null;
+        return SpigotConversionUtil.fromBukkitItemStack(BlockBreakingListener.withBreakSuppressionTool(bukkit));
     }
 
     private void sendChunkDataPacket(Player player, WrapperPlayServerChunkData packet) {
@@ -289,6 +364,19 @@ public class BlockPacketListener {
     private boolean handleBlockChange(WrapperPlayServerBlockChange packet, Player player) {
         Vector3i pos = packet.getBlockPosition();
         WrappedBlockState blockState = packet.getBlockState();
+        // While a barrier is being broken it's shown to the digger as the invisible break block so the
+        // crack animation renders. The server re-sends the real barrier (e.g. to reject the dig on an
+        // unbreakable block); rewrite those back to the break block so the illusion isn't clobbered.
+        if (blockState.getType() == StateTypes.BARRIER) {
+            if (BlockBreakingListener.isBreakingBarrierAt(player.getUniqueId(), pos.getX(), pos.getY(), pos.getZ())) {
+                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
+                        player,
+                        new WrapperPlayServerBlockChange(pos, CustomBreakingBlock.getInvisibleBreakBlockId())
+                );
+                return true;
+            }
+            return false;
+        }
         if (leavesTypes.contains(blockState.getType())) {
             CustomItem customItem = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
             if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {

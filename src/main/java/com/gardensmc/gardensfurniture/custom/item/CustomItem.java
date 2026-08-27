@@ -1,5 +1,7 @@
 package com.gardensmc.gardensfurniture.custom.item;
 
+import com.gardensmc.gardensfurniture.custom.block.bedrock.BedrockBlock;
+import com.gardensmc.gardensfurniture.custom.item.attributes.Attributes;
 import com.gardensmc.gardensfurniture.custom.item.components.Components;
 import com.gardensmc.gardensfurniture.custom.item.mechanics.Mechanics;
 import com.github.retrooper.packetevents.protocol.recipe.CraftingCategory;
@@ -14,6 +16,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.ItemFlag;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.List;
@@ -41,6 +44,8 @@ public class CustomItem implements Comparable<CustomItem> {
     @Getter
     private final Components components;
     @Getter
+    private final Attributes attributes;
+    @Getter
     private final List<ItemFlag> itemFlags;
     @Getter
     private final Mechanics mechanics;
@@ -54,6 +59,11 @@ public class CustomItem implements Comparable<CustomItem> {
     private final String cosmeticId;
     @Getter
     private final boolean isGenerateModel;
+    @Getter
+    private final boolean bedrockItem;
+    @Nullable
+    @Getter
+    private final BedrockBlock bedrockBlock;
 
     public CustomItem(String identifier, ConfigurationSection itemSection) {
         this.identifier = identifier;
@@ -69,6 +79,8 @@ public class CustomItem implements Comparable<CustomItem> {
         this.show_in_menu = itemSection.getBoolean("show_in_menu", true);
         var componentSection = itemSection.getConfigurationSection("components");
         this.components = componentSection == null ? null : new Components(componentSection);
+        var attributesSection = itemSection.getConfigurationSection("attributes");
+        this.attributes = attributesSection == null ? null : new Attributes(attributesSection);
         this.itemFlags = itemSection.getStringList("item_flags")
                 .stream()
                 .map(flag -> ItemFlag.valueOf(flag.toUpperCase()))
@@ -83,6 +95,9 @@ public class CustomItem implements Comparable<CustomItem> {
         this.basedOn = itemSection.getStringList("basedOn");
         this.cosmeticId = itemSection.getString("cosmetic_id");
         this.isGenerateModel = itemSection.getBoolean("generate_model", true);
+        this.bedrockItem = itemSection.getBoolean("bedrock");
+        var bedrockSection = itemSection.getConfigurationSection("bedrock");
+        this.bedrockBlock = bedrockSection == null ? null : new BedrockBlock(bedrockSection, identifier);
     }
 
     public int getCustomModel() {

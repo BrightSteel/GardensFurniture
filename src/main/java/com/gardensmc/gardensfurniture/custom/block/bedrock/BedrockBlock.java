@@ -7,7 +7,6 @@ import org.geysermc.geyser.api.block.custom.component.*;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Getter
 public class BedrockBlock {
@@ -17,8 +16,12 @@ public class BedrockBlock {
     private final List<Integer> rotation; // size of 3
     private final BoundingBox collisionBox;
     private final BoundingBox selectionBox;
+    // Whether the inventory item renders as this custom block (true) or falls back to its flat item
+    // icon (false, e.g. doors). Defaults to true.
+    private final boolean sendBlockAsItem;
 
     public BedrockBlock(ConfigurationSection bedrockSection, String furnitureId) {
+        this.sendBlockAsItem = bedrockSection.getBoolean("send_block_as_item", true);
         var geometrySection = bedrockSection.getConfigurationSection("geometry");
         this.geometry = geometrySection == null ? null : new Geometry(geometrySection);
         var materialSections = bedrockSection.getConfigurationSection("material_instances");
@@ -42,6 +45,10 @@ public class BedrockBlock {
         var componentBuilder = CustomBlockComponents.builder()
                 .geometry(GeometryComponent.builder()
                         .identifier(geometry == null || geometry.getIdentifier() == null ? "minecraft:geometry.full_block" : geometry.getIdentifier())
+                        .culling(geometry != null ? geometry.getCulling() : null)
+                        .cullingLayer(geometry != null ? geometry.getCullingLayer() : null)
+                        .cullingShape(geometry != null ? geometry.getCullingShape() : null)
+                        .boneVisibility(geometry != null ? geometry.getBoneVisibility() : null)
                         .build())
                 .destructibleByMining(Float.MAX_VALUE)
                 .placeAir(true);
@@ -64,6 +71,8 @@ public class BedrockBlock {
         getMaterialInstances().forEach(materialInstance -> componentBuilder.materialInstance(materialInstance.getName(), org.geysermc.geyser.api.block.custom.component.MaterialInstance.builder()
                 .texture(materialInstance.getTexture())
                 .renderMethod(materialInstance.getRenderMethod())
+                .ambientOcclusion(materialInstance.isAmbientOcclusion())
+                .faceDimming(materialInstance.isFaceDimming())
                 .build()
         ));
         return componentBuilder.build();

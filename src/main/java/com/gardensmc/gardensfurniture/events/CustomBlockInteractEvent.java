@@ -2,6 +2,7 @@ package com.gardensmc.gardensfurniture.events;
 
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
@@ -20,17 +21,21 @@ public class CustomBlockInteractEvent extends Event implements Cancellable {
 
     private Block block;
 
+    // the face of the clicked block that was targeted; the adjacent placement cell is block.getRelative(blockFace)
+    private BlockFace blockFace;
+
     private boolean cancelled;
 
     private static final HandlerList HANDLERS = new HandlerList();
 
 
-    public CustomBlockInteractEvent(Player player, CustomItem customItem, EquipmentSlot hand, ItemStack heldItem, Block block) {
+    public CustomBlockInteractEvent(Player player, CustomItem customItem, EquipmentSlot hand, ItemStack heldItem, Block block, BlockFace blockFace) {
         this.player = player;
         this.customItem = customItem;
         this.hand = hand;
         this.heldItem = heldItem;
         this.block = block;
+        this.blockFace = blockFace;
     }
 
     @Override
@@ -60,6 +65,10 @@ public class CustomBlockInteractEvent extends Event implements Cancellable {
 
     public Block getBlock() {
         return block;
+    }
+
+    public BlockFace getBlockFace() {
+        return blockFace;
     }
 
     @Override

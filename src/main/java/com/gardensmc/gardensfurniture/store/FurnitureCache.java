@@ -37,6 +37,14 @@ public class FurnitureCache {
                 });
     }
 
+    public Map<BlockKey, FurnitureStore> getChunkFurniture(Chunk chunk) {
+        try {
+            return furnitureCache.get(new ChunkKey(chunk));
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public FurnitureStore  getFurnitureStore(ChunkKey chunkKey, BlockKey blockKey) {
         Map<BlockKey, FurnitureStore> chunkData;
         try {

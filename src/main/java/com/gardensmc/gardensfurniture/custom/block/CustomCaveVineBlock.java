@@ -40,7 +40,7 @@ public class CustomCaveVineBlock extends CustomBlock {
     }
 
     @Override
-    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem placeableItem, Location location, PlaceOptions placeOptions) {
+    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem placeableItem, Location location, PlaceOptions placeOptions, Block clickedBlock) {
         Block block = location.getBlock();
         FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, new FurnitureStore(placeableItem.getIdentifier()), heldItem != null);
         if (heldItem != null && placeableItem.getMaterial() == Material.GLOW_BERRIES) {

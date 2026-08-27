@@ -41,7 +41,7 @@ public class CustomBlockManager {
      *  • Location is replaceable material (air, grass, etc)
      * @return placement success
      */
-    public static boolean attemptPlacement(Player player, ItemStack heldItem, CustomPlaceableItem placeableItem, Location location, PlaceOptions placeOptions) {
+    public static boolean attemptPlacement(Player player, ItemStack heldItem, CustomPlaceableItem placeableItem, Location location, PlaceOptions placeOptions, Block clickedBlock) {
         if (!ProtectionUtil.canBuild(location, player)) {
             return false;
         }
@@ -50,7 +50,13 @@ public class CustomBlockManager {
         }
         var material = location.getBlock().getType();
         if (!isPlaceableMaterial(material)) return false;
-        return placeableItem.placeBlock(player, heldItem, location, placeOptions);
+        // Expose the placing player as the furniture lifecycle cause (for Prism attribution).
+        FurnitureStoreHandler.currentActor.set(player);
+        try {
+            return placeableItem.placeBlock(player, heldItem, location, placeOptions, clickedBlock);
+        } finally {
+            FurnitureStoreHandler.currentActor.remove();
+        }
     }
 
     public static boolean isPlaceableMaterial(Material material) {
@@ -168,14 +174,25 @@ public class CustomBlockManager {
        if (player != null && !ProtectionUtil.canBuild(location, player)) {
            return;
        }
+        // Expose the breaking player as the furniture lifecycle cause (for Prism attribution).
+        FurnitureStoreHandler.currentActor.set(player);
+        try {
+            breakFurnitureInternal(player, location, isBreakingSystem);
+        } finally {
+            FurnitureStoreHandler.currentActor.remove();
+        }
+    }
+
+    private static void breakFurnitureInternal(Player player, Location location, boolean isBreakingSystem) {
         ItemEntity itemEntity = getItemEntity(location, true);
         if (itemEntity == null) return;
 
         CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
         var placeable = (CustomPlaceableItem) customItem;
-        if (player != null && player.getGameMode() != GameMode.CREATIVE && !isBreakingSystem && location.getBlock().getType() == Material.BARRIER && placeable != null && placeable.getCustomBlock().getMaterialTraits() != null) {
-            return; // breaks with breaking handler
-        }
+        // TODO temp disabled since breaking system is disabled
+//        if (player != null && player.getGameMode() != GameMode.CREATIVE && !isBreakingSystem && location.getBlock().getType() == Material.BARRIER && placeable != null && placeable.getCustomBlock().getMaterialTraits() != null) {
+//            return; // breaks with breaking handler
+//        }
         FurnitureBreakEvent e = new FurnitureBreakEvent(player, (CustomPlaceableItem) customItem, itemEntity);
         Bukkit.getPluginManager().callEvent(e);
         if (e.isCancelled()) {

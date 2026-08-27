@@ -9,6 +9,8 @@ public class MaterialInstance {
     private final String name;
     private final String texture;
     private final String renderMethod;
+    private final boolean ambientOcclusion;
+    private final boolean faceDimming;
 
     public MaterialInstance(String name, ConfigurationSection materialSection) {
         this.name = name;
@@ -16,5 +18,7 @@ public class MaterialInstance {
         this.renderMethod = materialSection.getString("render_method") != null
                 ? materialSection.getString("render_method")
                 : "alpha_test";
+        this.ambientOcclusion = materialSection.getBoolean("ambient_occlusion", true);
+        this.faceDimming = materialSection.getBoolean("face_dimming", true);
     }
 }

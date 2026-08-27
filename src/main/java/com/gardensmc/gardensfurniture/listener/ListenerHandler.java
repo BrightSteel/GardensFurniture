@@ -31,7 +31,8 @@ public class ListenerHandler {
                 new VanillaBlockSoundListener(),
                 new AnvilListener(),
                 new CraftListener(),
-                new BlockBreakingListener()
+                new BlockBreakingListener(),
+                new EnderStepListener()
         );
     }
 }

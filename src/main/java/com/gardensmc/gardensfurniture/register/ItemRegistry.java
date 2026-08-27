@@ -7,19 +7,26 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.*;
 import com.gardensmc.gardensfurniture.custom.block.CustomLeavesBlock;
 import com.gardensmc.gardensfurniture.custom.item.*;
+import com.gardensmc.gardensfurniture.custom.item.attributes.Attributes;
 import com.gardensmc.gardensfurniture.generator.GenDefinitionsHandler;
+import com.gardensmc.gardensfurniture.listener.EnderStepListener;
 import com.gardensmc.gardensfurniture.generator.GenOverworldDimensionHandler;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import de.tr7zw.nbtapi.NBT;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.Consumable;
+import io.papermc.paper.datacomponent.item.UseCooldown;
 import io.papermc.paper.datacomponent.item.consumable.ItemUseAnimation;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -47,6 +54,9 @@ public class ItemRegistry {
     public final Map<String, String> customNoteBlocks = new HashMap<>();
 
     public static final String FURNITURE_KEY = "GardensFurnitureId";
+    // keys for the interaction-range attribute modifiers applied from item components.
+    private static final NamespacedKey BLOCK_INTERACTION_RANGE_KEY = new NamespacedKey("gardensfurniture", "block_interaction_range");
+    private static final NamespacedKey ENTITY_INTERACTION_RANGE_KEY = new NamespacedKey("gardensfurniture", "entity_interaction_range");
     public static final File generatedDir = new File(GardensFurniture.plugin.getDataFolder(), "generated");
 
     // Regular expression to match text between ":" and "/"
@@ -290,7 +300,26 @@ public class ItemRegistry {
                     }
                 }
 
+                applyAttributes(meta, customItem.getMaterial(), customItem.getAttributes());
+
+                boolean enderStep = customItem.getMechanics() != null && customItem.getMechanics().isEnderStep();
+                if (enderStep) {
+                    var lore = meta.lore() != null ? new ArrayList<>(meta.lore()) : new ArrayList<net.kyori.adventure.text.Component>();
+                    lore.add(MiniMessage.miniMessage().deserialize(
+                            "<!italic><blue>+" + EnderStepListener.DISTANCE_PER_ARMOR + " Block Ender Step Range"));
+                    meta.lore(lore);
+                }
+
                 itemStack.setItemMeta(meta);
+
+                // ender_step: give the armor a shared use-cooldown group so the ability's cooldown
+                // renders as the vanilla overlay on the items (triggered in EnderStepListener).
+                if (enderStep) {
+                    itemStack.setData(DataComponentTypes.USE_COOLDOWN, UseCooldown
+                            .useCooldown(EnderStepListener.COOLDOWN_SECONDS)
+                            .cooldownGroup(EnderStepListener.COOLDOWN_GROUP)
+                            .build());
+                }
                 // paper data builder
                 // need to use NMS for block_state stuff until they implement block_data builder
 //                itemStack.setData(DataComponentTypes.BLOCK_DATA, new PaperBlockItemDataProperties(new BlockItemStateProperties(
@@ -305,6 +334,35 @@ public class ItemRegistry {
             return itemStack;
         }
         return null;
+    }
+
+    // Applies the item's `attributes` section (block_interaction_range / entity_interaction_range) as
+    // MAIN_HAND attribute modifiers. The config value is the exact bonus added to the vanilla base
+    // (block ~4.5, entity ~3); vanilla then handles the extended block/entity interaction (mining,
+    // furniture-barrier left-clicks, mob attacks, the attack cooldown indicator) natively.
+    private void applyAttributes(ItemMeta meta, Material material, Attributes attributes) {
+        if (attributes == null) {
+            return;
+        }
+        Double blockRange = attributes.getBlock_interaction_range();
+        Double entityRange = attributes.getEntity_interaction_range();
+        if (blockRange == null && entityRange == null) {
+            return;
+        }
+        // adding any explicit attribute modifier drops the item's DEFAULT modifiers (a tool's attack
+        // damage/speed), so re-add the main-hand defaults first.
+        var defaults = material.getDefaultAttributeModifiers(EquipmentSlot.HAND);
+        for (var entry : defaults.entries()) {
+            meta.addAttributeModifier(entry.getKey(), entry.getValue());
+        }
+        if (blockRange != null) {
+            meta.addAttributeModifier(Attribute.BLOCK_INTERACTION_RANGE, new AttributeModifier(
+                    BLOCK_INTERACTION_RANGE_KEY, blockRange, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.MAINHAND));
+        }
+        if (entityRange != null) {
+            meta.addAttributeModifier(Attribute.ENTITY_INTERACTION_RANGE, new AttributeModifier(
+                    ENTITY_INTERACTION_RANGE_KEY, entityRange, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.MAINHAND));
+        }
     }
 
     public void reload() {

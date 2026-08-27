@@ -38,7 +38,7 @@ public class CustomNoteBlock extends CustomBlock {
     }
 
     @Override
-    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions) {
+    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions, Block clickedBlock) {
         Block block = location.getBlock();
         CustomBlockPlaceEvent event = new CustomBlockPlaceEvent(player, customItem, block);
         Bukkit.getPluginManager().callEvent(event);

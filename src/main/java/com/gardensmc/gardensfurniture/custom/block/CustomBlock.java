@@ -80,11 +80,11 @@ public abstract class CustomBlock {
         return config.getConfigurationSection(sectionName);
     }
 
-    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem placeableItem, Location location) {
-        return placeBlock(player, heldItem, placeableItem, location, new PlaceOptions());
+    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem placeableItem, Location location, Block clickedBlock) {
+        return placeBlock(player, heldItem, placeableItem, location, new PlaceOptions(), clickedBlock);
     }
 
-    public abstract boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem placeableItem, Location location, PlaceOptions placeOptions);
+    public abstract boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem placeableItem, Location location, PlaceOptions placeOptions, Block clickedBlock);
 
     public void onBreak(Location location) {
     }

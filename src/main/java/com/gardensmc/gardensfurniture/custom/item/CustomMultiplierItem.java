@@ -32,11 +32,10 @@ public class CustomMultiplierItem extends CustomPlaceableItem {
     }
 
     @Override
-    public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions) {
-        if (!super.placeBlock(player, heldItem, location, placeOptions)) {
+    public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions, Block clickedBlock) {
+        if (!super.placeBlock(player, heldItem, location, placeOptions, clickedBlock)) {
             return false;
         }
-        Block clickedBlock = location.getBlock().getRelative(placeOptions.getBlockFace().getOppositeFace());
         // only supports leaf / trip wire blocks right now
         var multiplier = getBlockMultiplier(clickedBlock, player);
         if (multiplier == -1) {
@@ -48,7 +47,8 @@ public class CustomMultiplierItem extends CustomPlaceableItem {
                 heldItem,
                 this,
                 placementLocation,
-                placeOptions.setMultiplier(multiplier)
+                placeOptions.setMultiplier(multiplier),
+                clickedBlock
         );
     }
 

@@ -5,11 +5,37 @@ import org.bukkit.Chunk;
 import org.bukkit.block.Block;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.util.function.BiConsumer;
+
 public class FurnitureStoreHandler {
 
     public static FurnitureStoreHandler INSTANCE = new FurnitureStoreHandler();
     public static final String IDENTIFIER_KEY = "customItem";
     public static final String BLOCK_DATA_KEY = "furnitureStore";
+
+    /**
+     * Lifecycle hook for block/hybrid furniture (anything backed by a {@link FurnitureStore}).
+     * Invoked with {@code (block, true)} right after a store is written and {@code (block, false)}
+     * right before a store is removed — the canonical "furniture appeared / is about to disappear"
+     * signal. Kept as a plain {@link BiConsumer} so this core class carries no dependency on any
+     * optional integration (e.g. Prism); the hook is only registered when that plugin is present.
+     */
+    @Nullable
+    public static volatile BiConsumer<Block, Boolean> lifecycleListener;
+
+    /**
+     * When true on the current thread, lifecycle notifications are suppressed. Used to silence
+     * world-gen furniture placement and our own rollback/restore rebuilds, which must never be
+     * re-recorded as new player activity.
+     */
+    public static final ThreadLocal<Boolean> suppressLifecycle = ThreadLocal.withInitial(() -> false);
+
+    /**
+     * Best-effort "who is causing the current furniture change" for the current thread (a Player,
+     * or null). Set at the player-facing place/break entry points so lifecycle recording can attribute
+     * a cause. Null falls back to a system cause.
+     */
+    public static final ThreadLocal<Object> currentActor = new ThreadLocal<>();
 
     public void addFurnitureStore(Block block, FurnitureStore furnitureStore, boolean refresh) {
         var nbtChunk = new NBTChunk(block.getChunk()).getPersistentDataContainer().getOrCreateCompound("GardensFurniture");
@@ -26,12 +52,28 @@ public class FurnitureStoreHandler {
         if (refresh) {
             FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(block.getWorld().getName(), block.getChunk().getX(), block.getChunk().getZ()));
         }
+        notifyLifecycle(block, true);
     }
 
     public void removeFurnitureStore(Block block) {
+        // Notify before the store is gone so listeners can still read the furniture spec.
+        notifyLifecycle(block, false);
         var nbtChunk = new NBTChunk(block.getChunk()).getPersistentDataContainer().getOrCreateCompound("GardensFurniture");
         nbtChunk.removeKey(getBlockKey(block));
         FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(block.getWorld().getName(), block.getChunk().getX(), block.getChunk().getZ()));
+    }
+
+    private void notifyLifecycle(Block block, boolean added) {
+        var listener = lifecycleListener;
+        if (listener == null || Boolean.TRUE.equals(suppressLifecycle.get())) {
+            return;
+        }
+        if (added) {
+            // Ensure the cache reflects the just-written store so the listener can read its spec,
+            // even when the caller passed refresh=false.
+            FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(block.getChunk()));
+        }
+        listener.accept(block, added);
     }
 
     @Nullable

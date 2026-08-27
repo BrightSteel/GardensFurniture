@@ -5,16 +5,15 @@ import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.store.FurnitureCache;
+import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
-import com.gardensmc.gardensfurniture.util.ProbabilityUtil;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.NoteBlock;
 
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -24,7 +23,7 @@ public class ChunkFurnitureLoader {
 
     public static final Queue<FurnitureReplacement> furnitureReplacementQueue = new ConcurrentLinkedQueue<>();
     public static ChunkFurnitureLoader INSTANCE = new ChunkFurnitureLoader();
-    private static final int BLOCKS_PER_SECOND = 75;
+    private static final int BLOCKS_PER_TICK = 10000;
 
     public void processSnapshot(ChunkSnapshot chunkSnapshot, World.Environment environment) {
         var yMin = environment == World.Environment.NORMAL ? -60 : 0;
@@ -61,7 +60,7 @@ public class ChunkFurnitureLoader {
     }
 
     public void tickChunkFurnitureLoader() {
-        tickChunkFurnitureLoader(BLOCKS_PER_SECOND);
+        tickChunkFurnitureLoader(BLOCKS_PER_TICK);
     }
 
     public void loadAllQueuedFurniture() {
@@ -98,12 +97,18 @@ public class ChunkFurnitureLoader {
         var mapping = furnitureReplacement.mapping;
         CustomItem customItem = GardensFurniture.itemRegistry.getItem(mapping);
         block.setType(Material.AIR);
-        if (customItem instanceof CustomPlaceableItem placeableItem) {
-            placeableItem.placeBlock(null, null, block.getLocation(), new PlaceOptions().setPersistentLeaves(false));
-        } else {
-            if (!StructureHandler.INSTANCE.spawnStructure(mapping, block.getLocation())) {
-                GardensFurniture.plugin.getLogger().log(Level.SEVERE, "Generation mapping " + mapping + " is not a placeable custom block or structure!");
+        // World-gen furniture is deterministic and regenerable; never record it as player activity.
+        FurnitureStoreHandler.suppressLifecycle.set(true);
+        try {
+            if (customItem instanceof CustomPlaceableItem placeableItem) {
+                placeableItem.placeBlock(null, null, block.getLocation(), new PlaceOptions().setPersistentLeaves(false), null);
+            } else {
+                if (!StructureHandler.INSTANCE.spawnStructure(mapping, block.getLocation())) {
+                    GardensFurniture.plugin.getLogger().log(Level.SEVERE, "Generation mapping " + mapping + " is not a placeable custom block or structure!");
+                }
             }
+        } finally {
+            FurnitureStoreHandler.suppressLifecycle.set(false);
         }
         return chunk;
     }

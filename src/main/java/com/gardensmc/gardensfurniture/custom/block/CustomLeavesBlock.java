@@ -61,7 +61,7 @@ public class CustomLeavesBlock extends CustomBlock {
     }
 
     @Override
-    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions) {
+    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions, Block clickedBlock) {
         Block block = location.getBlock();
         block.setType(getLeavesType().getMaterial());
         FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, new FurnitureStore(customItem.getIdentifier()), heldItem != null);

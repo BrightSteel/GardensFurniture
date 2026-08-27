@@ -33,6 +33,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Openable;
 import org.bukkit.block.data.type.NoteBlock;
+import org.bukkit.block.data.type.Slab;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.entity.*;
@@ -79,13 +80,11 @@ public class PlayerListener implements Listener {
             if (!e.getPlayer().isSneaking() && isInteractableBlock(e.getClickedBlock())) {
                 return;
             }
-            System.out.println(itemStack);
             CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
-            System.out.println(customItem);
             if (customItem != null) {
                 if (ProtectionUtil.canBuild(location, e.getPlayer())) {
                     if (customItem instanceof CustomPlaceableItem placeableItem) {
-                        boolean placed = CustomBlockManager.attemptPlacement(e.getPlayer(), e.getItem(), placeableItem, location, new PlaceOptions().setBlockFace(e.getBlockFace()));
+                        boolean placed = CustomBlockManager.attemptPlacement(e.getPlayer(), e.getItem(), placeableItem, location, new PlaceOptions().setBlockFace(e.getBlockFace()), e.getClickedBlock());
                         if (placed) {
                             e.setCancelled(true);
                             switch (e.getHand()) {
@@ -108,6 +107,41 @@ public class PlayerListener implements Listener {
                     }
                 }
             }
+        }
+    }
+
+    // Combining a waxed slab into a double: Bedrock doesn't do client-side slab-merge prediction for
+    // custom blocks, so it draws a ghost full slab in the cell it clicked toward while the server
+    // merges it into a double one block over. The server never changes that cell, so Geyser never
+    // corrects it. Resend the affected cells to the placing player to discard the ghost (Geyser only;
+    // Java gets a harmless redundant update).
+    // NOT ignoreCancelled: the placement handler above cancels the event on a successful place, and
+    // we still need to fire to clear the Bedrock ghost.
+    @EventHandler
+    public void onWaxedSlabCombineRefresh(PlayerInteractEvent e) {
+        if (e.getAction() != Action.RIGHT_CLICK_BLOCK || e.getClickedBlock() == null || e.getItem() == null) {
+            return;
+        }
+        if (!(e.getClickedBlock().getBlockData() instanceof org.bukkit.block.data.type.Slab)) {
+            return;
+        }
+        var customItem = GardensFurniture.itemRegistry.getCustomItem(e.getItem());
+        if (!(customItem instanceof CustomBlockItem blockItem)
+                || !(blockItem.getCustomBlock() instanceof CustomWaxedBlock waxedBlock)
+                || !waxedBlock.getWaxedType().toString().startsWith("SLAB")) {
+            return;
+        }
+        var player = e.getPlayer();
+        var clicked = e.getClickedBlock();
+        var face = e.getBlockFace();
+        // resend at a few delays so we catch the client prediction whenever it settles
+        for (long delay : new long[]{1L, 3L, 6L}) {
+            Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> {
+                for (BlockFace f : new BlockFace[]{BlockFace.SELF, BlockFace.UP, BlockFace.DOWN, face}) {
+                    var b = clicked.getRelative(f);
+                    player.sendBlockChange(b.getLocation(), b.getBlockData());
+                }
+            }, delay);
         }
     }
 
@@ -157,13 +191,16 @@ public class PlayerListener implements Listener {
         if (e.getClickedBlock().getType() == Material.NOTE_BLOCK && e.getClickedBlock().getBlockData() instanceof NoteBlock noteBlock) {
             CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getClickedBlock());
             if (customItem != null) {
-                var event = new CustomBlockInteractEvent(e.getPlayer(), customItem, e.getHand(), e.getItem(), e.getClickedBlock());
+                var event = new CustomBlockInteractEvent(e.getPlayer(), customItem, e.getHand(), e.getItem(), e.getClickedBlock(), e.getBlockFace());
                 Bukkit.getPluginManager().callEvent(event);
+
+                // always suppress the vanilla note block interaction (retune) and placement for custom blocks
+                e.setCancelled(true);
+
+                // a listener fully handled this interaction (e.g. placed its own block); skip our default placement
                 if (event.isCancelled()) {
                     return;
                 }
-
-                e.setCancelled(true);
 
                 if (customItem.getIdentifier().equals("paint_bench")) {
                     if (ProtectionUtil.hasClaimPermission(e.getClickedBlock().getLocation(), e.getPlayer(), ClaimPermission.Access)) {
@@ -192,7 +229,7 @@ public class PlayerListener implements Listener {
                                 if (direction != null) {
                                     if (blockItem.getCustomBlock(direction) instanceof CustomNoteBlock customNoteBlock) {
                                         e.getClickedBlock().setType(Material.AIR);
-                                        customNoteBlock.placeBlock(null, stack, blockItem, e.getClickedBlock().getLocation());
+                                        customNoteBlock.placeBlock(null, stack, blockItem, e.getClickedBlock().getLocation(), null);
                                         e.getInteractionPoint().getWorld().playSound(
                                                 e.getInteractionPoint(), Sound.ITEM_AXE_STRIP, 1, 1
                                         );
@@ -343,12 +380,23 @@ public class PlayerListener implements Listener {
     public void onHitBarrier(PlayerInteractEvent e) {
         if (e.isCancelled()) return;
         if (e.getAction() != Action.LEFT_CLICK_BLOCK) return;
-        if (e.getClickedBlock() == null) return;
+        var block = e.getClickedBlock();
+        if (block == null || block.getType() != Material.BARRIER) return;
+        if (e.getPlayer().getInventory().getItem(e.getHand() == null ? EquipmentSlot.HAND : e.getHand()).getType().toString().endsWith("sword")) return;
+        if (!ProtectionUtil.canBuild(block.getLocation(), e.getPlayer())) return;
 
-        if (e.getClickedBlock().getType() == Material.BARRIER && !e.getPlayer().getInventory().getItem(e.getHand() == null ? EquipmentSlot.HAND : e.getHand()).getType().toString().endsWith("sword")) {
-            if (!ProtectionUtil.canBuild(e.getClickedBlock().getLocation(), e.getPlayer())) return;
-            CustomBlockManager.breakFurniture(e.getPlayer(), e.getClickedBlock().getLocation(), false);
+        // In survival, barrier furniture that defines material_traits breaks gradually via the
+        // CustomBreakingBlock system (BlockDamageEvent). Insta-break here only when it has no defined
+        // break speed, or in creative - where digging is instant anyway and the gradual handler bails out.
+        if (e.getPlayer().getGameMode() != GameMode.CREATIVE && hasMaterialTraits(block)) {
+            return;
         }
+        CustomBlockManager.breakFurniture(e.getPlayer(), block.getLocation(), false);
+    }
+
+    private boolean hasMaterialTraits(Block block) {
+        return CustomBlockManager.getCustomItemFromBlock(block) instanceof CustomPlaceableItem placeable
+                && placeable.getCustomBlock().getMaterialTraits() != null;
     }
 
 //    @EventHandler(ignoreCancelled = true)
@@ -406,6 +454,10 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void interactMobForCapture(PlayerInteractEntityEvent e) {
+        // PlayerInteractEntityEvent fires once per hand; only handle the main hand
+        if (e.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
         var mob = e.getRightClicked();
         if (!(mob instanceof LivingEntity livingEntity) || CaptureMobHandler.CAPTURABLE_MOB_FILTER.contains(mob.getType())) {
             return;
@@ -418,6 +470,9 @@ public class PlayerListener implements Listener {
             var captureMobHandler = new CaptureMobHandler(e.getPlayer(), wrappedItem.get());
             if (captureMobHandler.isCaptureItem() && captureMobHandler.canCaptureMob(livingEntity)) {
                 captureMobHandler.captureMob(livingEntity);
+                // cancel so vanilla doesn't follow through and use the resulting spawn egg
+                // on the block/fluid behind the mob (e.g. re-spawning it when standing in water)
+                e.setCancelled(true);
             }
         }
     }

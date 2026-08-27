@@ -28,10 +28,10 @@ public class CustomDirectionalItem extends CustomPlaceableItem {
     }
 
     @Override
-    public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions) {
-        if (!super.placeBlock(player, heldItem, location, placeOptions)) return false;
+    public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions, Block clickedBlock) {
+        if (!super.placeBlock(player, heldItem, location, placeOptions, clickedBlock)) return false;
         CustomBlock customBlock = getCustomBlock(placeOptions.getBlockFace());
-        return customBlock.placeBlock(player, heldItem, this, location, placeOptions.setFacing(placeOptions.getBlockFace().toString()));
+        return customBlock.placeBlock(player, heldItem, this, location, placeOptions.setFacing(placeOptions.getBlockFace().toString()), clickedBlock);
     }
 
     @Override

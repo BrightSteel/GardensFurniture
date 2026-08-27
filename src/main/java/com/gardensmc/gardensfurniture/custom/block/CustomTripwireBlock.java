@@ -80,7 +80,7 @@ public class CustomTripwireBlock extends CustomBlock {
     }
 
     @Override
-    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions) {
+    public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions, Block clickedBlock) {
         Block block = location.getBlock();
         var blockFace = placeOptions.getBlockFace();
 

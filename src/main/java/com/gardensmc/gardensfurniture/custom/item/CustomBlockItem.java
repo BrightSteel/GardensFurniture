@@ -7,6 +7,7 @@ import com.gardensmc.gardensfurniture.custom.block.CustomSaplingBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomWaxedBlock;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -34,8 +35,8 @@ public class CustomBlockItem extends CustomPlaceableItem {
     }
 
     @Override
-    public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions) {
-        if (!super.placeBlock(player, heldItem, location, placeOptions)) return false;
-        return customBlock.placeBlock(player, heldItem, this, location, placeOptions);
+    public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions, Block clickedBlock) {
+        if (!super.placeBlock(player, heldItem, location, placeOptions, clickedBlock)) return false;
+        return customBlock.placeBlock(player, heldItem, this, location, placeOptions, clickedBlock);
     }
 }
