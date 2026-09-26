@@ -72,7 +72,7 @@ public class CustomBlockManager {
             return loc.getWorld().getNearbyEntities(loc, 1, 1, 1, entity -> entity instanceof LivingEntity || entity instanceof Display)
                     .stream()
                     // ignore display entity data holders
-                    .filter(entity -> !(entity instanceof ItemDisplay itemDisplay && itemDisplay.getItemStack() == null))
+                    .filter(entity -> !(entity instanceof ItemDisplay itemDisplay && itemDisplay.getItemStack().isEmpty()))
                     .anyMatch(entity -> isValidEntity(entity, loc));
         }
         return false;

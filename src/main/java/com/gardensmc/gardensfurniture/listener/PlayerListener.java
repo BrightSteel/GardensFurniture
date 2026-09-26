@@ -399,7 +399,16 @@ public class PlayerListener implements Listener {
         var customItem = GardensFurniture.itemRegistry.getCustomItem(heldItem);
         if (customItem == null) return;
         if (customItem.getIdentifier().equalsIgnoreCase("destroy_stick") && e.getPlayer().hasPermission("gardens.destroy_stick")) {
-            e.getRightClicked().remove();
+            var clicked = e.getRightClicked();
+            // furniture is a display plus hitbox entities/barriers: remove the whole piece (no drop), not
+            // just the part that was clicked, which would leave the rest orphaned
+            if ((clicked instanceof Interaction || clicked instanceof ItemDisplay)
+                    && CustomBlockManager.getFurnitureEntity(clicked.getLocation()) != null) {
+                CustomBlockManager.breakFurniture(null, clicked.getLocation(), false);
+            } else {
+                clicked.remove();
+            }
+            e.setCancelled(true);
         }
     }
 
