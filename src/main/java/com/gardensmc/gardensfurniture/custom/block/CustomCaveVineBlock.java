@@ -48,6 +48,7 @@ public class CustomCaveVineBlock extends CustomBlock {
                 block.setType(Material.CAVE_VINES, true);
                 return true;
             }
+            FurnitureStoreHandler.INSTANCE.removeIfNotPlaced(block, type -> type == Material.CAVE_VINES || type == Material.CAVE_VINES_PLANT);
             return false; // place naturally (if not placed by terrain mapping)
         }
         block.setType(Material.CAVE_VINES, true);

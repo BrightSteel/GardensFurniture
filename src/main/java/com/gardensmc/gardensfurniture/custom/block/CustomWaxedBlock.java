@@ -68,10 +68,14 @@ public class CustomWaxedBlock extends CustomBlock {
             }
         }
         var furnitureStore = new FurnitureStore(customItem.getIdentifier());
-        FurnitureStoreHandler.INSTANCE.addFurnitureStore(location.getBlock(), furnitureStore, heldItem != null);
+        var block = location.getBlock();
+        FurnitureStoreHandler.INSTANCE.addFurnitureStore(block, furnitureStore, heldItem != null);
+        FurnitureStoreHandler.INSTANCE.removeIfNotPlaced(block, type -> type == waxedType.getMaterial());
         if (waxedType.toString().startsWith("DOOR")) {
             // top door block
-            FurnitureStoreHandler.INSTANCE.addFurnitureStore(location.getBlock().getRelative(BlockFace.UP), furnitureStore, heldItem != null);
+            var top = block.getRelative(BlockFace.UP);
+            FurnitureStoreHandler.INSTANCE.addFurnitureStore(top, furnitureStore, heldItem != null);
+            FurnitureStoreHandler.INSTANCE.removeIfNotPlaced(top, type -> type == waxedType.getMaterial());
         }
         return false; // allow natural placement
     }
