@@ -46,13 +46,16 @@ public class ItemRegistry {
     public CustomItemFactory customItemFactory;
     public CustomBlockFactory customBlockFactory;
 
-    private final Map<String, Set<CustomItem>> customItemByCategory = new HashMap<>();
+    // replaced as a whole when (re)loading, so a failed or in-progress reload never leaves them half-built
+    private volatile Map<String, Set<CustomItem>> customItemByCategory = new HashMap<>();
     @Getter
-    private final Map<String, CustomItem> customItems = new HashMap<>();
+    private volatile Map<String, CustomItem> customItems = new HashMap<>();
 
     // also can be for leaves too: distance,persistent -> identifier
     // note,instrument,powered -> custom_item_identifier
-    public final Map<String, String> customNoteBlocks = new HashMap<>();
+    private volatile Map<String, String> customNoteBlocks = new HashMap<>();
+    // block states registered by the items currently being loaded
+    private Map<String, String> loadingBlockStates = new HashMap<>();
 
     public static final String FURNITURE_KEY = "GardensFurnitureId";
     // keys for the interaction-range attribute modifiers applied from item components.
@@ -77,13 +80,25 @@ public class ItemRegistry {
             }
         }
 //        Set<String> outerFolders = new HashSet<>();
+        Map<String, CustomItem> customItems = new HashMap<>();
+        Map<String, Set<CustomItem>> customItemByCategory = new HashMap<>();
+        loadingBlockStates = new HashMap<>();
+        int failed = 0;
         for (Map.Entry<String, Configuration> entry : ConfigUtil.all_items.entrySet()) {
             String name = entry.getKey();
             var config = entry.getValue();
             for (String key : config.getKeys(false)) {
                 ConfigurationSection section = config.getConfigurationSection(key);
                 if (section != null) {
-                    CustomItem customItem = customItemFactory.createCustomItem(key, section);
+                    CustomItem customItem;
+                    try {
+                        customItem = customItemFactory.createCustomItem(key, section);
+                    } catch (Exception e) {
+                        // one bad item shouldn't take every other item down with it
+                        failed++;
+                        GardensFurniture.plugin.getLogger().severe("Skipping item '%s' in items/%s.yml: %s".formatted(key, name, e));
+                        continue;
+                    }
                     customItems.put(key, customItem);
 
                     if (customItem.showInMenu() && !customItem.isTemplate()) {
@@ -118,6 +133,12 @@ public class ItemRegistry {
                     }
                 }
             }
+        }
+        this.customItems = customItems;
+        this.customItemByCategory = customItemByCategory;
+        this.customNoteBlocks = loadingBlockStates;
+        if (failed > 0) {
+            GardensFurniture.plugin.getLogger().severe("%d item(s) failed to load, see errors above".formatted(failed));
         }
         GenDefinitionsHandler.INSTANCE.generate();
         GenOverworldDimensionHandler.INSTANCE.generate();
@@ -370,10 +391,15 @@ public class ItemRegistry {
     }
 
     public void reload() {
-        customItems.clear();
-        customItemByCategory.clear();
-        customNoteBlocks.clear();
         assembleItems();
+    }
+
+    // called by the block factory while items load: note/leaves states that map back to an item
+    public void registerBlockState(String stateKey, String identifier) {
+        var existing = loadingBlockStates.put(stateKey, identifier);
+        if (existing != null && !existing.equals(identifier)) {
+            GardensFurniture.plugin.getLogger().warning("Block state %s is used by both '%s' and '%s'; '%s' wins".formatted(stateKey, existing, identifier, identifier));
+        }
     }
 
     @Nullable

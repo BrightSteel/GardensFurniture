@@ -18,12 +18,12 @@ public class CustomBlockFactory {
             case TRIPWIRE -> customBlock = new CustomTripwireBlock(blockSection, item_identifier, blockId);
             case NOTE -> {
                 CustomNoteBlock customNoteBlock = new CustomNoteBlock(blockSection, item_identifier, blockId);
-                GardensFurniture.itemRegistry.customNoteBlocks.put(customNoteBlock.getNote().getId() + "," + customNoteBlock.getInstrument().toString() + "," + customNoteBlock.isPowered(), item_identifier);
+                GardensFurniture.itemRegistry.registerBlockState(customNoteBlock.getNote().getId() + "," + customNoteBlock.getInstrument().toString() + "," + customNoteBlock.isPowered(), item_identifier);
                 customBlock = customNoteBlock;
             }
             case LEAVES -> {
                 CustomLeavesBlock customLeavesBlock = new CustomLeavesBlock(blockSection, item_identifier, blockId);
-                GardensFurniture.itemRegistry.customNoteBlocks.put(customLeavesBlock.getDistance() + "," + customLeavesBlock.isPersistent(), item_identifier);
+                GardensFurniture.itemRegistry.registerBlockState(customLeavesBlock.getDistance() + "," + customLeavesBlock.isPersistent(), item_identifier);
                 customBlock = customLeavesBlock;
             }
             case DISPLAY -> customBlock = new CustomDisplayBlock(blockSection, item_identifier, blockId);

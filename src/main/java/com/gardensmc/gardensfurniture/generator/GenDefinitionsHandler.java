@@ -41,6 +41,7 @@ public class GenDefinitionsHandler {
 
         var definition = new YamlConfiguration();
         for (var modelFile : modelFiles) {
+            if (!modelFile.getName().endsWith(".json")) continue; // e.g. .DS_Store
             var modelFileName = modelFile.getName().substring(0, modelFile.getName().indexOf(".json"));
             var section = definition.createSection(subDirectory.getName() + "_" + modelFileName);
             // construct modelSection

@@ -1,5 +1,6 @@
 package com.gardensmc.gardensfurniture.custom.item;
 
+import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.bedrock.BedrockBlock;
 import com.gardensmc.gardensfurniture.custom.item.attributes.Attributes;
 import com.gardensmc.gardensfurniture.custom.item.components.Components;
@@ -122,6 +123,7 @@ public class CustomItem implements Comparable<CustomItem> {
             try {
                 material = Material.valueOf(material_str.toUpperCase());
             } catch (Exception e) {
+                GardensFurniture.plugin.getLogger().warning("Unknown material '%s' for item '%s', using PAPER".formatted(material_str, getIdentifier()));
                 return material;
             }
         }
