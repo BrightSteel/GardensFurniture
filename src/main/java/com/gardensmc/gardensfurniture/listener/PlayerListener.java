@@ -37,6 +37,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockDispenseEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.EquipmentSlot;
@@ -411,6 +412,30 @@ public class PlayerListener implements Listener {
                 return;
             }
             CustomBlockManager.onInteractFurniture(e.getPlayer(), e.getHand(), itemEntity, interaction);
+            e.setCancelled(true);
+        }
+    }
+
+    // Captured mobs live in real spawn eggs. Vanilla would spend one on a spawner, on water, on a mob
+    // of the same type (spawning a baby) or from a dispenser, losing the stored mob. Our release (in
+    // onCustomItemInteract) spawns the mob itself, so vanilla's own egg use can always be denied.
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void denyVanillaCapturedEggUse(PlayerInteractEvent e) {
+        if (CaptureMobHandler.isCapturedMob(e.getItem())) {
+            e.setUseItemInHand(org.bukkit.event.Event.Result.DENY);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void denyCapturedEggOnMob(PlayerInteractEntityEvent e) {
+        if (CaptureMobHandler.isCapturedMob(e.getPlayer().getInventory().getItem(e.getHand()))) {
+            e.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void denyCapturedEggDispense(BlockDispenseEvent e) {
+        if (CaptureMobHandler.isCapturedMob(e.getItem())) {
             e.setCancelled(true);
         }
     }

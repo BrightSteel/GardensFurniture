@@ -94,6 +94,12 @@ public class CaptureMobHandler {
         mob.remove();
     }
 
+    // a captured mob is kept in a real spawn egg; vanilla must never get to use that egg itself
+    public static boolean isCapturedMob(ItemStack itemStack) {
+        return itemStack != null && !itemStack.getType().isAir()
+                && NBT.get(itemStack, nbt -> (boolean) nbt.hasTag(CAPTURED_GROUP_KEY));
+    }
+
     public boolean isStoringMob() {
         return NBT.get(heldItem.itemStack(), nbt -> (boolean) nbt.hasTag(CAPTURED_GROUP_KEY));
     }
