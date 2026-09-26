@@ -58,6 +58,12 @@ public class CustomDisplayBlock extends CustomBlock {
     public CustomDisplayBlock(ConfigurationSection blockSection, String identifier, String blockId) {
         super(blockSection, blockId);
         this.lightToggleable = blockSection.getBoolean("toggleable") && getLight() > 0;
+        if (blockSection.getBoolean("toggleable") && getLight() <= 0) {
+            // block.light places the light blocks (and is what can be toggled); display_data.light only
+            // brightens the model, so on its own it leaves nothing to switch
+            GardensFurniture.plugin.getLogger().warning(("'%s' is toggleable but has no block light - set block.light "
+                    + "(display_data.light only sets model brightness)").formatted(identifier));
+        }
         this.itemIdentifier = identifier;
         ConfigurationSection displaySection = blockSection.getConfigurationSection("display_data");
         if (displaySection == null) return;
