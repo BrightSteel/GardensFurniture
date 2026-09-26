@@ -302,7 +302,14 @@ public class CustomDisplayBlock extends CustomBlock {
             }
         }
 
-        if (translation != null) {
+        // the display sits mid-block; a FIXED floor piece is a frame lying on the floor, so it goes down to
+        // the block's bottom (a ceiling one up to its top), and a configured translation adds to that
+        var fixedFloor = displayTransform == ItemDisplay.ItemDisplayTransform.FIXED && blockFace == BlockFace.UP;
+        var fixedCeiling = displayTransform == ItemDisplay.ItemDisplayTransform.FIXED && blockFace == BlockFace.DOWN;
+        if (fixedFloor || fixedCeiling) {
+            transform.getTranslation().set(0, fixedFloor ? -0.5f : 0.5f, 0);
+            if (translation != null) transform.getTranslation().add(translation);
+        } else if (translation != null) {
             transform.getTranslation().set(translation);
         }
         // FIXED draws the model as an item frame would, and a pack's "fixed" block is written for a frame
