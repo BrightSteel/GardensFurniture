@@ -84,6 +84,8 @@ public class PlayerListener implements Listener {
             if (customItem != null) {
                 if (ProtectionUtil.canBuild(location, e.getPlayer())) {
                     if (customItem instanceof CustomPlaceableItem placeableItem) {
+                        // adventure mode can't place blocks in vanilla either
+                        if (e.getPlayer().getGameMode() == GameMode.ADVENTURE) return;
                         boolean placed = CustomBlockManager.attemptPlacement(e.getPlayer(), e.getItem(), placeableItem, location, new PlaceOptions().setBlockFace(e.getBlockFace()), e.getClickedBlock());
                         if (placed) {
                             e.setCancelled(true);
@@ -92,7 +94,7 @@ public class PlayerListener implements Listener {
                                 case OFF_HAND -> e.getPlayer().swingOffHand();
                             }
 
-                            if (e.getPlayer().getGameMode() == GameMode.SURVIVAL) {
+                            if (e.getPlayer().getGameMode() != GameMode.CREATIVE) {
                                 ItemStack usedItem = e.getPlayer().getInventory().getItem(e.getHand());
                                 usedItem.setAmount(usedItem.getAmount() - 1);
                                 e.getPlayer().getInventory().setItem(e.getHand(), usedItem);
