@@ -182,9 +182,11 @@ public class CustomDisplayBlock extends CustomBlock {
         var world = location.getWorld();
         if (world == null) return false;
 
+        // barriers turn with the display, whether it faces the player or the clicked block face
+        var rotation = facePlayer ? Rotation.fromPlayerFacing(yaw) : Rotation.fromBlockFace(blockFace);
         List<Vector> barrierVectors;
         if (hitbox == Hitbox.BARRIER && !barriers.isEmpty()) {
-            var remappedVectors = barriers.stream().map(v -> Barriers.rotate(v, yaw)).toList();
+            var remappedVectors = barriers.stream().map(v -> Barriers.rotate(v, rotation)).toList();
             // every barrier cell must be free, and (for players) buildable and not occupied by a mob or player
             if (remappedVectors.stream().map(vector -> location.clone().add(vector)).allMatch(cell ->
                     CustomBlockManager.isPlaceableMaterial(cell.getBlock().getType())
@@ -197,7 +199,6 @@ public class CustomDisplayBlock extends CustomBlock {
             barrierVectors = Collections.emptyList();
         }
 
-        var rotation = facePlayer ? Rotation.fromPlayerFacing(yaw) : Rotation.fromBlockFace(blockFace);
         var locationOffset = location.clone().add(0.5, 0.0, 0.5); // move to center of block
         if (centerLeft) {
             locationOffset = getLocationOffset(locationOffset, Facing.fromYaw(rotation.getYaw()));

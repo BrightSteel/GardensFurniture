@@ -25,9 +25,9 @@ public final class Barriers {
         return new Vector(Double.parseDouble(nums[0]), Double.parseDouble(nums[1]), Double.parseDouble(nums[2]));
     }
 
-    // offsets are written facing north; turn them to face the same way as the furniture
-    public static Vector rotate(Vector vector, float yaw) {
-        return switch ((int) Rotation.fromPlayerFacing(yaw).getYaw()) {
+    // offsets are written for an unrotated display; turn them by the display's own rotation
+    public static Vector rotate(Vector vector, Rotation displayRotation) {
+        return switch ((int) displayRotation.getYaw()) {
             case 90 -> new Vector(-vector.getZ(), vector.getY(), vector.getX());
             case 180 -> new Vector(-vector.getX(), vector.getY(), -vector.getZ());
             case -90 -> new Vector(vector.getZ(), vector.getY(), -vector.getX());
