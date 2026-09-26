@@ -5,7 +5,6 @@ import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
-import com.gardensmc.gardensfurniture.util.LightUtil;
 import lombok.Getter;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -13,8 +12,6 @@ import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-
-import static com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener.*;
 
 @Getter
 public class CustomNoteBlock extends CustomBlock {
@@ -47,20 +44,16 @@ public class CustomNoteBlock extends CustomBlock {
         block.setType(Material.NOTE_BLOCK);
         FurnitureStoreHandler.INSTANCE.addFurnitureStore(
                 block,
-                new FurnitureStore.FurnitureStoreBuilder(customItem.getIdentifier())
-                        .withFacing(placeOptions.getFacing())
+                FurnitureStore.builder()
+                        .itemIdentifier(customItem.getIdentifier())
+                        .facing(placeOptions.getFacing())
                         .build(),
                 heldItem != null
         );
         // play place sound
-        var sound = getSoundToPlay(block, "place");
-        if (sound != null) {
-            block.getWorld().playSound(block.getLocation(), sound, SoundCategory.BLOCKS, VANILLA_PLACE_VOLUME, VANILLA_PLACE_PITCH);
-        }
+        playPlaceSound(block, null);
 
-        if (getLight() > 0) {
-            LightUtil.placeLight(location, getLight(), true);
-        }
+        placeLight(location);
         return true;
     }
 

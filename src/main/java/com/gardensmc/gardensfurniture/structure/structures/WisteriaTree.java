@@ -52,7 +52,7 @@ public class WisteriaTree extends TStructure {
         var topBranchBlockY = Pair.of("wisteria_log", BlockFace.UP);
         var topBranchBlockZ = Pair.of("wisteria_log", BlockFace.NORTH);
 
-        var  branchAngle = randomInt(randPrecision)/randPrecision*2*pi;
+        var  branchAngle = (double) randomInt(randPrecision)/randPrecision*2*pi; // integer division made this always 0
         for (var  i = 0; i < trunkHeight; i = i + 1) {
             if (i > sideBranchMinHeight) {
                 if (i % sideBranchInterval == 0) {

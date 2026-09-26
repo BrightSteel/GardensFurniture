@@ -1,10 +1,12 @@
 package com.gardensmc.gardensfurniture.listener;
 
+import com.destroystokyo.paper.event.block.BlockDestroyEvent;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.*;
 import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomMultiplierItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.itementity.ItemEntity;
 import com.gardensmc.gardensfurniture.loader.ChunkFurnitureLoader;
@@ -15,6 +17,7 @@ import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.gardensmc.gardensfurniture.util.ProbabilityUtil;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
+import com.gardensmc.gardensfurniture.util.SpecialItems;
 import de.tr7zw.nbtapi.NBT;
 import io.papermc.paper.configuration.GlobalConfiguration;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
@@ -25,23 +28,22 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.CaveVines;
 import org.bukkit.block.data.type.NoteBlock;
+import org.bukkit.block.data.type.Slab;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.world.StructureGrowEvent;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.gardensmc.gardensfurniture.custom.CustomBlockManager.*;
 import static com.gardensmc.gardensfurniture.util.CustomDropUtil.dropCustomItem;
@@ -61,7 +63,7 @@ public class BlockListener implements Listener {
             if (customItem instanceof CustomPlaceableItem placeableItem && placeableItem.getCustomBlock() instanceof CustomTripwireBlock customTripwireBlock) {
                 dropCustomItem(e, customItem, customTripwireBlock);
             }
-        } else if (Stream.concat(Arrays.stream(packetTypes), CustomWaxedBlock.WaxedType.materials().stream()).toList().contains(e.getBlock().getType())) {
+        } else if (CustomBlockManager.isStoreBacked(e.getBlock().getType())) {
             CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getBlock());
             if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomSaplingBlock) {
                 // remove sapling display
@@ -82,31 +84,7 @@ public class BlockListener implements Listener {
                 FurnitureStoreHandler.INSTANCE.removeFurnitureStore(partner);
             }
         }
-
     }
-
-    // When a waxed slab is combined into a double, the Bedrock client has already predicted the
-    // slab in the block it clicked toward (the neighbour cell) and drew a ghost there; the server
-    // merged it into a double here instead. Resend the neighbouring cells to the player so the
-    // Bedrock client discards its prediction (Java clients just get a harmless redundant update).
-//    @EventHandler(ignoreCancelled = true)
-//    public void onWaxedSlabDoublePlace(BlockPlaceEvent e) {
-//        var block = e.getBlockPlaced();
-//        if (!CustomWaxedBlock.WaxedType.materials().contains(block.getType())
-//                || !(block.getBlockData() instanceof org.bukkit.block.data.type.Slab slab)
-//                || slab.getType() != org.bukkit.block.data.type.Slab.Type.DOUBLE) {
-//            return;
-//        }
-//        var player = e.getPlayer();
-//        System.out.println("Player did a double slab");
-//        Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> {
-//            for (BlockFace face : new BlockFace[]{BlockFace.UP, BlockFace.DOWN, BlockFace.SELF}) {
-//                var b = block.getRelative(face);
-//                player.sendBlockChange(b.getLocation(), b.getBlockData());
-//                System.out.println("Updating anove");
-//            }
-//        }, 2L);
-//    }
 
     @EventHandler
     public void onSaplingOrTripwireBreak(BlockPhysicsEvent e) {
@@ -119,7 +97,7 @@ public class BlockListener implements Listener {
                         if (itemEntity != null) {
                             if (type == Material.FLOWER_POT) {
                                 // drop potted item
-                                var plantedHeldItem = NBT.getPersistentData(itemEntity.getEntity(), nbt -> nbt.getItemStack("GardensFurniturePotted"));
+                                var plantedHeldItem = NBT.getPersistentData(itemEntity.getEntity(), nbt -> nbt.getItemStack(CustomBlockManager.POTTED_KEY));
                                 if (plantedHeldItem != null) {
                                     e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), plantedHeldItem);
                                 }
@@ -143,12 +121,49 @@ public class BlockListener implements Listener {
         };
     }
 
+    // Cells whose custom sapling/tripwire was just destroyed without a player (physics, water, pistons,
+    // explosions) -> tick the mark expires. Vanilla drops the plain sapling/string there; only drops
+    // spawning in a marked cell become the custom item, so items dropped into a live cell aren't converted.
+    private static final Map<Location, Integer> pendingCustomDrops = new HashMap<>();
+    private static final Set<Material> CUSTOM_DROP_BLOCK_TYPES = Set.of(Material.OAK_SAPLING, Material.DARK_OAK_SAPLING, Material.TRIPWIRE);
+
+    private static void markCustomDrop(Block block) {
+        if (!CUSTOM_DROP_BLOCK_TYPES.contains(block.getType())) return;
+        int now = Bukkit.getCurrentTick();
+        pendingCustomDrops.values().removeIf(expiry -> expiry < now);
+        pendingCustomDrops.put(block.getLocation(), now + 2);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void markDestroyedDrop(BlockDestroyEvent e) {
+        markCustomDrop(e.getBlock());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void markWashedAwayDrop(BlockFromToEvent e) {
+        markCustomDrop(e.getToBlock());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void markExplodedDrops(BlockExplodeEvent e) {
+        e.blockList().forEach(BlockListener::markCustomDrop);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void markExplodedDrops(EntityExplodeEvent e) {
+        e.blockList().forEach(BlockListener::markCustomDrop);
+    }
+
     @EventHandler
     public void onSaplingOrStringDrop(ItemSpawnEvent e) {
         var itemStack = e.getEntity().getItemStack();
         if (itemStack.getType() == Material.OAK_SAPLING || itemStack.getType() == Material.DARK_OAK_SAPLING || itemStack.getType() == Material.STRING) {
-            CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getLocation().getBlock());
+            var cell = e.getLocation().getBlock();
+            var expiry = pendingCustomDrops.get(cell.getLocation());
+            if (expiry == null || expiry < Bukkit.getCurrentTick()) return;
+            CustomItem customItem = CustomBlockManager.getItemFromLeaves(cell);
             if (customItem instanceof CustomPlaceableItem placeable && (placeable.getCustomBlock() instanceof CustomSaplingBlock || placeable.getCustomBlock() instanceof CustomTripwireBlock)) {
+                pendingCustomDrops.remove(cell.getLocation()); // one destroyed block, one converted drop
                 e.getEntity().setItemStack(GardensFurniture.itemRegistry.buildItem(placeable));
             }
         }
@@ -156,12 +171,6 @@ public class BlockListener implements Listener {
 
     @EventHandler
     public void onPick(PlayerPickItemEvent e) {
-//        if (e.getSourceSlot() != -1) {
-//            var source = e.getPlayer().getInventory().getItem(e.getSourceSlot());
-//            if (source != null && source.getType() != Material.NOTE_BLOCK) {
-//                return; // item is present in inventory and not a note block, we dont care
-//            }
-//        }
         final RayTraceResult rayTraceResult = e.getPlayer().rayTraceBlocks(6.0);
         if (rayTraceResult == null) return;
         final Block block = rayTraceResult.getHitBlock();
@@ -210,16 +219,75 @@ public class BlockListener implements Listener {
         }
     }
 
+    // a piston would move the block but not its furniture store (which is keyed by position), so custom
+    // store-backed blocks can't be pushed or pulled
     private boolean cancelNoteBlockExtend(List<Block> blocks) {
         for (Block block : blocks) {
-            if (block.getType() == Material.NOTE_BLOCK && block.getBlockData() instanceof NoteBlock) {
-                CustomItem customItem = CustomBlockManager.getItemFromLeaves(block);
-                if (customItem != null) {
-                    return true;
-                }
+            if (CustomBlockManager.isStoreBacked(block.getType()) && CustomBlockManager.getItemFromLeaves(block) != null) {
+                return true;
             }
         }
         return false;
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onBlockExplode(BlockExplodeEvent e) {
+        explodeCustomBlocks(e.blockList(), e.getYield());
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onEntityExplode(EntityExplodeEvent e) {
+        explodeCustomBlocks(e.blockList(), e.getYield());
+    }
+
+    // Vanilla would drop the disguise block (note block, oak sapling, ...) and leave the store behind, so
+    // take custom blocks out of the explosion and destroy them ourselves.
+    private void explodeCustomBlocks(List<Block> blocks, float yield) {
+        // a potted custom plant is a display entity on top of a vanilla pot: drop it with the pot
+        blocks.stream().filter(block -> block.getType() == Material.FLOWER_POT).forEach(pot -> {
+            var planted = CustomBlockManager.getPottedPlant(pot);
+            if (planted == null) return;
+            var plantedItem = NBT.getPersistentData(planted, nbt -> nbt.getItemStack(CustomBlockManager.POTTED_KEY));
+            planted.remove();
+            if (plantedItem != null && ThreadLocalRandom.current().nextFloat() < yield) {
+                pot.getWorld().dropItemNaturally(pot.getLocation().add(0.5, 0.1, 0.5), plantedItem);
+            }
+        });
+        blocks.removeIf(block -> {
+            if (!CustomBlockManager.isStoreBacked(block.getType())) return false;
+            if (!(CustomBlockManager.getItemFromLeaves(block) instanceof CustomPlaceableItem placeable)) return false;
+            destroyCustomBlock(block, placeable, ThreadLocalRandom.current().nextFloat() < yield);
+            return true;
+        });
+    }
+
+    private void destroyCustomBlock(Block block, CustomPlaceableItem placeable, boolean drop) {
+        var customBlock = placeable.getCustomBlock();
+        if (drop && !customBlock.cancelDrop() && !placeable.getIdentifier().equals(SpecialItems.TRIPWIRE_TOP)) {
+            var itemStack = customBlock.getDropOverride() != null
+                    ? GardensFurniture.itemRegistry.buildItem(customBlock.getDropOverride())
+                    : GardensFurniture.itemRegistry.buildItem(placeable);
+            if (itemStack != null) {
+                var store = FurnitureStoreHandler.INSTANCE.getFurnitureStore(block);
+                if (placeable instanceof CustomMultiplierItem && store != null && store.getMultiplier() > 0) {
+                    itemStack.setAmount(store.getMultiplier());
+                } else if (block.getBlockData() instanceof Slab slab && slab.getType() == Slab.Type.DOUBLE) {
+                    itemStack.setAmount(2);
+                }
+                block.getWorld().dropItemNaturally(block.getLocation().add(0.5, 0.1, 0.5), itemStack);
+            }
+        }
+        CustomBlockManager.removeCustomBlock(block);
+    }
+
+    // burning leaves leave nothing behind, but their store (and any light) must go with them
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onCustomBlockBurn(BlockBurnEvent e) {
+        var block = e.getBlock();
+        if (!CustomBlockManager.isStoreBacked(block.getType())) return;
+        if (!(CustomBlockManager.getItemFromLeaves(block) instanceof CustomPlaceableItem placeable)) return;
+        FurnitureStoreHandler.INSTANCE.removeFurnitureStore(block);
+        placeable.getCustomBlock().removeLight(block.getLocation());
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -231,6 +299,10 @@ public class BlockListener implements Listener {
 
     @EventHandler
     public void onConnectablePhysics(BlockPhysicsEvent e) {
+        // physics events are extremely frequent; skip the entity lookup when nothing is connectable
+        if (!GardensFurniture.itemRegistry.hasConnectableItems()) {
+            return;
+        }
         var block = e.getBlock();
         if (!DISPLAY_BLOCK_TYPES.contains(block.getType())) {
             return;
@@ -277,7 +349,6 @@ public class BlockListener implements Listener {
                 e.setCancelled(true);
             }
         }
-
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -313,6 +384,11 @@ public class BlockListener implements Listener {
         if (customItem != null && customItem.getMechanics() != null) {
             var saplingStructure = customItem.getMechanics().getSapling_structure();
             e.setCancelled(true);
+            // datapack features can't be limited per block, so don't grow one next to someone else's claim
+            if (!StructureHandler.INSTANCE.hasStructure(saplingStructure)
+                    && ProtectionUtil.hasForeignClaimNear(e.getLocation(), StructureHandler.FEATURE_CLAIM_RADIUS)) {
+                return;
+            }
             // remove block(s)
             var blocks = e.getBlocks()
                     .stream()
@@ -342,16 +418,9 @@ public class BlockListener implements Listener {
                         .getFirst().getLocation();
             }
 
-            blocks.forEach(b -> {
-                b.setType(Material.AIR);
-                FurnitureStoreHandler.INSTANCE.removeFurnitureStore(b);
-                var itemEntity = CustomBlockManager.getItemEntity(b.getLocation());
-                if (itemEntity != null) {
-                    itemEntity.getEntity().remove();
-                }
-            });
+            blocks.forEach(CustomBlockManager::removeCustomBlock);
 
-            if (!StructureHandler.INSTANCE.spawnStructure(saplingStructure, location)) {
+            if (!StructureHandler.INSTANCE.spawnGrownStructure(saplingStructure, location)) {
                 try {
                     handleFeature(saplingStructure, location);
                 } catch (Exception ex) {
@@ -361,42 +430,53 @@ public class BlockListener implements Listener {
         }
     }
 
-    public static void handleFeature(String feature, Location location) throws ExecutionException, InterruptedException {
-        var intersectingChunks = location.getWorld().getIntersectingChunks(BoundingBox.of(location, 20, 1, 20)).stream().toList();
-        GlobalConfiguration.get().blockUpdates.disableNoteblockUpdates = true;
-        location.getWorld().setGameRule(GameRule.SEND_COMMAND_FEEDBACK, false);
-        var chunkSnapshots = toChunkSnapshot(intersectingChunks);
-        List<ChunkSnapshot> finalChunkSnapshots = chunkSnapshots;
-        var existingNoteBlocks = CompletableFuture.supplyAsync(() -> finalChunkSnapshots.stream()
-                .flatMap(chunk -> getExistingNoteBlocks(chunk, location.getWorld(), location.getBlockY()).stream())
-                .collect(Collectors.toSet()))
-                .get();
-        // Run in the sapling's world explicitly: the console command source is anchored to the
-        // primary/respawn overworld, so an unqualified "place feature" checks the position in the
-        // wrong world and fails with "That position is not loaded". World#getKey() yields the
-        // dimension key that "execute in" expects (minecraft:overworld / minecraft:<worldname>).
-        Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), "execute in %s run place feature gardens:%s %s %s %s".formatted(
-                location.getWorld().getKey(), feature, location.getBlockX(), location.getBlockY(), location.getBlockZ()
-        ));
+    public static void handleFeature(String feature, Location location) {
+        var world = location.getWorld();
+        var intersectingChunks = world.getIntersectingChunks(BoundingBox.of(location, 20, 1, 20)).stream().toList();
+        // both are global/world state: remember the previous values and always put them back
+        var blockUpdates = GlobalConfiguration.get().blockUpdates;
+        boolean previousNoteblockUpdates = blockUpdates.disableNoteblockUpdates;
+        Boolean previousFeedback = world.getGameRuleValue(GameRules.SEND_COMMAND_FEEDBACK);
+        Runnable restore = () -> {
+            blockUpdates.disableNoteblockUpdates = previousNoteblockUpdates;
+            if (previousFeedback != null) {
+                world.setGameRule(GameRules.SEND_COMMAND_FEEDBACK, previousFeedback);
+            }
+        };
+        blockUpdates.disableNoteblockUpdates = true;
+        world.setGameRule(GameRules.SEND_COMMAND_FEEDBACK, false);
+
+        Set<FurnitureCache.BlockKey> existingNoteBlocks;
+        try {
+            // note blocks already there before the feature, so only the feature's own ones get replaced
+            existingNoteBlocks = toChunkSnapshot(intersectingChunks).stream()
+                    .flatMap(chunk -> getExistingNoteBlocks(chunk, world, location.getBlockY()).stream())
+                    .collect(Collectors.toSet());
+            // Run in the sapling's world explicitly: the console command source is anchored to the
+            // primary/respawn overworld, so an unqualified "place feature" checks the position in the
+            // wrong world and fails with "That position is not loaded". World#getKey() yields the
+            // dimension key that "execute in" expects (minecraft:overworld / minecraft:<worldname>).
+            Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), "execute in %s run place feature gardens:%s %s %s %s".formatted(
+                    world.getKey(), feature, location.getBlockX(), location.getBlockY(), location.getBlockZ()
+            ));
+        } catch (RuntimeException ex) {
+            restore.run();
+            throw ex;
+        }
         // run in future to allow feature to finish placing
         Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> {
-            var chunkSnapshots1 = toChunkSnapshot(intersectingChunks);
-            Set<ChunkFurnitureLoader.FurnitureReplacement> replacements = null;
             try {
-                replacements = CompletableFuture.supplyAsync(() -> chunkSnapshots1.stream()
-                                .flatMap(chunk -> getReplacements(existingNoteBlocks, chunk, location.getWorld(), location.getBlockY()).stream())
-                                .collect(Collectors.toSet()))
-                        .get();
-                replacements.forEach(replacement -> ChunkFurnitureLoader.INSTANCE.placeFurnitureBlock(replacement));
+                toChunkSnapshot(intersectingChunks).stream()
+                        .flatMap(chunk -> getReplacements(existingNoteBlocks, chunk, world, location.getBlockY()).stream())
+                        .collect(Collectors.toSet())
+                        .forEach(ChunkFurnitureLoader.INSTANCE::placeFurnitureBlock);
                 intersectingChunks.forEach(chunk -> FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(chunk)));
-                GlobalConfiguration.get().blockUpdates.disableNoteblockUpdates = false;
-                location.getWorld().setGameRule(GameRule.SEND_COMMAND_FEEDBACK, true);
             } catch (Exception ex) {
                 ex.printStackTrace();
+            } finally {
+                restore.run();
             }
-
         }, 1);
-
     }
 
     private static List<ChunkSnapshot> toChunkSnapshot(List<Chunk> chunks) {

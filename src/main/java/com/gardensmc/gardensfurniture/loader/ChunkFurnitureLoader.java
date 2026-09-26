@@ -13,9 +13,15 @@ import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.NoteBlock;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 
@@ -23,12 +29,16 @@ public class ChunkFurnitureLoader {
 
     public static final Queue<FurnitureReplacement> furnitureReplacementQueue = new ConcurrentLinkedQueue<>();
     public static ChunkFurnitureLoader INSTANCE = new ChunkFurnitureLoader();
+    private final Set<String> reportedMissingMappings = ConcurrentHashMap.newKeySet();
     private static final int BLOCKS_PER_TICK = 10000;
+    // stop placing once this much of the tick is used, however many blocks are left
+    private static final long TICK_BUDGET_NANOS = 5_000_000;
+    private final Map<String, List<FurnitureReplacement>> deferredByChunk = new HashMap<>();
 
-    public void processSnapshot(ChunkSnapshot chunkSnapshot, World.Environment environment) {
-        var yMin = environment == World.Environment.NORMAL ? -60 : 0;
+    // generated note blocks can sit anywhere in the world's height (e.g. icicles on peaks above y=230)
+    public void processSnapshot(ChunkSnapshot chunkSnapshot, int minY, int maxY) {
         for (int x = 0; x < 16; x++) {
-            for (int y = 230; y > yMin; y--) {
+            for (int y = maxY - 1; y >= minY; y--) {
                 for (int z = 0; z < 16; z++) {
                     BlockData blockData = chunkSnapshot.getBlockData(x, y, z);
                     if (blockData instanceof NoteBlock noteBlock) {
@@ -45,38 +55,70 @@ public class ChunkFurnitureLoader {
                         String mapping = ConfigUtil.generationMappings.getString(key);
                         if (mapping != null) {
                             furnitureReplacementQueue.add(new FurnitureReplacement(chunkSnapshot.getWorldName(), chunkSnapshot.getX(), chunkSnapshot.getZ(), finalX, finalY, finalZ, mapping));
-                        } else {
+                        } else if (reportedMissingMappings.add(key)) {
                             GardensFurniture.plugin.getLogger().severe("Could not find mapping with key: " + key);
                         }
                     }
                 }
             }
         }
+    }
 
-        // limit cache update to once per chunk
-//        if (updateCache) {
-//            Bukkit.getScheduler().runTask(GardensFurniture.plugin, () -> FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(chunkSnapshot.getWorldName(), chunkSnapshot.getX(),chunkSnapshot.getZ())));
-//        }
+    // report mappings that point at nothing once at startup instead of once per generated block
+    public void validateMappings() {
+        for (String key : ConfigUtil.generationMappings.getKeys(false)) {
+            var mapping = ConfigUtil.generationMappings.getString(key);
+            if (mapping != null && !(GardensFurniture.itemRegistry.getItem(mapping) instanceof CustomPlaceableItem)
+                    && !StructureHandler.INSTANCE.hasStructure(mapping) && reportedMissingMappings.add(mapping)) {
+                GardensFurniture.plugin.getLogger().severe("generation_mappings.yml: " + key + " -> " + mapping + " is not a placeable custom block or structure");
+            }
+        }
     }
 
     public void tickChunkFurnitureLoader() {
-        tickChunkFurnitureLoader(BLOCKS_PER_TICK);
+        tickChunkFurnitureLoader(BLOCKS_PER_TICK, TICK_BUDGET_NANOS, false);
     }
 
+    // admin command: drain everything now, loading chunks as needed
     public void loadAllQueuedFurniture() {
-        tickChunkFurnitureLoader(Integer.MAX_VALUE);
+        tickChunkFurnitureLoader(Integer.MAX_VALUE, Long.MAX_VALUE, true);
     }
 
-    public void tickChunkFurnitureLoader(int bps) {
+    private void tickChunkFurnitureLoader(int bps, long budgetNanos, boolean loadChunksSync) {
         var affectedChunks = new HashSet<Chunk>();
-        for (int i = 0; i < bps; i++) {
+        long start = System.nanoTime();
+        for (int i = 0; i < bps && System.nanoTime() - start < budgetNanos; i++) {
             var furnitureReplacement = furnitureReplacementQueue.poll();
             if (furnitureReplacement == null) {
                 break;
             }
+            var world = Bukkit.getWorld(furnitureReplacement.world);
+            if (world == null) {
+                continue;
+            }
+            if (!loadChunksSync && !world.isChunkLoaded(furnitureReplacement.chunkX, furnitureReplacement.chunkZ)) {
+                deferUntilLoaded(world, furnitureReplacement);
+                continue;
+            }
             affectedChunks.add(placeFurnitureBlock(furnitureReplacement));
         }
         affectedChunks.forEach(chunk -> FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(chunk)));
+    }
+
+    // The chunk unloaded before we got to it: load it in the background and queue its blocks again,
+    // instead of loading it synchronously on the main thread.
+    private void deferUntilLoaded(World world, FurnitureReplacement replacement) {
+        var key = world.getName() + "," + replacement.chunkX + "," + replacement.chunkZ;
+        var waiting = deferredByChunk.computeIfAbsent(key, k -> new ArrayList<>());
+        waiting.add(replacement);
+        if (waiting.size() == 1) {
+            world.getChunkAtAsync(replacement.chunkX, replacement.chunkZ).thenAccept(chunk -> {
+                var ready = deferredByChunk.remove(key);
+                if (ready != null) {
+                    furnitureReplacementQueue.addAll(ready);
+                }
+            });
+        }
     }
 
     public void tickChunkStats() {
@@ -95,7 +137,18 @@ public class ChunkFurnitureLoader {
         Block block = chunk.getBlock(furnitureReplacement.relX, furnitureReplacement.relY, furnitureReplacement.relZ);
         // custom mappings
         var mapping = furnitureReplacement.mapping;
+        // the block may have changed since the snapshot was taken
+        if (block.getType() != Material.NOTE_BLOCK) {
+            return chunk;
+        }
         CustomItem customItem = GardensFurniture.itemRegistry.getItem(mapping);
+        if (!(customItem instanceof CustomPlaceableItem) && !StructureHandler.INSTANCE.hasStructure(mapping)) {
+            // leave the note block rather than punching a hole in the terrain
+            if (reportedMissingMappings.add(mapping)) {
+                GardensFurniture.plugin.getLogger().severe("Generation mapping " + mapping + " is not a placeable custom block or structure!");
+            }
+            return chunk;
+        }
         block.setType(Material.AIR);
         // World-gen furniture is deterministic and regenerable; never record it as player activity.
         FurnitureStoreHandler.suppressLifecycle.set(true);

@@ -5,6 +5,7 @@ import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.CustomDisplayBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -12,6 +13,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.Light;
 import org.bukkit.entity.ItemDisplay;
 
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Set;
 
@@ -29,42 +31,52 @@ public class LightUtil {
     public static void placeLight(Location location, int level, boolean isSolid) {
         if (isSolid) {
             for (var blockFace : blockFaces) {
-                var block = location.getBlock().getRelative(blockFace);
-                if (block.getType() == Material.AIR) {
-                    block.setType(Material.LIGHT);
-                    Light lightBlock = (Light) block.getBlockData();
-                    lightBlock.setLevel(level);
-                }
+                setLight(location.getBlock().getRelative(blockFace), level);
             }
         } else {
-            var block = location.getBlock();
-            block.setType(Material.LIGHT);
-            Light lightBlock = (Light) block.getBlockData();
-            lightBlock.setLevel(level);
+            setLight(location.getBlock(), level);
         }
     }
 
+    // only ever fills empty space - a light offset must never replace a real block
+    private static void setLight(Block block, int level) {
+        var type = block.getType();
+        if (type != Material.AIR && type != Material.CAVE_AIR && type != Material.LIGHT) {
+            return;
+        }
+        Light lightBlock = (Light) Material.LIGHT.createBlockData();
+        lightBlock.setLevel(level);
+        block.setBlockData(lightBlock);
+    }
+
     public static void removeLight(Location location, boolean isSolid) {
+        var cleared = new ArrayList<Block>();
         if (isSolid) {
             for (var blockFace : blockFaces) {
                 var block = location.getBlock().getRelative(blockFace);
                 if (block.getType() == Material.LIGHT) {
                     block.setType(Material.AIR);
+                    cleared.add(block);
                 }
             }
         } else {
             var block = location.getBlock();
             if (block.getType() == Material.LIGHT) {
                 block.setType(Material.AIR);
+                cleared.add(block);
             }
+        }
+        // a light block can be shared with a neighbouring lamp - relight any cell another lamp still covers.
+        // Next tick, so the furniture being removed is gone and can't count itself.
+        if (!cleared.isEmpty()) {
+            Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> cleared.forEach(LightUtil::addLightBack), 1);
         }
     }
 
     public static void addLightBack(Block block) {
         var light = LightUtil.getCoveringLight(block);
         if (light > 0) {
-            block.setType(Material.LIGHT);
-            ((Light) block.getBlockData()).setLevel(light);
+            setLight(block, light);
         }
     }
 
@@ -80,8 +92,9 @@ public class LightUtil {
             }
         }
 
-        // account for displays with light offsets
-        return block.getLocation().getNearbyEntitiesByType(ItemDisplay.class, 5)
+        // account for displays with light offsets - offsets are vertical, so only this block's column can
+        // hold one (runs a tick after every block break, so keep the search small)
+        return block.getLocation().add(0.5, 0, 0.5).getNearbyEntitiesByType(ItemDisplay.class, 0.5, 6, 0.5)
                 .stream()
                 .map(itemDisplay -> {
                     var customItem = GardensFurniture.itemRegistry.getCustomItem(itemDisplay.getItemStack());

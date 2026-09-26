@@ -5,6 +5,7 @@ import com.gardensmc.gardensfurniture.custom.block.CustomWaxedBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import net.minecraft.world.level.block.SoundType;
 import org.bukkit.*;
+import org.bukkit.Registry;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Openable;
@@ -74,7 +75,9 @@ public class VanillaBlockSoundListener implements Listener {
                     case "step" -> soundGroup.getStepSound();
                     default -> throw new IllegalArgumentException("Unknown sound suffix: " + suffix);
                 };
-                return traitsKey.getKey().getKey().toLowerCase();
+                // sounds can exist without a key (eg a data pack's), then there's no name to go by
+                var soundKey = Registry.SOUND_EVENT.getKey(traitsKey);
+                return soundKey == null ? null : soundKey.getKey().toLowerCase();
             }
         }
         return getSoundOverride(block.getBlockData().getSoundGroup(), suffix);

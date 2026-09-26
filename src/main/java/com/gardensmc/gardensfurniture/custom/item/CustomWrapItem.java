@@ -37,7 +37,7 @@ public class CustomWrapItem extends CustomItem {
         BACKPACK(itemStack -> GardensFurniture.itemRegistry.getCustomItem(itemStack) instanceof CustomBackpackItem),
         SWORD(itemStack -> isType(itemStack, "sword")),
         PICKAXE(itemStack -> isType(itemStack, "pickaxe")),
-        AXE(itemStack -> isType(itemStack, "axe")),
+        AXE(itemStack -> isType(itemStack, "axe") && !isType(itemStack, "pickaxe")),
         SHOVEL(itemStack -> isType(itemStack, "shovel")),
         HOE(itemStack -> isType(itemStack, "hoe")),
         BOW(itemStack -> isType(itemStack, "bow")),

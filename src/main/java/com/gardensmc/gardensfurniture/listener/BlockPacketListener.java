@@ -4,8 +4,8 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.breaking.CustomBreakingBlock;
 import com.gardensmc.gardensfurniture.custom.block.*;
 import com.gardensmc.gardensfurniture.custom.item.*;
+import com.gardensmc.gardensfurniture.store.FurnitureCache;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
-import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerAbstract;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
@@ -28,9 +28,6 @@ import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSe
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSetSlot;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerWindowItems;
 import io.github.retrooper.packetevents.util.SpigotConversionUtil;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import org.bukkit.*;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
@@ -38,7 +35,6 @@ import org.bukkit.entity.Player;
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import static java.util.Map.entry;
 
@@ -48,15 +44,6 @@ import static java.util.Map.entry;
  * Realistic Seasons and other biome-adders basically caused clients to crash with that
  */
 public class BlockPacketListener {
-
-    private static final LoadingCache<String, Integer> recentPacketsSent = CacheBuilder.newBuilder()
-            .expireAfterWrite(2, TimeUnit.SECONDS)
-            .build(new CacheLoader<>() {
-                @Override
-                public Integer load(String key) {
-                    return 0;
-                }
-            });
 
     private final Set<StateType> leavesTypes = Set.of(
             StateTypes.SPRUCE_LEAVES,
@@ -96,31 +83,6 @@ public class BlockPacketListener {
         PacketEvents.getAPI().getEventManager().registerListener(new PacketListenerAbstract() {
             @Override
             public void onPacketSend(PacketSendEvent event) {
-//                if (event.getPacketType() == PacketType.Play.Server.DECLARE_RECIPES) {
-//                    var wrapper = new WrapperPlayServerDeclareRecipes(event);
-//                    var recipes = wrapper.getRecipes();
-//                    for (int i = 0; i < recipes.length; i++) {
-//                        var recipe = recipes[i];
-//                        if (recipe.getIdentifier().startsWith("customcrafting:cc_display.gardens")) {
-//                            var data = recipe.getData();
-//                            try {
-//                                if (data instanceof ShapedRecipeData recipeData) {
-//                                    Field category = recipeData.getClass().getDeclaredField("category");
-//                                    category.setAccessible(true);
-//                                    category.set(recipeData, CraftingCategory.BUILDING);
-//                                } else if (data instanceof ShapelessRecipeData recipeData) {
-//                                    Field category = recipeData.getClass().getDeclaredField("category");
-//                                    category.setAccessible(true);
-//                                    category.set(recipeData, CraftingCategory.BUILDING);
-//
-//                                }
-//                            } catch (Exception e) {
-//                                e.printStackTrace();
-//                            }
-//                        }
-//
-//                    }
-//                }
                 if (!(event.getPlayer() instanceof Player player)) return;
                 if (event.getPacketType() == PacketType.Play.Server.CHUNK_DATA) {
                     // editing this packet directly takes too long and causes ping spikes to the client.
@@ -213,21 +175,24 @@ public class BlockPacketListener {
     }
 
     private void sendChunkDataPacket(Player player, WrapperPlayServerChunkData packet) {
-//        var key = makeRecentPacketKey(player, packet);
-//        int packetsSentCount = recentPacketsSent.getUnchecked(key);
-//        if (packetsSentCount >= 1) {
-//            return;
-//        }
-//        recentPacketsSent.put(key, packetsSentCount + 1);
-        handleChunkChange(packet, player);
-//        if (modified) {
+        var world = player.getWorld();
+        try {
+            handleChunkChange(packet, player);
+        } catch (Exception e) {
+            // still send the (partly remapped) chunk - never leave the client with a hole
+            GardensFurniture.plugin.getLogger().log(java.util.logging.Level.WARNING, "Failed to remap chunk packet", e);
+        }
+        // The rewrite ran async, so the player may have moved on meanwhile. Send from the main thread, where
+        // chunk unloads happen, and skip it if the server has since told the client to forget this chunk -
+        // otherwise the late copy would bring it back as a ghost chunk.
+        var chunkKey = Chunk.getChunkKey(packet.getColumn().getX(), packet.getColumn().getZ());
+        if (!GardensFurniture.plugin.isEnabled()) return; // shutting down: can't schedule, player is leaving anyway
+        Bukkit.getScheduler().runTask(GardensFurniture.plugin, () -> {
+            if (!player.isOnline() || !player.getWorld().equals(world) || !player.isChunkSent(chunkKey)) {
+                return;
+            }
             PacketEvents.getAPI().getPlayerManager().sendPacketSilently(player, packet);
-//        }
-    }
-
-    private String makeRecentPacketKey(Player player, WrapperPlayServerChunkData packet) {
-        var column = packet.getColumn();
-        return player.getUniqueId() + "-" + column.getX() + "-" + column.getZ();
+        });
     }
 
     // returns true if modified packet otherwise false
@@ -249,74 +214,17 @@ public class BlockPacketListener {
                         int realZ = coordinateZ + z;
                         int realY = y + (16 * i) - Math.abs(worldMinHeight);
 
-                        if (leavesTypes.contains(blockState.getType())) {
-                            modified = true;
-                            CustomItem customItem = getCustomItemFromPos(player.getWorld(), realX, realY, realZ);
-                            if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
-                                baseChunk.set(x, y, z, getBlockStateFromLeaves(customLeavesBlock, blockState));
-                            }
-                            else {
-                                baseChunk.set(x, y, z, getNormalLeaveState(blockState));
-                            }
+                        WrappedBlockState remapped;
+                        try {
+                            remapped = remap(world, realX, realY, realZ, blockState);
+                        } catch (RuntimeException e) {
+                            // one bad block must not stop the rest of the chunk from being remapped
+                            logRemapFailure(e);
+                            continue;
                         }
-                        else if (blockState.getType() == StateTypes.NOTE_BLOCK) {
+                        if (remapped != null) {
+                            baseChunk.set(x, y, z, remapped);
                             modified = true;
-                            CustomItem customItem = getCustomItemFromPos(player.getWorld(), realX, realY, realZ);
-                            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomNoteBlock) {
-                                var customNoteBlock = getCustomNoteBlock(placeable, world, realX, realY, realZ);
-                                baseChunk.set(x, y, z, getBlockStateFromNoteBlock(customNoteBlock));
-                            } else {
-                                baseChunk.set(x, y, z, getNormalNoteBlockState(blockState));
-                            }
-                        }
-                        else if (blockState.getType() == StateTypes.CAVE_VINES_PLANT) {
-                            modified = true;
-                            CustomItem customItem = getCustomItemFromPos(player.getWorld(), realX, realY, realZ);
-                            if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
-                                CustomCaveVineBlock customCaveVineBlock = customCaveVineItem.getPlant();
-                                baseChunk.set(x, y, z, getBlockStateFromVine(customCaveVineBlock, blockState.isBerries()));
-                            }
-                        }
-                        else if (blockState.getType() == StateTypes.CAVE_VINES) {
-                            modified = true;
-                            CustomItem customItem = getCustomItemFromPos(world, realX, realY, realZ);
-                            if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
-                                CustomCaveVineBlock customCaveVineBlock;
-                                if (blockState.getAge() == 25) {
-                                    customCaveVineBlock = customCaveVineItem.getVine_25();
-                                }
-                                else {
-                                    customCaveVineBlock = customCaveVineItem.getVine();
-                                }
-                                baseChunk.set(x, y, z, getBlockStateFromVine(customCaveVineBlock, blockState.isBerries()));
-                            }
-                            else {
-                                baseChunk.set(x, y, z, getNormalVineState(blockState.isBerries()));
-                            }
-                        }
-                        else if (blockState.getType() == StateTypes.TRIPWIRE) {
-                            modified = true;
-                            CustomItem customItem = getCustomItemFromPos(world, realX, realY, realZ);
-                            if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomTripwireBlock) {
-                                var customTripwireBlock = getCustomTripwireBlock(customBlockItem, world, realX, realY, realZ);
-                                baseChunk.set(x, y, z, getBlockStateFromTripwire(customTripwireBlock));
-                            } else {
-                                baseChunk.set(x, y, z, getNormalTripwire(blockState));
-                            }
-                        } else if (waxedTypes.containsKey(blockState.getType())) {
-                            modified = true;
-                            CustomItem customItem = getCustomItemFromPos(player.getWorld(), realX, realY, realZ);
-                            if (customItem == null) {
-                                baseChunk.set(x, y, z, getUnwaxedState(blockState));
-                            }
-                        } else if (saplingTypes.contains(blockState.getType())) {
-                            modified = true;
-                            CustomItem customItem = getCustomItemFromPos(player.getWorld(), realX, realY, realZ);
-                            if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomSaplingBlock) {
-                                baseChunk.set(x, y, z, getBlockStateFromSapling(blockState.getType()));
-                            } else {
-                                baseChunk.set(x, y, z, getNormalSapling(blockState));
-                            }
                         }
                     }
                 }
@@ -326,14 +234,11 @@ public class BlockPacketListener {
     }
 
     private CustomTripwireBlock getCustomTripwireBlock(CustomPlaceableItem customPlaceableItem, World world, int x, int y, int z) {
-        if (customPlaceableItem instanceof CustomMultiplierItem customMultiplierItem) {
-            var furnitureStore = getStoreFromPos(world, x, y, z);
-            int multiplier = furnitureStore.getMultiplier();
-            return (CustomTripwireBlock) customMultiplierItem.getCustomBlock(multiplier);
-        } else if (customPlaceableItem instanceof CustomFacingItem customFacingItem) {
-            var furnitureStore = getStoreFromPos(world, x, y, z);
-            String facing = furnitureStore.getFacing();
-            return (CustomTripwireBlock) customFacingItem.getCustomBlock(facing);
+        var furnitureStore = getStoreFromPos(world, x, y, z);
+        if (customPlaceableItem instanceof CustomMultiplierItem customMultiplierItem && furnitureStore != null && furnitureStore.getMultiplier() > 0) {
+            return (CustomTripwireBlock) customMultiplierItem.getCustomBlock(furnitureStore.getMultiplier());
+        } else if (customPlaceableItem instanceof CustomFacingItem customFacingItem && furnitureStore != null && furnitureStore.getFacing() != null) {
+            return (CustomTripwireBlock) customFacingItem.getCustomBlock(furnitureStore.getFacing());
         }
         return (CustomTripwireBlock) customPlaceableItem.getCustomBlock();
     }
@@ -341,7 +246,9 @@ public class BlockPacketListener {
     private CustomNoteBlock getCustomNoteBlock(CustomPlaceableItem customPlaceableItem, World world, int x, int y, int z) {
         if (customPlaceableItem instanceof CustomDirectionalItem customDirectionalItem) {
             var store = getStoreFromPos(world, x, y, z);
-            return (CustomNoteBlock) customDirectionalItem.getCustomBlock(BlockFace.valueOf(store.getFacing()));
+            if (store != null && store.getFacing() != null) {
+                return (CustomNoteBlock) customDirectionalItem.getCustomBlock(BlockFace.valueOf(store.getFacing()));
+            }
         }
         return (CustomNoteBlock) customPlaceableItem.getCustomBlock();
     }
@@ -352,7 +259,11 @@ public class BlockPacketListener {
     }
 
     private FurnitureStore getStoreFromPos(World world, int x, int y, int z) {
-        return FurnitureStoreHandler.INSTANCE.getFurnitureStore(world.getChunkAt(new Location(world, x, y, z)), x, y, z);
+        // runs on packet threads: build the key from coordinates instead of touching the chunk
+        return FurnitureCache.INSTANCE.getFurnitureStore(
+                new FurnitureCache.ChunkKey(world.getName(), x >> 4, z >> 4),
+                new FurnitureCache.BlockKey(x, y, z)
+        );
     }
 
     private String getIdentifierFromPos(World world, int x, int y, int z) {
@@ -377,211 +288,80 @@ public class BlockPacketListener {
             }
             return false;
         }
-        if (leavesTypes.contains(blockState.getType())) {
-            CustomItem customItem = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
-            if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
-                WrappedBlockState blockState1 = getBlockStateFromLeaves(customLeavesBlock, blockState);
-                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
-                        player,
-                        new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
-                );
-                return true;
-            }
-            else {
-                WrappedBlockState blockState1 = getNormalLeaveState(blockState);
-                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
-                        player,
-                        new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
-                );
-                return true;
-            }
+        var remapped = remap(player.getWorld(), pos.getX(), pos.getY(), pos.getZ(), blockState);
+        if (remapped == null) {
+            return false;
         }
-        if (blockState.getType() == StateTypes.NOTE_BLOCK) {
-            CustomItem customItem = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
-            if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomNoteBlock) {
-                var customNoteBlock = getCustomNoteBlock(customBlockItem, player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
-                WrappedBlockState blockState1 = getBlockStateFromNoteBlock(customNoteBlock);
-                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
-                        player,
-                        new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
-                );
-                return true;
-            }
-            else {
-                WrappedBlockState blockState1 = getNormalNoteBlockState(blockState);
-                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
-                        player,
-                        new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
-                );
-                return true;
-            }
-        }
-        else if (waxedTypes.containsKey(blockState.getType())) {
-            CustomItem customItem = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
-            if (customItem == null) {
-                WrappedBlockState blockState1 = getUnwaxedState(blockState);
-                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
-                        player,
-                        new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
-                );
-                return true;
-            }
-        }
-        else if (blockState.getType() == StateTypes.TRIPWIRE) {
-            CustomItem customItem = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
-            if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomTripwireBlock) {
-                var customTripwireBlock = getCustomTripwireBlock(customBlockItem, player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
-                WrappedBlockState blockState1 = getBlockStateFromTripwire(customTripwireBlock);
-                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
-                        player,
-                        new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
-                );
-                return true;
-            }
-            else {
-                WrappedBlockState blockState1 = getNormalTripwire(blockState);
-                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
-                        player,
-                        new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
-                );
-                return true;
-            }
-        }
-        else if (blockState.getType() == StateTypes.CAVE_VINES_PLANT) {
-            CustomItem customItem = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
-            if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
-                CustomCaveVineBlock plantBlock = customCaveVineItem.getPlant();
-                WrappedBlockState blockState1 = getBlockStateFromVine(plantBlock, blockState.isBerries());
-                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
-                        player,
-                        new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
-                );
-                return true;
-            }
-        }
-        else if (blockState.getType() == StateTypes.CAVE_VINES) {
-            CustomItem customItem = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
-            if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
-                CustomCaveVineBlock vineBlock;
-                if (blockState.getAge() == 25) {
-                    vineBlock = customCaveVineItem.getVine_25();
-                }
-                else {
-                    vineBlock = customCaveVineItem.getVine();
-                }
-                WrappedBlockState blockState1 = getBlockStateFromVine(vineBlock, blockState.isBerries());
-                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
-                        player,
-                        new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
-                );
-                return true;
-            }
-            else {
-                WrappedBlockState blockState1 = getNormalVineState(blockState.isBerries());
-                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
-                        player,
-                        new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
-                );
-                return true;
-            }
-        } else if (saplingTypes.contains(blockState.getType())) {
-            CustomItem customItem = getCustomItemFromPos(player.getWorld(), pos.getX(), pos.getY(), pos.getZ());
-            if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomSaplingBlock) {
-                WrappedBlockState blockState1 = getBlockStateFromSapling(blockState.getType());
-                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
-                        player,
-                        new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
-                );
-                return true;
-            }
-            else {
-                WrappedBlockState blockState1 = getNormalSapling(blockState);
-                PacketEvents.getAPI().getPlayerManager().sendPacketSilently(
-                        player,
-                        new WrapperPlayServerBlockChange(pos, blockState1.getGlobalId())
-                );
-                return true;
-            }
-        }
-        return false;
+        PacketEvents.getAPI().getPlayerManager().sendPacketSilently(player, new WrapperPlayServerBlockChange(pos, remapped.getGlobalId()));
+        return true;
     }
 
     private void handleMultiBlockChange(WrapperPlayServerMultiBlockChange packet, Player player) {
         var blocks = packet.getBlocks();
         for (var block : blocks) {
-            WrappedBlockState blockState1 = block.getBlockState(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion());
-            if (leavesTypes.contains(blockState1.getType())) {
-                CustomItem customItem = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
-                if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
-                    WrappedBlockState blockState = getBlockStateFromLeaves(customLeavesBlock, blockState1);
-                    block.setBlockState(blockState);
-                }
-                else {
-                    block.setBlockState(getNormalLeaveState(blockState1));
-                }
+            var blockState = block.getBlockState(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion());
+            var remapped = remap(player.getWorld(), block.getX(), block.getY(), block.getZ(), blockState);
+            if (remapped != null) {
+                block.setBlockState(remapped);
             }
-            if (blockState1.getType() == StateTypes.NOTE_BLOCK) {
-                CustomItem customItem = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
-                if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomNoteBlock) {
-                    var customNoteBlock = getCustomNoteBlock(customBlockItem, player.getWorld(), block.getX(), block.getY(), block.getZ());
-                    WrappedBlockState blockState = getBlockStateFromNoteBlock(customNoteBlock);
-                    block.setBlockState(blockState);
-                }
-                else {
-                    block.setBlockState(getNormalNoteBlockState(blockState1));
-                }
+        }
+    }
+
+    /**
+     * The state a client should see for a block the server is sending, or null to send it unchanged.
+     * Custom blocks are shown as their custom state; the vanilla block types we use as disguises are
+     * normalised so a plain vanilla block never looks like a custom one. Shared by chunk, block-change
+     * and multi-block-change packets, and called on packet threads.
+     */
+    @Nullable
+    private WrappedBlockState remap(World world, int x, int y, int z, WrappedBlockState state) {
+        var type = state.getType();
+        if (leavesTypes.contains(type)) {
+            return getCustomItemFromPos(world, x, y, z) instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomLeavesBlock leaves
+                    ? getBlockStateFromLeaves(leaves, state)
+                    : getNormalLeaveState(state);
+        }
+        if (type == StateTypes.NOTE_BLOCK) {
+            return getCustomItemFromPos(world, x, y, z) instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomNoteBlock
+                    ? getBlockStateFromNoteBlock(getCustomNoteBlock(placeable, world, x, y, z))
+                    : getNormalNoteBlockState(state);
+        }
+        if (type == StateTypes.TRIPWIRE) {
+            return getCustomItemFromPos(world, x, y, z) instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomTripwireBlock
+                    ? getBlockStateFromTripwire(getCustomTripwireBlock(placeable, world, x, y, z))
+                    : getNormalTripwire(state);
+        }
+        if (type == StateTypes.CAVE_VINES_PLANT) {
+            return getCustomItemFromPos(world, x, y, z) instanceof CustomCaveVineItem vineItem
+                    ? getBlockStateFromVine(vineItem.getPlant(), state.isBerries())
+                    : null;
+        }
+        if (type == StateTypes.CAVE_VINES) {
+            if (getCustomItemFromPos(world, x, y, z) instanceof CustomCaveVineItem vineItem) {
+                var vine = state.getAge() == 25 ? vineItem.getVine_25() : vineItem.getVine();
+                return getBlockStateFromVine(vine, state.isBerries());
             }
-            if (waxedTypes.containsKey(blockState1.getType())) {
-                CustomItem customItem = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
-                if (customItem == null) {
-                    WrappedBlockState blockState = getUnwaxedState(blockState1);
-                    block.setBlockState(blockState);
-                }
-            }
-            else if (blockState1.getType() == StateTypes.TRIPWIRE) {
-                CustomItem customItem = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
-                if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomTripwireBlock) {
-                    var customTripwireBlock = getCustomTripwireBlock(customBlockItem, player.getWorld(), block.getX(), block.getY(), block.getZ());
-                    WrappedBlockState blockState = getBlockStateFromTripwire(customTripwireBlock);
-                    block.setBlockState(blockState);
-                }
-                else {
-                    block.setBlockState(getNormalTripwire(blockState1));
-                }
-            }
-            else if (blockState1.getType() == StateTypes.CAVE_VINES_PLANT) {
-                CustomItem customItem = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
-                if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
-                    WrappedBlockState blockState = getBlockStateFromVine(customCaveVineItem.getPlant(), blockState1.isBerries());
-                    block.setBlockState(blockState);
-                }
-            }
-            else if (blockState1.getType() == StateTypes.CAVE_VINES) {
-                CustomItem customItem = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
-                if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
-                    CustomCaveVineBlock customCaveVineBlock;
-                    if (blockState1.getAge() == 25) {
-                        customCaveVineBlock = customCaveVineItem.getVine_25();
-                    }
-                    else {
-                        customCaveVineBlock = customCaveVineItem.getVine();
-                    }
-                    WrappedBlockState blockState = getBlockStateFromVine(customCaveVineBlock, blockState1.isBerries());
-                    block.setBlockState(blockState);
-                }
-                else {
-                    block.setBlockState(getNormalVineState(blockState1.isBerries()));
-                }
-            } else if (saplingTypes.contains(blockState1.getType())) {
-                CustomItem customItem = getCustomItemFromPos(player.getWorld(), block.getX(), block.getY(), block.getZ());
-                if (customItem instanceof CustomPlaceableItem customBlockItem && customBlockItem.getCustomBlock() instanceof CustomSaplingBlock) {
-                    WrappedBlockState blockState = getBlockStateFromSapling(blockState1.getType());
-                    block.setBlockState(blockState);
-                }
-                else {
-                    block.setBlockState(getNormalSapling(blockState1));
-                }
-            }
+            return getNormalVineState(state.isBerries());
+        }
+        if (waxedTypes.containsKey(type)) {
+            // waxed copper is only ever custom; a vanilla waxed block is shown unwaxed
+            return getCustomItemFromPos(world, x, y, z) == null ? getUnwaxedState(state) : null;
+        }
+        if (saplingTypes.contains(type)) {
+            return getCustomItemFromPos(world, x, y, z) instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomSaplingBlock
+                    ? getBlockStateFromSapling(type)
+                    : getNormalSapling(state);
+        }
+        return null;
+    }
+
+    private volatile long lastRemapFailureLog;
+
+    private void logRemapFailure(RuntimeException e) {
+        long now = System.currentTimeMillis();
+        if (now - lastRemapFailureLog > 60_000) { // at most once a minute
+            lastRemapFailureLog = now;
+            GardensFurniture.plugin.getLogger().log(java.util.logging.Level.WARNING, "Failed to remap a block in a chunk packet", e);
         }
     }
 
@@ -669,7 +449,6 @@ public class BlockPacketListener {
         blockState.setStage(1);
         return blockState;
     }
-
 
     private WrappedBlockState getNormalTripwire(WrappedBlockState blockstate) {
         // strip off un-needed states so we can use them in conjunction with the directions

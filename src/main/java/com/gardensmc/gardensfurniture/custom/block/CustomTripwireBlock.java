@@ -6,17 +6,15 @@ import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
+import com.gardensmc.gardensfurniture.util.SpecialItems;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-
-import static com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener.*;
 
 public class CustomTripwireBlock extends CustomBlock {
 
@@ -95,32 +93,30 @@ public class CustomTripwireBlock extends CustomBlock {
             if (top.getType() != Material.AIR) return false;
 
             // ensure tripwire top is registered
-            if (GardensFurniture.itemRegistry.getItem("tripwire_top") == null) {
+            if (GardensFurniture.itemRegistry.getItem(SpecialItems.TRIPWIRE_TOP) == null) {
                 return false;
             }
 
             // place blank tripwire as hitbox
             top.setType(Material.TRIPWIRE);
-            FurnitureStoreHandler.INSTANCE.addFurnitureStore(top, new FurnitureStore("tripwire_top"), heldItem != null);
+            FurnitureStoreHandler.INSTANCE.addFurnitureStore(top, new FurnitureStore(SpecialItems.TRIPWIRE_TOP), heldItem != null);
         }
 
 
         block.setType(Material.TRIPWIRE);
         FurnitureStoreHandler.INSTANCE.addFurnitureStore(
                 block,
-                new FurnitureStore.FurnitureStoreBuilder(customItem.getIdentifier())
-                        .withMultiplier(placeOptions.getMultiplier())
-                        .withFacing(placeOptions.getFacing())
+                FurnitureStore.builder()
+                        .itemIdentifier(customItem.getIdentifier())
+                        .multiplier(placeOptions.getMultiplier())
+                        .facing(placeOptions.getFacing())
                         .build(),
                 heldItem != null
         );
 
         Bukkit.getPluginManager().callEvent(new CustomBlockPlaceEvent(player, customItem, block));
         // play place sound
-        var sound = getSoundToPlay(block, "place");
-        if (sound != null) {
-            block.getWorld().playSound(block.getLocation(), sound, SoundCategory.BLOCKS, VANILLA_PLACE_VOLUME, VANILLA_PLACE_PITCH);
-        }
+        playPlaceSound(block, null);
         return true;
     }
 }

@@ -149,13 +149,14 @@ public class FurnitureCommand implements TabExecutor {
             var radius = 2;
             int i = 1;
             var area = Math.pow(radius*2 + 1, 2);
+            int minY = centerChunk.getWorld().getMinHeight(), maxY = centerChunk.getWorld().getMaxHeight();
             for (int x = -radius; x <= radius; x++) {
                 for (int z = -radius; z <= radius; z++) {
                     var chunk = centerChunk.getWorld().getChunkAt(centerChunk.getX() + x, centerChunk.getZ() + z);
                     var snapshot = chunk.getChunkSnapshot();
                     int finalI = i;
                     CompletableFuture
-                            .runAsync(() -> ChunkFurnitureLoader.INSTANCE.processSnapshot(snapshot, player.getWorld().getEnvironment()))
+                            .runAsync(() -> ChunkFurnitureLoader.INSTANCE.processSnapshot(snapshot, minY, maxY))
                             .thenRun(() -> player.sendMessage("Loaded chunk furniture " + finalI + "/" + area));
                     i++;
                 }
@@ -168,7 +169,7 @@ public class FurnitureCommand implements TabExecutor {
     public List<String> onTabComplete(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String s, @NotNull String[] arguments) {
         List<String> suggestions = new ArrayList<>();
         if (arguments.length > 0) {
-            switch (arguments[0]) {
+            switch (arguments[0].toUpperCase()) {
                 case "GET" -> suggestions = GardensFurniture.itemRegistry.getItemIdentifiers();
             }
         }

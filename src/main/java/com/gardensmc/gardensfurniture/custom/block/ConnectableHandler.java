@@ -4,6 +4,7 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.type.Connectable;
+import com.gardensmc.gardensfurniture.custom.type.Facing;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.PaperBlockItemDataProperties;
 import lombok.AllArgsConstructor;
@@ -39,8 +40,8 @@ public class ConnectableHandler {
         if (front != null) {
             return Connectable.INNER;
         }
-        var left = getAttachedBlock(offsetClockwise(facing));
-        var right = getAttachedBlock(offsetClockwise(facing.getOppositeFace()));
+        var left = getAttachedBlock(Facing.fromBlockFace(facing).clockwise().toBlockFace());
+        var right = getAttachedBlock(Facing.fromBlockFace(facing.getOppositeFace()).clockwise().toBlockFace());
         if (left == null && right == null) {
             return Connectable.STRAIGHT;
         }
@@ -63,25 +64,5 @@ public class ConnectableHandler {
             return null;
         }
         return relativeDisplay;
-    }
-
-    private BlockFace offsetClockwise(BlockFace origin) {
-        return switch (origin) {
-            case NORTH -> BlockFace.EAST;
-            case EAST -> BlockFace.SOUTH;
-            case SOUTH -> BlockFace.WEST;
-            case WEST -> BlockFace.NORTH;
-            default -> throw new RuntimeException("Illegal rotation origin: " + origin);
-        };
-    }
-
-    private BlockFace offsetCounterClockwise(BlockFace origin) {
-        return switch (origin) {
-            case NORTH -> BlockFace.WEST;
-            case WEST -> BlockFace.SOUTH;
-            case SOUTH -> BlockFace.EAST;
-            case EAST -> BlockFace.NORTH;
-            default -> throw new RuntimeException("Illegal rotation origin: " + origin);
-        };
     }
 }

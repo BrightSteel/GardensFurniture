@@ -3,6 +3,7 @@ package com.gardensmc.gardensfurniture.listener;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.item.CustomBackpackItem;
 import com.gardensmc.gardensfurniture.wrap.WrapHandler;
+import com.gardensmc.gardensfurniture.util.SpecialItems;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -38,7 +39,7 @@ public class CraftListener implements Listener {
             if (shulker.getItemMeta() instanceof BlockStateMeta blockStateMeta) {
                 if (blockStateMeta.getBlockState() instanceof ShulkerBox shulkerBox) {
                     var dye = shulkerBox.getColor() == null ? "" : "_" + shulkerBox.getColor().toString().toLowerCase();
-                    var backpack = GardensFurniture.itemRegistry.buildItem("backpack" + dye);
+                    var backpack = GardensFurniture.itemRegistry.buildItem(SpecialItems.BACKPACK_PREFIX + dye);
                     if (backpack != null) {
                         backpack.setData(DataComponentTypes.CONTAINER, shulker.getData(DataComponentTypes.CONTAINER));
                         e.getInventory().setResult(backpack);
@@ -79,7 +80,7 @@ public class CraftListener implements Listener {
         }
         // modify item model
         var backpackClone = backpack.clone();
-        var desiredBackpack = GardensFurniture.itemRegistry.getItem("backpack_" + dye.getType().toString().toLowerCase().split("_")[0]);
+        var desiredBackpack = GardensFurniture.itemRegistry.getItem(SpecialItems.BACKPACK_PREFIX + "_" + dye.getType().toString().toLowerCase().split("_")[0]);
         if (desiredBackpack == null) {
             return;
         }

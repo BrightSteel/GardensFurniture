@@ -1,30 +1,30 @@
 package com.gardensmc.gardensfurniture.custom;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.custom.block.Barriers;
 import com.gardensmc.gardensfurniture.custom.block.CustomDisplayBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomTripwireBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomWaxedBlock;
 import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.events.Furniture;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.events.FurnitureInteractEvent;
 import com.gardensmc.gardensfurniture.itementity.DisplayItemEntity;
-import com.gardensmc.gardensfurniture.itementity.FrameItemEntity;
 import com.gardensmc.gardensfurniture.itementity.ItemEntity;
 import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
+import com.gardensmc.gardensfurniture.util.SpecialItems;
 import de.tr7zw.nbtapi.NBT;
 import de.tr7zw.nbtapi.NBTEntity;
-import de.tr7zw.nbtapi.iface.ReadableNBTList;
 import dev.geco.gsit.api.GSitAPI;
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.block.data.type.NoteBlock;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
-import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -68,12 +68,12 @@ public class CustomBlockManager {
                 || material == Material.SNOW;
     }
 
-    private static boolean entityBlocking(Location loc) {
+    public static boolean entityBlocking(Location loc) {
         if (loc.getWorld() != null) {
             return loc.getWorld().getNearbyEntities(loc, 1, 1, 1, entity -> entity instanceof LivingEntity || entity instanceof Display)
                     .stream()
                     // ignore display entity data holders
-                    .filter(entity -> !(entity instanceof ItemDisplay itemDisplay && itemDisplay.getItemStack() == null))
+                    .filter(entity -> !(entity instanceof ItemDisplay itemDisplay && itemDisplay.getItemStack().isEmpty()))
                     .anyMatch(entity -> isValidEntity(entity, loc));
         }
         return false;
@@ -100,16 +100,7 @@ public class CustomBlockManager {
         if (displayEntity != null) {
             return new DisplayItemEntity(displayEntity);
         }
-//        var itemFrame = getBlock(location);
-//        if (itemFrame != null) {
-//            return new FrameItemEntity(itemFrame);
-//        }
         return null;
-    }
-
-    @Nullable
-    private static ItemFrame getBlock(Location location) {
-        return (ItemFrame) getEntityByClass(location, ItemFrame.class);
     }
 
     @Nullable
@@ -119,35 +110,54 @@ public class CustomBlockManager {
 
     @Nullable
     public static ItemDisplay getDisplayEntity(Location location, boolean isCheckAdjacent) {
-        var display = (ItemDisplay) getEntityByClass(location, ItemDisplay.class);
+        return getDisplayEntity(location, isCheckAdjacent, display -> true);
+    }
+
+    /**
+     * Like {@link #getItemEntity(Location, boolean)} but only matches placed furniture, never another
+     * plugin's display (or our own sapling/pot model displays). Use for break and interact handling.
+     */
+    @Nullable
+    public static ItemEntity getFurnitureEntity(Location location) {
+        return getFurnitureEntity(location, true);
+    }
+
+    @Nullable
+    public static ItemEntity getFurnitureEntity(Location location, boolean isCheckAdjacent) {
+        var displayEntity = getDisplayEntity(location, isCheckAdjacent, CustomBlockManager::isFurnitureDisplay);
+        return displayEntity == null ? null : new DisplayItemEntity(displayEntity);
+    }
+
+    @Nullable
+    private static ItemDisplay getDisplayEntity(Location location, boolean isCheckAdjacent, java.util.function.Predicate<ItemDisplay> filter) {
+        var display = (ItemDisplay) getEntityByClass(location, ItemDisplay.class, entity -> filter.test((ItemDisplay) entity));
         if (display != null) {
             return display;
         }
         if (isCheckAdjacent) {
             return location.getNearbyEntitiesByType(ItemDisplay.class, 5)
                     .stream()
-                    .filter(entity -> getBarrierVectors(entity).stream().anyMatch(vector -> entity.getLocation().toBlockLocation().toVector().clone().add(vector).equals(location.toBlockLocation().toVector())))
+                    .filter(entity -> Barriers.read(entity).stream().anyMatch(vector -> entity.getLocation().toBlockLocation().toVector().clone().add(vector).equals(location.toBlockLocation().toVector())))
+                    .filter(filter)
                     .findFirst()
                     .orElse(null);
         }
         return null;
     }
 
-    private static List<Vector> getBarrierVectors(Entity entity) {
-        List<String> furnitureBarriers = new ArrayList<>();
-        NBT.getPersistentData(entity, nbt -> {
-            if (nbt.hasTag("FurnitureBarriers")) {
-                nbt.getStringList("FurnitureBarriers").forEach(furnitureBarriers::add);
-            }
-            return null;
-        });
-        if (!furnitureBarriers.isEmpty()) {
-            return furnitureBarriers.stream().map(str -> {
-                var nums = str.split(",");
-                return new Vector(Double.parseDouble(nums[0]), Double.parseDouble(nums[1]), Double.parseDouble(nums[2]));
-            }).toList();
-        }
-        return Collections.emptyList();
+    public static final String POTTED_KEY = "GardensFurniturePotted";
+
+    // the display of a custom plant sitting in a vanilla flower pot (it isn't placeable furniture)
+    @Nullable
+    public static ItemDisplay getPottedPlant(Block pot) {
+        return getDisplayEntity(pot.getLocation(), false,
+                display -> NBT.getPersistentData(display, nbt -> (boolean) nbt.hasTag(POTTED_KEY)));
+    }
+
+    // other plugins (pets, cosmetics, holograms) spawn item displays too - only ours hold a placeable item
+    public static boolean isFurnitureDisplay(ItemDisplay display) {
+        var item = new DisplayItemEntity(display).getItem();
+        return item != null && GardensFurniture.itemRegistry.getCustomItem(item) instanceof CustomPlaceableItem;
     }
 
     @Nullable
@@ -157,11 +167,16 @@ public class CustomBlockManager {
 
     @Nullable
     public static Entity getEntityByClass(Location location, Class<? extends Entity> entityClass) {
+        return getEntityByClass(location, entityClass, entity -> true);
+    }
+
+    @Nullable
+    public static Entity getEntityByClass(Location location, Class<? extends Entity> entityClass, java.util.function.Predicate<Entity> filter) {
         Collection<Entity> entities = location.getWorld().getNearbyEntities(location, 1, 1, 1);
         Block center = location.getBlock();
 
         for (Entity entity : entities) {
-            if (entityClass.isInstance(entity)) {
+            if (entityClass.isInstance(entity) && filter.test(entity)) {
                 if (entity.getLocation().getBlock().getLocation().equals(center.getLocation()))
                     return entity;
             }
@@ -184,11 +199,13 @@ public class CustomBlockManager {
     }
 
     private static void breakFurnitureInternal(Player player, Location location, boolean isBreakingSystem) {
-        ItemEntity itemEntity = getItemEntity(location, true);
+        ItemEntity itemEntity = getFurnitureEntity(location);
         if (itemEntity == null) return;
 
         CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
-        var placeable = (CustomPlaceableItem) customItem;
+        if (!(customItem instanceof CustomPlaceableItem placeable)) {
+            return; // not our furniture - never remove another plugin's entity
+        }
         // TODO temp disabled since breaking system is disabled
 //        if (player != null && player.getGameMode() != GameMode.CREATIVE && !isBreakingSystem && location.getBlock().getType() == Material.BARRIER && placeable != null && placeable.getCustomBlock().getMaterialTraits() != null) {
 //            return; // breaks with breaking handler
@@ -200,7 +217,7 @@ public class CustomBlockManager {
         }
 
         // remove furniture entities / hitbox
-        var barriers = getBarrierVectors(itemEntity.getEntity());
+        var barriers = Barriers.read(itemEntity.getEntity());
         if (!barriers.isEmpty()) {
             barriers.stream().map(v -> itemEntity.getEntity().getLocation().add(v).getBlock()).forEach(block -> {
                 if (block.getType() == Material.BARRIER) {
@@ -246,13 +263,59 @@ public class CustomBlockManager {
             Material.DARK_OAK_SAPLING
     };
 
+    /**
+     * Remove a store-backed custom block and everything that belongs to it, without dropping anything:
+     * a model display in its cell (saplings), the other half of a door or large tripwire, its light, its
+     * store, and the block itself. Callers handle drops, since those differ per cause.
+     */
+    public static void removeCustomBlock(Block block) {
+        var customBlock = getItemFromLeaves(block) instanceof CustomPlaceableItem placeable ? placeable.getCustomBlock() : null;
+        var itemEntity = getItemEntity(block.getLocation());
+        if (itemEntity != null) {
+            itemEntity.getEntity().remove();
+        }
+        Block partner = null;
+        if (block.getBlockData() instanceof org.bukkit.block.data.type.Door door) {
+            partner = door.getHalf() == org.bukkit.block.data.Bisected.Half.BOTTOM ? block.getRelative(BlockFace.UP) : block.getRelative(BlockFace.DOWN);
+        } else if (customBlock instanceof CustomTripwireBlock tripwire && tripwire.isLarge()) {
+            partner = block.getRelative(BlockFace.UP);
+        }
+        if (partner != null && FurnitureStoreHandler.INSTANCE.getFurnitureStore(partner) != null) {
+            FurnitureStoreHandler.INSTANCE.removeFurnitureStore(partner);
+            partner.setType(Material.AIR, false);
+        }
+        block.setType(Material.AIR);
+        FurnitureStoreHandler.INSTANCE.removeFurnitureStore(block);
+        if (customBlock != null) {
+            customBlock.removeLight(block.getLocation());
+        }
+    }
+
+    // every block type whose custom item lives in a furniture store rather than a display entity
+    private static final Set<Material> STORE_BACKED_TYPES = Collections.unmodifiableSet(EnumSet.copyOf(
+            Stream.concat(Arrays.stream(packetTypes), CustomWaxedBlock.WaxedType.materials().stream()).toList()
+    ));
+
+    public static boolean isStoreBacked(Material material) {
+        return STORE_BACKED_TYPES.contains(material);
+    }
+
     @Nullable
     public static CustomItem getCustomItemFromBlock(Block block) {
-        if (Stream.concat(Arrays.stream(packetTypes), CustomWaxedBlock.WaxedType.materials().stream()).toList().contains(block.getType())) {
+        var type = block.getType();
+        if (isStoreBacked(type)) {
             return CustomBlockManager.getItemFromLeaves(block);
         }
-
-        ItemEntity itemEntity = getItemEntity(block.getLocation(), true);
+        // Display furniture only ever occupies barrier cells or the free cell it was placed in, so skip the
+        // entity lookup for everything else - this runs on every mob step, block place and block break.
+        ItemEntity itemEntity;
+        if (type == Material.BARRIER) {
+            itemEntity = getFurnitureEntity(block.getLocation());
+        } else if (type == Material.CAVE_AIR || isPlaceableMaterial(type)) {
+            itemEntity = getFurnitureEntity(block.getLocation(), false); // interaction hitboxes: own cell only
+        } else {
+            return null;
+        }
         if (itemEntity != null) {
             return GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
         }
@@ -287,12 +350,18 @@ public class CustomBlockManager {
         if (event.isCancelled()) {
             return;
         }
-        if (!ProtectionUtil.canBuild(itemEntity.getEntity().getLocation(), player)) {
+        var location = itemEntity.getEntity().getLocation();
+        // using furniture (sitting, switching a light) needs access trust, like buttons and levers;
+        // changing it (dyeing) or taking from it (maple taps) needs build trust
+        boolean canUse = ProtectionUtil.canUse(location, player);
+        boolean canBuild = ProtectionUtil.canBuild(location, player);
+        if (!canUse && !canBuild) {
             return;
         }
         if (player.isSneaking()) {
 //            itemEntity.rotate(45);
         } else if (heldItem.getType().toString().toUpperCase().endsWith("DYE") && customItem.isDyeable() && itemEntity.getItem().getItemMeta() instanceof LeatherArmorMeta leatherMeta) {
+            if (!canBuild) return;
             leatherMeta.setColor(getColorFromDye(heldItem.getType()));
             var item = itemEntity.getItem();
             item.setItemMeta(leatherMeta);
@@ -306,11 +375,12 @@ public class CustomBlockManager {
         } else if (customBlockItem.getCustomBlock().isSeated()) {
             double offset = customBlockItem.getCustomBlock().getSeatOffset();
             GSitAPI.createSeat(itemEntity.getEntity().getLocation().getBlock(), player, true, 0.0, offset, 0.0, player.getLocation().getYaw(), true);
-        } else if (customItem.getIdentifier().equals("maple_tap_5") && heldItem.getType() == Material.GLASS_BOTTLE) {
-            itemEntity.setItem(GardensFurniture.itemRegistry.buildItem("maple_tap_1"));
+        } else if (customItem.getIdentifier().equals(SpecialItems.mapleTapStage(5)) && heldItem.getType() == Material.GLASS_BOTTLE) {
+            if (!canBuild) return;
+            itemEntity.setItem(GardensFurniture.itemRegistry.buildItem(SpecialItems.mapleTapStage(1)));
             var nbt = new NBTEntity(itemEntity.getEntity()).getPersistentDataContainer();
             nbt.removeKey(MapleTapHandler.TAP_NBT);
-            var mapleSyrup = GardensFurniture.itemRegistry.buildItem("maple_syrup");
+            var mapleSyrup = GardensFurniture.itemRegistry.buildItem(SpecialItems.MAPLE_SYRUP);
             if (mapleSyrup == null) {
                 Bukkit.getLogger().log(Level.SEVERE, "Failed to get maple_syrup item!");
                 return;
@@ -347,6 +417,4 @@ public class CustomBlockManager {
         }
         return color;
     }
-
-
 }

@@ -15,5 +15,7 @@ public class PlaceOptions {
     private int multiplier;
     private String facing;
     private boolean force;
+    // rotation to use when nobody is placing (world gen, structures, rollbacks); ignored when a player places
+    private float yaw;
 
 }

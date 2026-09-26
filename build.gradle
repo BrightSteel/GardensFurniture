@@ -25,9 +25,6 @@ repositories {
         url = "https://jitpack.io/"
     }
     maven {
-        url = "https://maven.enginehub.org/repo/"
-    }
-    maven {
         url = "https://repo.dmulloy2.net/repository/public/"
     }
     maven {
@@ -65,9 +62,6 @@ dependencies {
      implementation("de.themoep:inventorygui:1.6.4-SNAPSHOT")
     compileOnly("com.github.retrooper:packetevents-spigot:2.12.2")
     compileOnly 'com.ticxo.modelengine:ModelEngine:R4.0.7'
-    implementation(platform("com.intellectualsites.bom:bom-newest:1.56")) // Ref: https://github.com/IntellectualSites/bom
-    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core")
-    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Bukkit")
     compileOnly("com.hibiscusmc:HMCCosmetics:2.8.0-f56d5c90")
     compileOnly("com.github.GriefPrevention:GriefPrevention:16.18.4")
     // Prism (prism-mc.org) rollback/restore integration — custom actions API.
@@ -82,6 +76,13 @@ dependencies {
 
     testCompileOnly 'org.projectlombok:lombok:1.18.46'
     testAnnotationProcessor 'org.projectlombok:lombok:1.18.46'
+
+    // unit tests run without a server: the Paper API and NBT-API are only on the classpath, never started
+    testImplementation(platform("org.junit:junit-bom:5.12.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("io.papermc.paper:paper-api:26.1.2.build.+")
+    testImplementation("de.tr7zw:item-nbt-api-plugin:2.15.7")
 }
 
 def targetJavaVersion = 25
@@ -111,6 +112,14 @@ tasks {
         relocate("de.themoep", "com.gardensmc.furniture.shaded.inventorygui")
     }
 
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "failed"
+        exceptionFormat "full"
+    }
 }
 
 processResources {

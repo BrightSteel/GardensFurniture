@@ -20,6 +20,7 @@ import io.papermc.paper.datacomponent.item.UseCooldown;
 import io.papermc.paper.datacomponent.item.consumable.ItemUseAnimation;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.experimental.Accessors;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
@@ -39,29 +40,31 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.regex.Pattern;
 
 public class ItemRegistry {
 
     public CustomItemFactory customItemFactory;
     public CustomBlockFactory customBlockFactory;
 
-    private final Map<String, Set<CustomItem>> customItemByCategory = new HashMap<>();
+    // replaced as a whole when (re)loading, so a failed or in-progress reload never leaves them half-built
+    private volatile Map<String, Set<CustomItem>> customItemByCategory = new HashMap<>();
     @Getter
-    private final Map<String, CustomItem> customItems = new HashMap<>();
+    private volatile Map<String, CustomItem> customItems = new HashMap<>();
 
     // also can be for leaves too: distance,persistent -> identifier
     // note,instrument,powered -> custom_item_identifier
-    public final Map<String, String> customNoteBlocks = new HashMap<>();
+    private volatile Map<String, String> customNoteBlocks = new HashMap<>();
+    @Getter
+    @Accessors(fluent = true)
+    private volatile boolean hasConnectableItems;
+    // block states registered by the items currently being loaded
+    private Map<String, String> loadingBlockStates = new HashMap<>();
 
     public static final String FURNITURE_KEY = "GardensFurnitureId";
     // keys for the interaction-range attribute modifiers applied from item components.
     private static final NamespacedKey BLOCK_INTERACTION_RANGE_KEY = new NamespacedKey("gardensfurniture", "block_interaction_range");
     private static final NamespacedKey ENTITY_INTERACTION_RANGE_KEY = new NamespacedKey("gardensfurniture", "entity_interaction_range");
     public static final File generatedDir = new File(GardensFurniture.plugin.getDataFolder(), "generated");
-
-    // Regular expression to match text between ":" and "/"
-    private static final Pattern OUTER_DIR_PATTERN = Pattern.compile("(?<=:)([^/]+)(?=/)");
 
     public ItemRegistry() {
         customItemFactory = new CustomItemFactory();
@@ -76,14 +79,25 @@ public class ItemRegistry {
                 e.printStackTrace();
             }
         }
-//        Set<String> outerFolders = new HashSet<>();
+        Map<String, CustomItem> customItems = new HashMap<>();
+        Map<String, Set<CustomItem>> customItemByCategory = new HashMap<>();
+        loadingBlockStates = new HashMap<>();
+        int failed = 0;
         for (Map.Entry<String, Configuration> entry : ConfigUtil.all_items.entrySet()) {
             String name = entry.getKey();
             var config = entry.getValue();
             for (String key : config.getKeys(false)) {
                 ConfigurationSection section = config.getConfigurationSection(key);
                 if (section != null) {
-                    CustomItem customItem = customItemFactory.createCustomItem(key, section);
+                    CustomItem customItem;
+                    try {
+                        customItem = customItemFactory.createCustomItem(key, section);
+                    } catch (Exception e) {
+                        // one bad item shouldn't take every other item down with it
+                        failed++;
+                        GardensFurniture.plugin.getLogger().severe("Skipping item '%s' in items/%s.yml: %s".formatted(key, name, e));
+                        continue;
+                    }
                     customItems.put(key, customItem);
 
                     if (customItem.showInMenu() && !customItem.isTemplate()) {
@@ -107,10 +121,6 @@ public class ItemRegistry {
                                 if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock && displayBlock.getLitModel() != null) {
                                     writeOutModelFile(displayBlock.getLitModel(), tint, false);
                                 }
-//                                var outerFolder = OUTER_DIR_PATTERN.matcher(itemModel);
-//                                if (outerFolder.find()) {
-//                                    outerFolders.add(outerFolder.group(1));
-//                                }
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
@@ -119,12 +129,16 @@ public class ItemRegistry {
                 }
             }
         }
+        this.hasConnectableItems = customItems.values().stream().anyMatch(item ->
+                item instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock && displayBlock.isConnectable());
+        this.customItems = customItems;
+        this.customItemByCategory = customItemByCategory;
+        this.customNoteBlocks = loadingBlockStates;
+        if (failed > 0) {
+            GardensFurniture.plugin.getLogger().severe("%d item(s) failed to load, see errors above".formatted(failed));
+        }
         GenDefinitionsHandler.INSTANCE.generate();
         GenOverworldDimensionHandler.INSTANCE.generate();
-
-//        if (!outerFolders.isEmpty()) {
-//            writeOutAtlases(outerFolders);
-//        }
     }
 
     @AllArgsConstructor
@@ -169,22 +183,6 @@ public class ItemRegistry {
         mapper.writerWithDefaultPrettyPrinter().writeValue(output, node);
     }
 
-    private void writeOutAtlases(Set<String> outerFolders) {
-        JsonMapper jsonMapper = new JsonMapper();
-        var atlas = new Atlases(outerFolders
-                .stream()
-                .map(folder -> new Atlas("directory", folder, folder + "/"))
-                .toList()
-        );
-        var output = new File(generatedDir, "minecraft/atlases/blocks.json");
-        output.getParentFile().mkdirs();
-        try {
-            jsonMapper.writerWithDefaultPrettyPrinter().writeValue(output, atlas);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     public List<String> getItemIdentifiers() {
         return customItems.keySet().stream().toList();
     }
@@ -208,7 +206,6 @@ public class ItemRegistry {
         CustomItem customItem = getItem(identifier);
         return buildItem(customItem);
     }
-
 
     @Nullable
     public ItemStack buildItem(CustomItem customItem) {
@@ -370,10 +367,15 @@ public class ItemRegistry {
     }
 
     public void reload() {
-        customItems.clear();
-        customItemByCategory.clear();
-        customNoteBlocks.clear();
         assembleItems();
+    }
+
+    // called by the block factory while items load: note/leaves states that map back to an item
+    public void registerBlockState(String stateKey, String identifier) {
+        var existing = loadingBlockStates.put(stateKey, identifier);
+        if (existing != null && !existing.equals(identifier)) {
+            GardensFurniture.plugin.getLogger().warning("Block state %s is used by both '%s' and '%s'; '%s' wins".formatted(stateKey, existing, identifier, identifier));
+        }
     }
 
     @Nullable

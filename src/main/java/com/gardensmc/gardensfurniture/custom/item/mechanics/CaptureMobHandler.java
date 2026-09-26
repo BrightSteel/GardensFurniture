@@ -14,6 +14,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
@@ -44,6 +45,8 @@ public class CaptureMobHandler {
 
     private final Player player;
     private final WrappedItem heldItem;
+    // hand the capture item is held in - only this slot is ever replaced
+    private final EquipmentSlot hand;
 
     public boolean isCaptureItem() {
         var mechanics = heldItem.customItem().getMechanics();
@@ -78,8 +81,23 @@ public class CaptureMobHandler {
             capturedGroupNBT.setString(ENTITY_TYPE_KEY, mobType);
             capturedGroupNBT.getOrCreateCompound(ENTITY_NBT_KEY).mergeCompound(entityNbt);
         });
-        player.getInventory().setItemInMainHand(egg);
+        var held = player.getInventory().getItem(hand);
+        if (held.getAmount() > 1) {
+            // only one ball from the stack captures the mob
+            held.setAmount(held.getAmount() - 1);
+            player.getInventory().setItem(hand, held);
+            player.getInventory().addItem(egg).values()
+                    .forEach(leftover -> player.getWorld().dropItemNaturally(player.getLocation(), leftover));
+        } else {
+            player.getInventory().setItem(hand, egg);
+        }
         mob.remove();
+    }
+
+    // a captured mob is kept in a real spawn egg; vanilla must never get to use that egg itself
+    public static boolean isCapturedMob(ItemStack itemStack) {
+        return itemStack != null && !itemStack.getType().isAir()
+                && NBT.get(itemStack, nbt -> (boolean) nbt.hasTag(CAPTURED_GROUP_KEY));
     }
 
     public boolean isStoringMob() {
@@ -111,7 +129,7 @@ public class CaptureMobHandler {
         } else {
             replacementEgg = new ItemStack(Material.AIR);
         }
-       player.getInventory().setItemInMainHand(replacementEgg);
+        player.getInventory().setItem(hand, replacementEgg);
     }
 
     // return uses left

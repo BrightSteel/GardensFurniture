@@ -115,7 +115,8 @@ public class CustomBreakingBlock {
 
     public void close() {
         task.cancel();
-        BlockBreakingListener.customBreakingBlocks.remove(playerUUID);
+        // only drop our own entry - a newer break by the same player may already have replaced it
+        BlockBreakingListener.customBreakingBlocks.remove(playerUUID, this);
         var player = Bukkit.getPlayer(playerUUID);
         if (player != null) {
             sendBlockDestroyStagePacket(player, (byte) 10); // invalid stage to remove animation

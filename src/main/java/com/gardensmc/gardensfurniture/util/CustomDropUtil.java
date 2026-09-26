@@ -20,18 +20,13 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 public class CustomDropUtil {
 
     // I guess this is a custom handler for tripwire? Why is it hidden in this util, there should be a factory or something
     public static void dropCustomItem(BlockBreakEvent e, CustomItem customItem, CustomTripwireBlock customTripwireBlock) {
         e.setDropItems(false);
-        if (customItem.getIdentifier().equals("tripwire_top")) {
+        if (customItem.getIdentifier().equals(SpecialItems.TRIPWIRE_TOP)) {
             Block bottom = e.getBlock().getRelative(BlockFace.DOWN);
-//            var furnitureStore = FurnitureStoreHandler.INSTANCE.getFurnitureStore(bottom);
-//            var tripItem = GardensFurniture.itemRegistry.getItem(furnitureStore.itemIdentifier());
-            // wait are we going to support multiplier big ones ?
             CustomItem tripItem = CustomBlockManager.getItemFromLeaves(bottom);
 
             // remove top from store
@@ -102,9 +97,20 @@ public class CustomDropUtil {
 
             Bukkit.getPluginManager().callEvent(new CustomBlockBreakEvent(e.getPlayer(), customBlockItem, e.getBlock()));
             if (removeFurniture) {
-                // run later for other listeners to see furniture data before removal
-                Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock()), 1);
-
+                // run later for other listeners to see furniture data before removal; carry the breaking
+                // player and the pre-break block state so the removal is recorded against them (Prism)
+                var player = e.getPlayer();
+                var brokenBlockData = e.getBlock().getBlockData().getAsString();
+                Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> {
+                    FurnitureStoreHandler.currentActor.set(player);
+                    FurnitureStoreHandler.removedBlockData.set(brokenBlockData);
+                    try {
+                        FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
+                    } finally {
+                        FurnitureStoreHandler.currentActor.remove();
+                        FurnitureStoreHandler.removedBlockData.remove();
+                    }
+                }, 1);
             }
         }
     }

@@ -8,17 +8,19 @@ import com.gardensmc.gardensfurniture.util.LightUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 
 public class CustomBlockBreakListener implements Listener {
 
-    @EventHandler(ignoreCancelled = true)
+    // MONITOR: only once no other listener can still cancel the break
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockBreak(CustomBlockBreakEvent e) {
         removeLight(e.getBlock().getLocation(), e.getCustomItem().getCustomBlock());
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onFurnitureBreak(FurnitureBreakEvent e) {
         removeLight(e.getItemEntity().getEntity().getLocation(), e.getCustomItem().getCustomBlock());
     }
@@ -33,8 +35,6 @@ public class CustomBlockBreakListener implements Listener {
     }
 
     private void removeLight(Location location, CustomBlock customBlock) {
-        if (customBlock.getLight() > 0) {
-            LightUtil.removeLight(location.add(0, customBlock.getLightOffset(), 0), customBlock.isSolid());
-        }
+        customBlock.removeLight(location);
     }
 }

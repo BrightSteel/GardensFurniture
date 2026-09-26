@@ -1,11 +1,15 @@
 package com.gardensmc.gardensfurniture.store;
 
+import com.gardensmc.gardensfurniture.GardensFurniture;
 import de.tr7zw.nbtapi.NBTChunk;
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.function.BiConsumer;
+import java.util.function.Predicate;
 
 public class FurnitureStoreHandler {
 
@@ -37,6 +41,12 @@ public class FurnitureStoreHandler {
      */
     public static final ThreadLocal<Object> currentActor = new ThreadLocal<>();
 
+    /**
+     * Block state of a store's block from before it was broken, for removals that run after the block
+     * is already gone (so lifecycle recording captures the real block rather than air).
+     */
+    public static final ThreadLocal<String> removedBlockData = new ThreadLocal<>();
+
     public void addFurnitureStore(Block block, FurnitureStore furnitureStore, boolean refresh) {
         var nbtChunk = new NBTChunk(block.getChunk()).getPersistentDataContainer().getOrCreateCompound("GardensFurniture");
         var chunkBlockCompound = nbtChunk.getOrCreateCompound(getBlockKey(block));
@@ -51,6 +61,8 @@ public class FurnitureStoreHandler {
         }
         if (refresh) {
             FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(block.getWorld().getName(), block.getChunk().getX(), block.getChunk().getZ()));
+        } else {
+            FurnitureCache.INSTANCE.putCached(new FurnitureCache.ChunkKey(block.getChunk()), blockKey(block), furnitureStore);
         }
         notifyLifecycle(block, true);
     }
@@ -60,7 +72,28 @@ public class FurnitureStoreHandler {
         notifyLifecycle(block, false);
         var nbtChunk = new NBTChunk(block.getChunk()).getPersistentDataContainer().getOrCreateCompound("GardensFurniture");
         nbtChunk.removeKey(getBlockKey(block));
+        FurnitureCache.INSTANCE.removeCached(new FurnitureCache.ChunkKey(block.getChunk()), blockKey(block));
         FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(block.getWorld().getName(), block.getChunk().getX(), block.getChunk().getZ()));
+    }
+
+    /**
+     * For stores written ahead of a vanilla ("natural") placement: if vanilla didn't end up placing the
+     * block (placement failed, or a slab merged into the clicked block instead), drop the store next tick
+     * so it can't disguise whatever vanilla block is placed there later.
+     */
+    public void removeIfNotPlaced(Block block, Predicate<Material> isPlaced) {
+        Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> {
+            if (isPlaced.test(block.getType())) {
+                return;
+            }
+            // the placement never happened, so don't record it as a break either
+            suppressLifecycle.set(true);
+            try {
+                removeFurnitureStore(block);
+            } finally {
+                suppressLifecycle.set(false);
+            }
+        }, 1);
     }
 
     private void notifyLifecycle(Block block, boolean added) {
@@ -87,6 +120,10 @@ public class FurnitureStoreHandler {
                 new FurnitureCache.ChunkKey(chunk.getWorld().getName(), chunk.getX(), chunk.getZ()),
                 new FurnitureCache.BlockKey(x, y, z)
         );
+    }
+
+    private FurnitureCache.BlockKey blockKey(Block block) {
+        return new FurnitureCache.BlockKey(block.getX(), block.getY(), block.getZ());
     }
 
     private String getBlockKey(Block block) {

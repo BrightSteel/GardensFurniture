@@ -1,5 +1,6 @@
 package com.gardensmc.gardensfurniture.listener;
 
+import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener;
 import org.bukkit.Bukkit;
@@ -32,7 +33,8 @@ public class ListenerHandler {
                 new AnvilListener(),
                 new CraftListener(),
                 new BlockBreakingListener(),
-                new EnderStepListener()
+                new EnderStepListener(),
+                MapleTapHandler.INSTANCE
         );
     }
 }

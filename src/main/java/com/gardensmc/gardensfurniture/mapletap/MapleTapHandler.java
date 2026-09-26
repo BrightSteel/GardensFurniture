@@ -5,22 +5,29 @@ import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import de.tr7zw.nbtapi.NBTCompound;
 import de.tr7zw.nbtapi.NBTEntity;
 import org.bukkit.Bukkit;
-import org.bukkit.World;
+import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
+import com.gardensmc.gardensfurniture.util.SpecialItems;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemDisplay;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.world.EntitiesLoadEvent;
+import org.bukkit.event.world.EntitiesUnloadEvent;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 
-public class MapleTapHandler {
+public class MapleTapHandler implements Listener {
 
     public static final MapleTapHandler INSTANCE = new MapleTapHandler();
     public static final String TAP_NBT = "GardensFurnitureMapleTap";
 
-    private static final String MAPLE_ID = "maple_tap";
     private static final int FINAL_STAGE = 5;
     private static final String INITIAL_TAG = "initial";
     // timings in seconds from nbt generation
@@ -34,11 +41,47 @@ public class MapleTapHandler {
     private MapleTapHandler() {
     }
 
+    // tap displays in loaded chunks, kept up to date by entity load/unload and placement instead of
+    // scanning (and reading the NBT of) every item display in every world each second
+    private final Set<ItemDisplay> taps = new HashSet<>();
+
     public void tick() {
-        Bukkit.getWorlds()
-                .stream()
-                .flatMap(world -> getTaps(world).stream())
-                .forEach(this::tickTap);
+        taps.removeIf(display -> !display.isValid());
+        for (var display : List.copyOf(taps)) {
+            var tap = getTap(display);
+            if (tap != null) {
+                tickTap(tap);
+            }
+        }
+    }
+
+    // pick up taps in chunks that were already loaded when the plugin enabled
+    public void trackLoadedTaps() {
+        Bukkit.getWorlds().forEach(world -> world.getEntitiesByClass(ItemDisplay.class).forEach(this::track));
+    }
+
+    private void track(Entity entity) {
+        if (entity instanceof ItemDisplay display && display.getItemStack() != null) {
+            var customItem = GardensFurniture.itemRegistry.getCustomItem(display.getItemStack());
+            if (customItem != null && customItem.getIdentifier().startsWith(SpecialItems.MAPLE_TAP_PREFIX)) {
+                taps.add(display);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onEntitiesLoad(EntitiesLoadEvent e) {
+        e.getEntities().forEach(this::track);
+    }
+
+    @EventHandler
+    public void onEntitiesUnload(EntitiesUnloadEvent e) {
+        e.getEntities().forEach(taps::remove);
+    }
+
+    @EventHandler
+    public void onTapPlaced(FurniturePlaceEvent e) {
+        track(e.getFurniture().itemDisplay());
     }
 
     private void tickTap(Tap tap) {
@@ -58,7 +101,7 @@ public class MapleTapHandler {
             }
             if (!targetStage.equals(tap.stage)) {
                 // replace stage
-                var nextStageId = MAPLE_ID + "_" + targetStage.substring("stage_".length());
+                var nextStageId = SpecialItems.MAPLE_TAP_PREFIX + "_" + targetStage.substring("stage_".length());
                 var itemStack = GardensFurniture.itemRegistry.buildItem(nextStageId);
                 if (itemStack == null) {
                     Bukkit.getLogger().log(Level.SEVERE, "Failed to get next maple tap stage: " + nextStageId);
@@ -81,14 +124,6 @@ public class MapleTapHandler {
         }
     }
 
-    private List<Tap> getTaps(World world) {
-        return world.getEntitiesByClass(ItemDisplay.class)
-                .stream()
-                .map(this::getTap)
-                .filter(Objects::nonNull)
-                .toList();
-    }
-
     @Nullable
     private Tap getTap(ItemDisplay itemDisplay) {
         if (itemDisplay.getItemStack() == null) return null;
@@ -97,10 +132,10 @@ public class MapleTapHandler {
         if (customItem == null) return null;
 
         var identifier = customItem.getIdentifier();
-        if (!identifier.startsWith(MAPLE_ID)) return null;
+        if (!identifier.startsWith(SpecialItems.MAPLE_TAP_PREFIX)) return null;
 
         try {
-            int stage = Integer.parseInt(identifier.substring(MAPLE_ID.length() + 1));
+            int stage = Integer.parseInt(identifier.substring(SpecialItems.MAPLE_TAP_PREFIX.length() + 1));
             if (stage >= FINAL_STAGE) return null; // no need to tick
             return new Tap(itemDisplay, customItem, "stage_" + stage);
         } catch (NumberFormatException e) {
