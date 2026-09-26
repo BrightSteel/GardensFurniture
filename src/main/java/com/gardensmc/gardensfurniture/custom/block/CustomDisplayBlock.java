@@ -284,7 +284,8 @@ public class CustomDisplayBlock extends CustomBlock {
 
         spawnHitbox(locationOffset, barrierVectors);
         if (getLight() > 0 && !lightToggleable) {
-            LightUtil.placeLight(location.add(0, getLightOffset(), 0), getLight(), hitbox == Hitbox.BARRIER);
+            // anchor on the display, like toggling and breaking do (center_left can move it off `location`)
+            LightUtil.placeLight(display.getLocation().add(0, getLightOffset(), 0), getLight(), hitbox == Hitbox.BARRIER);
         }
         Bukkit.getPluginManager().callEvent(new FurniturePlaceEvent(player, new Furniture(customItem, display, null)));
         return true;

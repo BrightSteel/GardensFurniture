@@ -5,6 +5,7 @@ import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.CustomDisplayBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -12,6 +13,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.Light;
 import org.bukkit.entity.ItemDisplay;
 
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Set;
 
@@ -48,18 +50,26 @@ public class LightUtil {
     }
 
     public static void removeLight(Location location, boolean isSolid) {
+        var cleared = new ArrayList<Block>();
         if (isSolid) {
             for (var blockFace : blockFaces) {
                 var block = location.getBlock().getRelative(blockFace);
                 if (block.getType() == Material.LIGHT) {
                     block.setType(Material.AIR);
+                    cleared.add(block);
                 }
             }
         } else {
             var block = location.getBlock();
             if (block.getType() == Material.LIGHT) {
                 block.setType(Material.AIR);
+                cleared.add(block);
             }
+        }
+        // a light block can be shared with a neighbouring lamp - relight any cell another lamp still covers.
+        // Next tick, so the furniture being removed is gone and can't count itself.
+        if (!cleared.isEmpty()) {
+            Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> cleared.forEach(LightUtil::addLightBack), 1);
         }
     }
 
