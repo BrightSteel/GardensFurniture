@@ -219,6 +219,8 @@ public class PlayerListener implements Listener {
                 if (e.getHand() != null) {
                     ItemStack stack = e.getPlayer().getInventory().getItem(e.getHand());
                     if (stack == null || stack.getType() == Material.AIR || stack.getType() == Material.BONE_MEAL) return;
+                    // like vanilla, the offhand is only used when the main hand has nothing to use
+                    if (e.getHand() == EquipmentSlot.OFF_HAND && !e.getPlayer().getInventory().getItemInMainHand().getType().isAir()) return;
 
                     if (stack.getType().toString().endsWith("AXE")) {
                         var mechanics = customItem.getMechanics();
@@ -259,7 +261,9 @@ public class PlayerListener implements Listener {
                         case DOWN -> direction = Direction.DOWN;
                         default -> direction = Direction.UP;
                     }
-                    var result = craftItemStack.useOn(new UseOnContext(human, InteractionHand.MAIN_HAND, new BlockHitResult(
+                    // the context consumes from this hand, so it must be the hand the item came from
+                    var hand = e.getHand() == EquipmentSlot.OFF_HAND ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+                    var result = craftItemStack.useOn(new UseOnContext(human, hand, new BlockHitResult(
                             new Vec3(e.getInteractionPoint().getX(), e.getInteractionPoint().getY(), e.getInteractionPoint().getZ()),
                             direction,
                             new BlockPos(e.getClickedBlock().getX(), e.getClickedBlock().getY(), e.getClickedBlock().getZ()),
