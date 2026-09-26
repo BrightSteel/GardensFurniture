@@ -42,6 +42,11 @@ public abstract class CustomPlaceableItem extends CustomItem {
         }
     }
 
+    // used by GardensCrops (planters, sprinklers): unused here, but part of the API other plugins call
+    public void placeBlock(Location location) {
+        placeBlock(null, null, location, new PlaceOptions().setForce(true), null);
+    }
+
     public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions, Block clickedBlock) {
         if (placeOptions.isForce()) {
             return true;
