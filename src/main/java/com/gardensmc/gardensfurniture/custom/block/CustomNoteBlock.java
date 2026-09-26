@@ -44,8 +44,9 @@ public class CustomNoteBlock extends CustomBlock {
         block.setType(Material.NOTE_BLOCK);
         FurnitureStoreHandler.INSTANCE.addFurnitureStore(
                 block,
-                new FurnitureStore.FurnitureStoreBuilder(customItem.getIdentifier())
-                        .withFacing(placeOptions.getFacing())
+                FurnitureStore.builder()
+                        .itemIdentifier(customItem.getIdentifier())
+                        .facing(placeOptions.getFacing())
                         .build(),
                 heldItem != null
         );

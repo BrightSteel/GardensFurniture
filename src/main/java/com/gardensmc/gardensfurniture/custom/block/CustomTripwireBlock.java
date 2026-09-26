@@ -105,9 +105,10 @@ public class CustomTripwireBlock extends CustomBlock {
         block.setType(Material.TRIPWIRE);
         FurnitureStoreHandler.INSTANCE.addFurnitureStore(
                 block,
-                new FurnitureStore.FurnitureStoreBuilder(customItem.getIdentifier())
-                        .withMultiplier(placeOptions.getMultiplier())
-                        .withFacing(placeOptions.getFacing())
+                FurnitureStore.builder()
+                        .itemIdentifier(customItem.getIdentifier())
+                        .multiplier(placeOptions.getMultiplier())
+                        .facing(placeOptions.getFacing())
                         .build(),
                 heldItem != null
         );
