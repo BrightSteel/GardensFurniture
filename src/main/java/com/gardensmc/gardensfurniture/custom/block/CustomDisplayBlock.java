@@ -101,10 +101,7 @@ public class CustomDisplayBlock extends CustomBlock {
             if (hitboxSection.contains("height")) {
                 this.hitboxHeight = hitboxSection.getDouble("height");
             }
-            this.barriers = hitboxSection.getStringList("barriers").stream().map(s -> {
-                var nums = s.split(",");
-                return new Vector(Double.parseDouble(nums[0]), Double.parseDouble(nums[1]), Double.parseDouble(nums[2]));
-            }).toList();
+            this.barriers = hitboxSection.getStringList("barriers").stream().map(Barriers::parse).toList();
         }
         this.modelengine_id = displaySection.getString("modelengine_id");
         this.model_override = displaySection.getString("model_override");
@@ -182,24 +179,13 @@ public class CustomDisplayBlock extends CustomBlock {
         }
     }
 
-    public static Vector offsetVector(Vector vector, float yaw) {
-        var offsetVector = vector.clone();
-        var rotation = Rotation.fromPlayerFacing(yaw);
-        return switch ((int) rotation.getYaw()) {
-            case 90 -> new Vector(-offsetVector.getZ(), offsetVector.getY(), offsetVector.getX());
-            case 180 -> new Vector(-offsetVector.getX(), offsetVector.getY(), -offsetVector.getZ());
-            case -90 -> new Vector(offsetVector.getZ(), offsetVector.getY(), -offsetVector.getX());
-            default -> new Vector(offsetVector.getX(), offsetVector.getY(), offsetVector.getZ());
-        };
-    }
-
     protected boolean placeDisplay(CustomPlaceableItem customItem, ItemStack item, @Nullable Player player, float yaw, Location location, BlockFace blockFace) {
         var world = location.getWorld();
         if (world == null) return false;
 
         List<Vector> barrierVectors;
         if (hitbox == Hitbox.BARRIER && !barriers.isEmpty()) {
-            var remappedVectors = barriers.stream().map(v -> offsetVector(v, yaw)).toList();
+            var remappedVectors = barriers.stream().map(v -> Barriers.rotate(v, yaw)).toList();
             // every barrier cell must be free, and (for players) buildable and not occupied by a mob or player
             if (remappedVectors.stream().map(vector -> location.clone().add(vector)).allMatch(cell ->
                     CustomBlockManager.isPlaceableMaterial(cell.getBlock().getType())
@@ -263,12 +249,7 @@ public class CustomDisplayBlock extends CustomBlock {
         }
 
         // hitbox data
-        if (!barrierVectors.isEmpty()) {
-            NBT.modifyPersistentData(display, nbt -> {
-                var stringList = nbt.getStringList("FurnitureBarriers");
-                barrierVectors.forEach(barrierVector -> stringList.add(barrierVector.toString()));
-            });
-        }
+        Barriers.write(display, barrierVectors);
 
         spawnHitbox(locationOffset, barrierVectors);
         if (getLight() > 0 && !lightToggleable) {

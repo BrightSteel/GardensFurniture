@@ -1,6 +1,7 @@
 package com.gardensmc.gardensfurniture.custom;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.custom.block.Barriers;
 import com.gardensmc.gardensfurniture.custom.block.CustomDisplayBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomWaxedBlock;
 import com.gardensmc.gardensfurniture.custom.item.*;
@@ -12,7 +13,6 @@ import com.gardensmc.gardensfurniture.itementity.ItemEntity;
 import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
-import de.tr7zw.nbtapi.NBT;
 import de.tr7zw.nbtapi.NBTEntity;
 import dev.geco.gsit.api.GSitAPI;
 import org.bukkit.*;
@@ -21,7 +21,6 @@ import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
-import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -134,7 +133,7 @@ public class CustomBlockManager {
         if (isCheckAdjacent) {
             return location.getNearbyEntitiesByType(ItemDisplay.class, 5)
                     .stream()
-                    .filter(entity -> getBarrierVectors(entity).stream().anyMatch(vector -> entity.getLocation().toBlockLocation().toVector().clone().add(vector).equals(location.toBlockLocation().toVector())))
+                    .filter(entity -> Barriers.read(entity).stream().anyMatch(vector -> entity.getLocation().toBlockLocation().toVector().clone().add(vector).equals(location.toBlockLocation().toVector())))
                     .filter(filter)
                     .findFirst()
                     .orElse(null);
@@ -146,23 +145,6 @@ public class CustomBlockManager {
     public static boolean isFurnitureDisplay(ItemDisplay display) {
         var item = new DisplayItemEntity(display).getItem();
         return item != null && GardensFurniture.itemRegistry.getCustomItem(item) instanceof CustomPlaceableItem;
-    }
-
-    private static List<Vector> getBarrierVectors(Entity entity) {
-        List<String> furnitureBarriers = new ArrayList<>();
-        NBT.getPersistentData(entity, nbt -> {
-            if (nbt.hasTag("FurnitureBarriers")) {
-                nbt.getStringList("FurnitureBarriers").forEach(furnitureBarriers::add);
-            }
-            return null;
-        });
-        if (!furnitureBarriers.isEmpty()) {
-            return furnitureBarriers.stream().map(str -> {
-                var nums = str.split(",");
-                return new Vector(Double.parseDouble(nums[0]), Double.parseDouble(nums[1]), Double.parseDouble(nums[2]));
-            }).toList();
-        }
-        return Collections.emptyList();
     }
 
     @Nullable
@@ -222,7 +204,7 @@ public class CustomBlockManager {
         }
 
         // remove furniture entities / hitbox
-        var barriers = getBarrierVectors(itemEntity.getEntity());
+        var barriers = Barriers.read(itemEntity.getEntity());
         if (!barriers.isEmpty()) {
             barriers.stream().map(v -> itemEntity.getEntity().getLocation().add(v).getBlock()).forEach(block -> {
                 if (block.getType() == Material.BARRIER) {
