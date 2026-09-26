@@ -485,42 +485,53 @@ public class BlockListener implements Listener {
         }
     }
 
-    public static void handleFeature(String feature, Location location) throws ExecutionException, InterruptedException {
-        var intersectingChunks = location.getWorld().getIntersectingChunks(BoundingBox.of(location, 20, 1, 20)).stream().toList();
-        GlobalConfiguration.get().blockUpdates.disableNoteblockUpdates = true;
-        location.getWorld().setGameRule(GameRule.SEND_COMMAND_FEEDBACK, false);
-        var chunkSnapshots = toChunkSnapshot(intersectingChunks);
-        List<ChunkSnapshot> finalChunkSnapshots = chunkSnapshots;
-        var existingNoteBlocks = CompletableFuture.supplyAsync(() -> finalChunkSnapshots.stream()
-                .flatMap(chunk -> getExistingNoteBlocks(chunk, location.getWorld(), location.getBlockY()).stream())
-                .collect(Collectors.toSet()))
-                .get();
-        // Run in the sapling's world explicitly: the console command source is anchored to the
-        // primary/respawn overworld, so an unqualified "place feature" checks the position in the
-        // wrong world and fails with "That position is not loaded". World#getKey() yields the
-        // dimension key that "execute in" expects (minecraft:overworld / minecraft:<worldname>).
-        Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), "execute in %s run place feature gardens:%s %s %s %s".formatted(
-                location.getWorld().getKey(), feature, location.getBlockX(), location.getBlockY(), location.getBlockZ()
-        ));
+    public static void handleFeature(String feature, Location location) {
+        var world = location.getWorld();
+        var intersectingChunks = world.getIntersectingChunks(BoundingBox.of(location, 20, 1, 20)).stream().toList();
+        // both are global/world state: remember the previous values and always put them back
+        var blockUpdates = GlobalConfiguration.get().blockUpdates;
+        boolean previousNoteblockUpdates = blockUpdates.disableNoteblockUpdates;
+        Boolean previousFeedback = world.getGameRuleValue(GameRule.SEND_COMMAND_FEEDBACK);
+        Runnable restore = () -> {
+            blockUpdates.disableNoteblockUpdates = previousNoteblockUpdates;
+            if (previousFeedback != null) {
+                world.setGameRule(GameRule.SEND_COMMAND_FEEDBACK, previousFeedback);
+            }
+        };
+        blockUpdates.disableNoteblockUpdates = true;
+        world.setGameRule(GameRule.SEND_COMMAND_FEEDBACK, false);
+
+        Set<FurnitureCache.BlockKey> existingNoteBlocks;
+        try {
+            // note blocks already there before the feature, so only the feature's own ones get replaced
+            existingNoteBlocks = toChunkSnapshot(intersectingChunks).stream()
+                    .flatMap(chunk -> getExistingNoteBlocks(chunk, world, location.getBlockY()).stream())
+                    .collect(Collectors.toSet());
+            // Run in the sapling's world explicitly: the console command source is anchored to the
+            // primary/respawn overworld, so an unqualified "place feature" checks the position in the
+            // wrong world and fails with "That position is not loaded". World#getKey() yields the
+            // dimension key that "execute in" expects (minecraft:overworld / minecraft:<worldname>).
+            Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), "execute in %s run place feature gardens:%s %s %s %s".formatted(
+                    world.getKey(), feature, location.getBlockX(), location.getBlockY(), location.getBlockZ()
+            ));
+        } catch (RuntimeException ex) {
+            restore.run();
+            throw ex;
+        }
         // run in future to allow feature to finish placing
         Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> {
-            var chunkSnapshots1 = toChunkSnapshot(intersectingChunks);
-            Set<ChunkFurnitureLoader.FurnitureReplacement> replacements = null;
             try {
-                replacements = CompletableFuture.supplyAsync(() -> chunkSnapshots1.stream()
-                                .flatMap(chunk -> getReplacements(existingNoteBlocks, chunk, location.getWorld(), location.getBlockY()).stream())
-                                .collect(Collectors.toSet()))
-                        .get();
-                replacements.forEach(replacement -> ChunkFurnitureLoader.INSTANCE.placeFurnitureBlock(replacement));
+                toChunkSnapshot(intersectingChunks).stream()
+                        .flatMap(chunk -> getReplacements(existingNoteBlocks, chunk, world, location.getBlockY()).stream())
+                        .collect(Collectors.toSet())
+                        .forEach(ChunkFurnitureLoader.INSTANCE::placeFurnitureBlock);
                 intersectingChunks.forEach(chunk -> FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(chunk)));
-                GlobalConfiguration.get().blockUpdates.disableNoteblockUpdates = false;
-                location.getWorld().setGameRule(GameRule.SEND_COMMAND_FEEDBACK, true);
             } catch (Exception ex) {
                 ex.printStackTrace();
+            } finally {
+                restore.run();
             }
-
         }, 1);
-
     }
 
     private static List<ChunkSnapshot> toChunkSnapshot(List<Chunk> chunks) {
