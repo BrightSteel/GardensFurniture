@@ -56,6 +56,17 @@ public class ChunkListener implements Listener {
         }
     }
 
+    // keep furniture data cached for exactly the loaded chunks, so packet threads never have to load it
+    @EventHandler
+    public void cacheChunkFurniture(ChunkLoadEvent e) {
+        FurnitureCache.INSTANCE.loadChunk(new FurnitureCache.ChunkKey(e.getChunk()));
+    }
+
+    @EventHandler
+    public void uncacheChunkFurniture(ChunkUnloadEvent e) {
+        FurnitureCache.INSTANCE.invalidateChunk(new FurnitureCache.ChunkKey(e.getChunk()));
+    }
+
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent e) {
         if (ENABLE_CHUNK_FIXER) {

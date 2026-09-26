@@ -4,6 +4,7 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.breaking.CustomBreakingBlock;
 import com.gardensmc.gardensfurniture.custom.block.*;
 import com.gardensmc.gardensfurniture.custom.item.*;
+import com.gardensmc.gardensfurniture.store.FurnitureCache;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -219,10 +220,13 @@ public class BlockPacketListener {
 //            return;
 //        }
 //        recentPacketsSent.put(key, packetsSentCount + 1);
-        handleChunkChange(packet, player);
-//        if (modified) {
-            PacketEvents.getAPI().getPlayerManager().sendPacketSilently(player, packet);
-//        }
+        try {
+            handleChunkChange(packet, player);
+        } catch (Exception e) {
+            // still send the (partly remapped) chunk - never leave the client with a hole
+            GardensFurniture.plugin.getLogger().log(java.util.logging.Level.WARNING, "Failed to remap chunk packet", e);
+        }
+        PacketEvents.getAPI().getPlayerManager().sendPacketSilently(player, packet);
     }
 
     private String makeRecentPacketKey(Player player, WrapperPlayServerChunkData packet) {
@@ -326,14 +330,11 @@ public class BlockPacketListener {
     }
 
     private CustomTripwireBlock getCustomTripwireBlock(CustomPlaceableItem customPlaceableItem, World world, int x, int y, int z) {
-        if (customPlaceableItem instanceof CustomMultiplierItem customMultiplierItem) {
-            var furnitureStore = getStoreFromPos(world, x, y, z);
-            int multiplier = furnitureStore.getMultiplier();
-            return (CustomTripwireBlock) customMultiplierItem.getCustomBlock(multiplier);
-        } else if (customPlaceableItem instanceof CustomFacingItem customFacingItem) {
-            var furnitureStore = getStoreFromPos(world, x, y, z);
-            String facing = furnitureStore.getFacing();
-            return (CustomTripwireBlock) customFacingItem.getCustomBlock(facing);
+        var furnitureStore = getStoreFromPos(world, x, y, z);
+        if (customPlaceableItem instanceof CustomMultiplierItem customMultiplierItem && furnitureStore != null && furnitureStore.getMultiplier() > 0) {
+            return (CustomTripwireBlock) customMultiplierItem.getCustomBlock(furnitureStore.getMultiplier());
+        } else if (customPlaceableItem instanceof CustomFacingItem customFacingItem && furnitureStore != null && furnitureStore.getFacing() != null) {
+            return (CustomTripwireBlock) customFacingItem.getCustomBlock(furnitureStore.getFacing());
         }
         return (CustomTripwireBlock) customPlaceableItem.getCustomBlock();
     }
@@ -341,7 +342,9 @@ public class BlockPacketListener {
     private CustomNoteBlock getCustomNoteBlock(CustomPlaceableItem customPlaceableItem, World world, int x, int y, int z) {
         if (customPlaceableItem instanceof CustomDirectionalItem customDirectionalItem) {
             var store = getStoreFromPos(world, x, y, z);
-            return (CustomNoteBlock) customDirectionalItem.getCustomBlock(BlockFace.valueOf(store.getFacing()));
+            if (store != null && store.getFacing() != null) {
+                return (CustomNoteBlock) customDirectionalItem.getCustomBlock(BlockFace.valueOf(store.getFacing()));
+            }
         }
         return (CustomNoteBlock) customPlaceableItem.getCustomBlock();
     }
@@ -352,7 +355,11 @@ public class BlockPacketListener {
     }
 
     private FurnitureStore getStoreFromPos(World world, int x, int y, int z) {
-        return FurnitureStoreHandler.INSTANCE.getFurnitureStore(world.getChunkAt(new Location(world, x, y, z)), x, y, z);
+        // runs on packet threads: build the key from coordinates instead of touching the chunk
+        return FurnitureCache.INSTANCE.getFurnitureStore(
+                new FurnitureCache.ChunkKey(world.getName(), x >> 4, z >> 4),
+                new FurnitureCache.BlockKey(x, y, z)
+        );
     }
 
     private String getIdentifierFromPos(World world, int x, int y, int z) {

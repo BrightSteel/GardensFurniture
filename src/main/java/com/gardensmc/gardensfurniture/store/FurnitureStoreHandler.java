@@ -55,6 +55,8 @@ public class FurnitureStoreHandler {
         }
         if (refresh) {
             FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(block.getWorld().getName(), block.getChunk().getX(), block.getChunk().getZ()));
+        } else {
+            FurnitureCache.INSTANCE.putCached(new FurnitureCache.ChunkKey(block.getChunk()), blockKey(block), furnitureStore);
         }
         notifyLifecycle(block, true);
     }
@@ -64,6 +66,7 @@ public class FurnitureStoreHandler {
         notifyLifecycle(block, false);
         var nbtChunk = new NBTChunk(block.getChunk()).getPersistentDataContainer().getOrCreateCompound("GardensFurniture");
         nbtChunk.removeKey(getBlockKey(block));
+        FurnitureCache.INSTANCE.removeCached(new FurnitureCache.ChunkKey(block.getChunk()), blockKey(block));
         FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(block.getWorld().getName(), block.getChunk().getX(), block.getChunk().getZ()));
     }
 
@@ -111,6 +114,10 @@ public class FurnitureStoreHandler {
                 new FurnitureCache.ChunkKey(chunk.getWorld().getName(), chunk.getX(), chunk.getZ()),
                 new FurnitureCache.BlockKey(x, y, z)
         );
+    }
+
+    private FurnitureCache.BlockKey blockKey(Block block) {
+        return new FurnitureCache.BlockKey(block.getX(), block.getY(), block.getZ());
     }
 
     private String getBlockKey(Block block) {

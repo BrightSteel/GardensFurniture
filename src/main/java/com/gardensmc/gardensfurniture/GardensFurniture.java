@@ -1,5 +1,6 @@
 package com.gardensmc.gardensfurniture;
 
+import com.gardensmc.gardensfurniture.store.FurnitureCache;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.gardensmc.gardensfurniture.command.CommandHandler;
@@ -86,6 +87,7 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
         // register handlers
         CommandHandler.registerCommands();
         ListenerHandler.registerListeners();
+        FurnitureCache.INSTANCE.loadAllLoadedChunks();
 
         // init packet events
         PacketEvents.getAPI().init();
