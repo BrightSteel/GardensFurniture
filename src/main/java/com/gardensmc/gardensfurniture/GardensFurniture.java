@@ -83,6 +83,7 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
         // load registry
         itemRegistry = new ItemRegistry();
         itemRegistry.assembleItems();
+        ChunkFurnitureLoader.INSTANCE.validateMappings();
 
         // register handlers
         CommandHandler.registerCommands();

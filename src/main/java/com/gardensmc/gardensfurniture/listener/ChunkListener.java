@@ -48,9 +48,10 @@ public class ChunkListener implements Listener {
         if (environment != World.Environment.NETHER) {
             if (e.isNewChunk()) {
                 var snapshot = e.getChunk().getChunkSnapshot();
+                int minY = e.getWorld().getMinHeight(), maxY = e.getWorld().getMaxHeight();
                 Bukkit.getScheduler().runTaskAsynchronously(
                         GardensFurniture.plugin,
-                        () -> ChunkFurnitureLoader.INSTANCE.processSnapshot(snapshot, environment)
+                        () -> ChunkFurnitureLoader.INSTANCE.processSnapshot(snapshot, minY, maxY)
                 );
             }
         }
