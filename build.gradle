@@ -76,6 +76,13 @@ dependencies {
 
     testCompileOnly 'org.projectlombok:lombok:1.18.46'
     testAnnotationProcessor 'org.projectlombok:lombok:1.18.46'
+
+    // unit tests run without a server: the Paper API and NBT-API are only on the classpath, never started
+    testImplementation(platform("org.junit:junit-bom:5.12.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("io.papermc.paper:paper-api:26.1.2.build.+")
+    testImplementation("de.tr7zw:item-nbt-api-plugin:2.15.7")
 }
 
 def targetJavaVersion = 25
@@ -105,6 +112,14 @@ tasks {
         relocate("de.themoep", "com.gardensmc.furniture.shaded.inventorygui")
     }
 
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "failed"
+        exceptionFormat "full"
+    }
 }
 
 processResources {
