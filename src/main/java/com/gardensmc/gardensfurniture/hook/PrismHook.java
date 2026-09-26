@@ -11,7 +11,6 @@ import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
-import com.gardensmc.gardensfurniture.util.LightUtil;
 import de.tr7zw.nbtapi.NBT;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -302,9 +301,7 @@ public class PrismHook implements Listener {
         FurnitureStoreHandler.INSTANCE.addFurnitureStore(
                 block, new FurnitureStore(spec.identifier, spec.multiplier, spec.facing), true);
         CustomBlock customBlock = placeable.getCustomBlock();
-        if (customBlock.getLight() > 0) {
-            LightUtil.placeLight(loc.clone().add(0, customBlock.getLightOffset(), 0), customBlock.getLight(), customBlock.isSolid());
-        }
+        customBlock.placeLight(loc);
     }
 
     private static PlaceOptions options(Spec spec) {
@@ -329,10 +326,7 @@ public class PrismHook implements Listener {
 
     private static void removeLight(Location loc, CustomItem customItem) {
         if (customItem instanceof CustomPlaceableItem placeable) {
-            CustomBlock cb = placeable.getCustomBlock();
-            if (cb.getLight() > 0) {
-                LightUtil.removeLight(loc.clone().add(0, cb.getLightOffset(), 0), cb.isSolid());
-            }
+            placeable.getCustomBlock().removeLight(loc);
         }
     }
 

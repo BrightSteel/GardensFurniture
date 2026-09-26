@@ -8,7 +8,6 @@ import com.gardensmc.gardensfurniture.custom.type.Facing;
 import com.gardensmc.gardensfurniture.custom.type.Rotation;
 import com.gardensmc.gardensfurniture.events.Furniture;
 import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
-import com.gardensmc.gardensfurniture.util.LightUtil;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import com.ticxo.modelengine.api.ModelEngineAPI;
 import de.tr7zw.nbtapi.NBT;
@@ -171,11 +170,10 @@ public class CustomDisplayBlock extends CustomBlock {
         display.setItemStack(item);
         display.setBrightness(lit && light > 0 ? new Display.Brightness(light, 0) : null);
 
-        var lightLocation = display.getLocation().add(0, getLightOffset(), 0);
         if (lit) {
-            LightUtil.placeLight(lightLocation, getLight(), isSolid());
+            placeLight(display.getLocation());
         } else {
-            LightUtil.removeLight(lightLocation, isSolid());
+            removeLight(display.getLocation());
         }
     }
 
@@ -252,9 +250,9 @@ public class CustomDisplayBlock extends CustomBlock {
         Barriers.write(display, barrierVectors);
 
         spawnHitbox(locationOffset, barrierVectors);
-        if (getLight() > 0 && !lightToggleable) {
+        if (!lightToggleable) {
             // anchor on the display, like toggling and breaking do (center_left can move it off `location`)
-            LightUtil.placeLight(display.getLocation().add(0, getLightOffset(), 0), getLight(), hitbox == Hitbox.BARRIER);
+            placeLight(display.getLocation());
         }
         Bukkit.getPluginManager().callEvent(new FurniturePlaceEvent(player, new Furniture(customItem, display, null)));
         return true;

@@ -5,7 +5,6 @@ import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
-import com.gardensmc.gardensfurniture.util.LightUtil;
 import lombok.Getter;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -58,9 +57,7 @@ public class CustomNoteBlock extends CustomBlock {
             block.getWorld().playSound(block.getLocation(), sound, SoundCategory.BLOCKS, VANILLA_PLACE_VOLUME, VANILLA_PLACE_PITCH);
         }
 
-        if (getLight() > 0) {
-            LightUtil.placeLight(location, getLight(), true);
-        }
+        placeLight(location);
         return true;
     }
 

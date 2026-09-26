@@ -3,6 +3,7 @@ package com.gardensmc.gardensfurniture.custom.block;
 import com.gardensmc.gardensfurniture.custom.block.bedrock.BedrockBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
+import com.gardensmc.gardensfurniture.util.LightUtil;
 import lombok.Getter;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -62,6 +63,22 @@ public abstract class CustomBlock {
     }
 
     public abstract boolean isSolid();
+
+    /**
+     * Add this block's light for furniture anchored at {@code anchor} (the block itself, or a display's
+     * position). Solid blocks light the free cells around them, others light their own cell.
+     */
+    public void placeLight(Location anchor) {
+        if (light > 0) {
+            LightUtil.placeLight(anchor.clone().add(0, lightOffset, 0), light, isSolid());
+        }
+    }
+
+    public void removeLight(Location anchor) {
+        if (light > 0) {
+            LightUtil.removeLight(anchor.clone().add(0, lightOffset, 0), isSolid());
+        }
+    }
 
     protected ConfigurationSection getConfigSectionOrThrow(ConfigurationSection config, String sectionName, String customBlockName) {
         if (!config.isConfigurationSection(sectionName)) {

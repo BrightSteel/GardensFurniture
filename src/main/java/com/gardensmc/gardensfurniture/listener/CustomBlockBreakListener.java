@@ -33,8 +33,6 @@ public class CustomBlockBreakListener implements Listener {
     }
 
     private void removeLight(Location location, CustomBlock customBlock) {
-        if (customBlock.getLight() > 0) {
-            LightUtil.removeLight(location.add(0, customBlock.getLightOffset(), 0), customBlock.isSolid());
-        }
+        customBlock.removeLight(location);
     }
 }

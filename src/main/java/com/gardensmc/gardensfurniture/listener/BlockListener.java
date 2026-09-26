@@ -14,7 +14,6 @@ import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
-import com.gardensmc.gardensfurniture.util.LightUtil;
 import com.gardensmc.gardensfurniture.util.ProbabilityUtil;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import com.destroystokyo.paper.event.block.BlockDestroyEvent;
@@ -286,9 +285,7 @@ public class BlockListener implements Listener {
         }
         block.setType(Material.AIR);
         FurnitureStoreHandler.INSTANCE.removeFurnitureStore(block);
-        if (customBlock.getLight() > 0) {
-            LightUtil.removeLight(block.getLocation(), customBlock.isSolid());
-        }
+        customBlock.removeLight(block.getLocation());
     }
 
     // burning leaves leave nothing behind, but their store (and any light) must go with them
@@ -298,9 +295,7 @@ public class BlockListener implements Listener {
         if (!CustomBlockManager.isStoreBacked(block.getType())) return;
         if (!(CustomBlockManager.getItemFromLeaves(block) instanceof CustomPlaceableItem placeable)) return;
         FurnitureStoreHandler.INSTANCE.removeFurnitureStore(block);
-        if (placeable.getCustomBlock().getLight() > 0) {
-            LightUtil.removeLight(block.getLocation(), placeable.getCustomBlock().isSolid());
-        }
+        placeable.getCustomBlock().removeLight(block.getLocation());
     }
 
     @EventHandler(ignoreCancelled = true)
