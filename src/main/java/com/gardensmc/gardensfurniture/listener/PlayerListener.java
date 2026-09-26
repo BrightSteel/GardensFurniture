@@ -99,7 +99,7 @@ public class PlayerListener implements Listener {
                             }
                         }
                     } else if (customItem.getMechanics() != null && customItem.getMechanics().isCaptureMobs()) {
-                        var captureMobHandler = new CaptureMobHandler(e.getPlayer(), new WrappedItem(itemStack, customItem));
+                        var captureMobHandler = new CaptureMobHandler(e.getPlayer(), new WrappedItem(itemStack, customItem), e.getHand());
                         if (captureMobHandler.isStoringMob()) {
                             captureMobHandler.releaseMob(location);
                             e.setCancelled(true);
@@ -471,7 +471,7 @@ public class PlayerListener implements Listener {
         }
         var wrappedItem = WrappedItem.create(e.getPlayer().getInventory().getItem(e.getHand()));
         if (wrappedItem.isPresent()) {
-            var captureMobHandler = new CaptureMobHandler(e.getPlayer(), wrappedItem.get());
+            var captureMobHandler = new CaptureMobHandler(e.getPlayer(), wrappedItem.get(), e.getHand());
             if (captureMobHandler.isCaptureItem() && captureMobHandler.canCaptureMob(livingEntity)) {
                 captureMobHandler.captureMob(livingEntity);
                 // cancel so vanilla doesn't follow through and use the resulting spawn egg
