@@ -1,5 +1,6 @@
 package com.gardensmc.gardensfurniture.custom.block;
 
+import com.gardensmc.gardensfurniture.custom.type.Facing;
 import com.gardensmc.gardensfurniture.custom.type.Rotation;
 import de.tr7zw.nbtapi.NBT;
 import org.bukkit.entity.Entity;
@@ -27,12 +28,7 @@ public final class Barriers {
 
     // offsets are written for an unrotated display; turn them by the display's own rotation
     public static Vector rotate(Vector vector, Rotation displayRotation) {
-        return switch ((int) displayRotation.getYaw()) {
-            case 90 -> new Vector(-vector.getZ(), vector.getY(), vector.getX());
-            case 180 -> new Vector(-vector.getX(), vector.getY(), -vector.getZ());
-            case -90 -> new Vector(vector.getZ(), vector.getY(), -vector.getX());
-            default -> vector.clone();
-        };
+        return Facing.fromYaw(displayRotation.getYaw()).rotate(vector);
     }
 
     public static void write(Entity display, List<Vector> barriers) {

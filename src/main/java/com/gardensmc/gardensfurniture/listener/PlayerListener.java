@@ -379,20 +379,6 @@ public class PlayerListener implements Listener {
                 && placeable.getCustomBlock().getMaterialTraits() != null;
     }
 
-    private Location getLocationFromBlockFace(Location location, BlockFace blockFace) {
-        Location temp = location;
-        // todo uhm why not use Block#getRelative ?
-        switch (blockFace) {
-            case UP -> temp.add(0, 1, 0);
-            case WEST -> temp.add(-1, 0, 0);
-            case EAST -> temp.add(1, 0, 0);
-            case NORTH -> temp.add(0, 0, -1);
-            case SOUTH -> temp.add(0, 0, 1);
-            case DOWN -> temp.add(0, -1, 0);
-        }
-        return temp;
-    }
-
     @EventHandler(ignoreCancelled = true)
     public void interactWithDestroyStick(PlayerInteractEntityEvent e) {
         ItemStack heldItem = e.getPlayer().getInventory().getItem(e.getHand());

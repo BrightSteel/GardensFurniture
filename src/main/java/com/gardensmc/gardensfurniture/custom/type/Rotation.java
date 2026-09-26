@@ -34,18 +34,9 @@ public class Rotation {
         };
     }
 
+    // furniture placed by a player faces back towards them
     public static Rotation fromPlayerFacing(float playerYaw) {
-        float yaw;
-        if (playerYaw >= -135 && playerYaw <= -45) {
-            yaw = 90;
-        } else if (playerYaw > -45 && playerYaw < 45) {
-            yaw = 180;
-        } else if (playerYaw >= 45 && playerYaw <= 135) {
-            yaw = -90;
-        } else {
-            yaw = 0;
-        }
-        return new Rotation(yaw, 0);
+        return new Rotation(Facing.fromYaw(playerYaw).opposite().getYaw(), 0);
     }
 
 }

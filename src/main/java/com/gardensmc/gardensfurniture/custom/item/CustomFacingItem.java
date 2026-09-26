@@ -2,7 +2,7 @@ package com.gardensmc.gardensfurniture.custom.item;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
-import com.gardensmc.gardensfurniture.util.DirectionUtil;
+import com.gardensmc.gardensfurniture.custom.type.Facing;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -45,7 +45,7 @@ public class CustomFacingItem extends CustomPlaceableItem {
 
     private BlockFace getFaceForPlacement(Player player, Location location) {
         if (player != null) {
-            return BlockFace.valueOf(DirectionUtil.getDirectionFromFacing(player)).getOppositeFace();
+            return Facing.fromYaw(player.getYaw()).toBlockFace().getOppositeFace();
         } else {
             // placed by terrain - lets put it against a block if possible since used by log mushroom
             for (var blockFace : Set.of(BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST)) {
