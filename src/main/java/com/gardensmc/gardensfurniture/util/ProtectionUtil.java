@@ -35,6 +35,12 @@ public class ProtectionUtil {
         return claim.getPermission(player.getUniqueId().toString());
     }
 
+    // access trust: using things (sitting, switching lights) without changing them. The GriefPrevention
+    // class is only touched once we know it's installed.
+    public static boolean canUse(Location location, Player player) {
+        return !GardensFurniture.isGriefPreventionHooked || hasClaimPermission(location, player, ClaimPermission.Access);
+    }
+
     public static boolean hasClaimPermission(Location location, Player player, ClaimPermission claimPermission) {
         var permission = getClaimPermission(location, player);
         if (permission == null) {

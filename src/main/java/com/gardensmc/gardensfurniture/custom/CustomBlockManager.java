@@ -339,12 +339,18 @@ public class CustomBlockManager {
         if (event.isCancelled()) {
             return;
         }
-        if (!ProtectionUtil.canBuild(itemEntity.getEntity().getLocation(), player)) {
+        var location = itemEntity.getEntity().getLocation();
+        // using furniture (sitting, switching a light) needs access trust, like buttons and levers;
+        // changing it (dyeing) or taking from it (maple taps) needs build trust
+        boolean canUse = ProtectionUtil.canUse(location, player);
+        boolean canBuild = ProtectionUtil.canBuild(location, player);
+        if (!canUse && !canBuild) {
             return;
         }
         if (player.isSneaking()) {
 //            itemEntity.rotate(45);
         } else if (heldItem.getType().toString().toUpperCase().endsWith("DYE") && customItem.isDyeable() && itemEntity.getItem().getItemMeta() instanceof LeatherArmorMeta leatherMeta) {
+            if (!canBuild) return;
             leatherMeta.setColor(getColorFromDye(heldItem.getType()));
             var item = itemEntity.getItem();
             item.setItemMeta(leatherMeta);
@@ -359,6 +365,7 @@ public class CustomBlockManager {
             double offset = customBlockItem.getCustomBlock().getSeatOffset();
             GSitAPI.createSeat(itemEntity.getEntity().getLocation().getBlock(), player, true, 0.0, offset, 0.0, player.getLocation().getYaw(), true);
         } else if (customItem.getIdentifier().equals("maple_tap_5") && heldItem.getType() == Material.GLASS_BOTTLE) {
+            if (!canBuild) return;
             itemEntity.setItem(GardensFurniture.itemRegistry.buildItem("maple_tap_1"));
             var nbt = new NBTEntity(itemEntity.getEntity()).getPersistentDataContainer();
             nbt.removeKey(MapleTapHandler.TAP_NBT);

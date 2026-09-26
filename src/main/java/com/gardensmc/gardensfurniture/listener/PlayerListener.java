@@ -443,6 +443,8 @@ public class PlayerListener implements Listener {
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
     public void onInteractBarrier(PlayerInteractEvent e) {
         if (e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        // sneaking right-clicks go to vanilla, like on any other block (e.g. placing a block against a table)
+        if (e.getPlayer().isSneaking()) return;
         var block = e.getClickedBlock();
         if (block != null && block.getType() == Material.BARRIER) {
             var itemEntity = CustomBlockManager.getFurnitureEntity(block.getLocation());
