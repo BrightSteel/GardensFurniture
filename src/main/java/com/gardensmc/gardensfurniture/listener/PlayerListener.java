@@ -274,8 +274,7 @@ public class PlayerListener implements Listener {
         if (e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         if (e.getClickedBlock() == null || e.getClickedBlock().getType() != Material.FLOWER_POT) return;
 
-        var aboveCustomItem = CustomBlockManager.getCustomItemFromBlock(e.getClickedBlock());
-        if (aboveCustomItem != null) {
+        if (CustomBlockManager.getPottedPlant(e.getClickedBlock()) != null) {
             e.setCancelled(true); // cancel placement of normal flower pot if our custom is planted already
             return;
         }
@@ -285,6 +284,7 @@ public class PlayerListener implements Listener {
         var mechanics = heldItem.getMechanics();
         if (mechanics == null || mechanics.getPot_item() == null) return;
 
+        if (!ProtectionUtil.canBuild(e.getClickedBlock().getLocation(), e.getPlayer())) return;
         var potItem = GardensFurniture.itemRegistry.getItem(mechanics.getPot_item());
         if (potItem == null) {
             throw new RuntimeException("Gurl you need to register an actual item for the pot item called: " + mechanics.getPot_item());
@@ -309,19 +309,19 @@ public class PlayerListener implements Listener {
                 new AxisAngle4f(0, 0, 0, 1)
         ));
         NBT.modifyPersistentData(display, nbt -> {
-            nbt.setItemStack("GardensFurniturePotted", itemToStore);
+            nbt.setItemStack(CustomBlockManager.POTTED_KEY, itemToStore);
         });
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onPotBreak(BlockBreakEvent e) {
         if (e.getBlock().getType() != Material.FLOWER_POT) return;
-        var plantedItem = CustomBlockManager.getItemEntity(e.getBlock().getLocation());
+        var plantedItem = CustomBlockManager.getPottedPlant(e.getBlock());
         if (plantedItem == null) return;
-        var plantedHeldItem = NBT.getPersistentData(plantedItem.getEntity(), nbt -> nbt.getItemStack("GardensFurniturePotted"));
+        var plantedHeldItem = NBT.getPersistentData(plantedItem, nbt -> nbt.getItemStack(CustomBlockManager.POTTED_KEY));
         if (plantedHeldItem == null) return;
 
-        plantedItem.getEntity().remove();
+        plantedItem.remove();
         e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), plantedHeldItem);
     }
 

@@ -14,6 +14,7 @@ import com.gardensmc.gardensfurniture.itementity.ItemEntity;
 import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
+import de.tr7zw.nbtapi.NBT;
 import de.tr7zw.nbtapi.NBTEntity;
 import dev.geco.gsit.api.GSitAPI;
 import org.bukkit.*;
@@ -141,6 +142,15 @@ public class CustomBlockManager {
                     .orElse(null);
         }
         return null;
+    }
+
+    public static final String POTTED_KEY = "GardensFurniturePotted";
+
+    // the display of a custom plant sitting in a vanilla flower pot (it isn't placeable furniture)
+    @Nullable
+    public static ItemDisplay getPottedPlant(Block pot) {
+        return getDisplayEntity(pot.getLocation(), false,
+                display -> NBT.getPersistentData(display, nbt -> (boolean) nbt.hasTag(POTTED_KEY)));
     }
 
     // other plugins (pets, cosmetics, holograms) spawn item displays too - only ours hold a placeable item

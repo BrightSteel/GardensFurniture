@@ -96,7 +96,7 @@ public class BlockListener implements Listener {
                         if (itemEntity != null) {
                             if (type == Material.FLOWER_POT) {
                                 // drop potted item
-                                var plantedHeldItem = NBT.getPersistentData(itemEntity.getEntity(), nbt -> nbt.getItemStack("GardensFurniturePotted"));
+                                var plantedHeldItem = NBT.getPersistentData(itemEntity.getEntity(), nbt -> nbt.getItemStack(CustomBlockManager.POTTED_KEY));
                                 if (plantedHeldItem != null) {
                                     e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), plantedHeldItem);
                                 }
@@ -242,6 +242,16 @@ public class BlockListener implements Listener {
     // Vanilla would drop the disguise block (note block, oak sapling, ...) and leave the store behind, so
     // take custom blocks out of the explosion and destroy them ourselves.
     private void explodeCustomBlocks(List<Block> blocks, float yield) {
+        // a potted custom plant is a display entity on top of a vanilla pot: drop it with the pot
+        blocks.stream().filter(block -> block.getType() == Material.FLOWER_POT).forEach(pot -> {
+            var planted = CustomBlockManager.getPottedPlant(pot);
+            if (planted == null) return;
+            var plantedItem = NBT.getPersistentData(planted, nbt -> nbt.getItemStack(CustomBlockManager.POTTED_KEY));
+            planted.remove();
+            if (plantedItem != null && ThreadLocalRandom.current().nextFloat() < yield) {
+                pot.getWorld().dropItemNaturally(pot.getLocation().add(0.5, 0.1, 0.5), plantedItem);
+            }
+        });
         blocks.removeIf(block -> {
             if (!CustomBlockManager.isStoreBacked(block.getType())) return false;
             if (!(CustomBlockManager.getItemFromLeaves(block) instanceof CustomPlaceableItem placeable)) return false;
