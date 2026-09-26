@@ -18,8 +18,6 @@ public class ConfigUtil {
     public static FileConfiguration itemsYaml, itemSaverYaml;
 
     public static void loadConfigs() {
-//        File itemFile = getYMLFile("items.yml");
-//        itemsYaml = YamlConfiguration.loadConfiguration(itemFile);
         all_items.clear();
         all_items = getAllConfigs("items");
 
@@ -59,7 +57,6 @@ public class ConfigUtil {
         }
 
         return configs;
-
     }
 
     public static File getYMLFile(String file_name) {
@@ -72,5 +69,4 @@ public class ConfigUtil {
         }
         return file;
     }
-
 }

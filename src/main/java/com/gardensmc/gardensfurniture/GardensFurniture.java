@@ -6,7 +6,6 @@ import com.comphenix.protocol.ProtocolManager;
 import com.gardensmc.gardensfurniture.command.CommandHandler;
 import com.gardensmc.gardensfurniture.custom.item.mechanics.AirborneBreakPenaltyHandler;
 import com.gardensmc.gardensfurniture.dye.DyeColorGroups;
-import com.gardensmc.gardensfurniture.hook.GardensWorldEditExtent;
 import com.gardensmc.gardensfurniture.hook.HookGardensFurniture;
 import com.gardensmc.gardensfurniture.hook.PrismHook;
 import com.gardensmc.gardensfurniture.listener.ListenerHandler;
@@ -17,13 +16,8 @@ import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.settings.PacketEventsSettings;
 import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
-import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.event.extent.EditSessionEvent;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
-import io.netty.handler.logging.LogLevel;
 import me.lojosho.hibiscuscommons.hooks.Hooks;
-import net.coreprotect.CoreProtect;
-import net.coreprotect.CoreProtectAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -52,7 +46,6 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
     public static ProtocolManager protocolManager;
     public static boolean isGriefPreventionHooked;
     public static boolean isCosmeticsHooked;
-    public static CoreProtectAPI coreProtectAPI;
 
     @Override
     public void onLoad() {
@@ -74,7 +67,6 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
     public void onEnable() {
         plugin = this;
         protocolManager = ProtocolLibrary.getProtocolManager();
-//        new DigSoundListener().registerListener();
 
         // load custom item configs
         ConfigUtil.loadConfigs();
@@ -109,17 +101,8 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
         Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, ChunkFurnitureLoader.INSTANCE::tickChunkFurnitureLoader, 0, 1);
         Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, ChunkFurnitureLoader.INSTANCE::tickChunkStats, 0, 100);
 
-//        WorldEdit.getInstance().getEventBus().register(new Object() {
-//            @Subscribe
-//            public void onEditSession(EditSessionEvent event) {
-//                if (event.getWorld() == null) return;
-//                event.setExtent(new GardensWorldEditExtent(event.getExtent(), Bukkit.getWorld(event.getWorld().getName())));
-//            }
-//        });
-//        hookIntoShopGUIPlus();
         hookIntoGriefPrevention();
         hookIntoCosmetics();
-        hookIntoCoreProtect();
         hookIntoPrism();
     }
 
@@ -224,13 +207,6 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
                 || name.endsWith("_HOE");
     }
 
-//    private void hookIntoShopGUIPlus() {
-//        if (Bukkit.getPluginManager().getPlugin("ShopGUIPlus") != null) {
-//            Bukkit.getPluginManager().registerEvents(new ShopGuiPlusHook(), this);
-//            this.getLogger().info("Hooked into ShopGUI+");
-//        }
-//    }
-
     private void hookIntoGriefPrevention() {
         if (Bukkit.getPluginManager().getPlugin("GriefPrevention") != null) {
             isGriefPreventionHooked = true;
@@ -244,22 +220,4 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
             HMCCosmeticsPlugin.setup();
         }
     }
-
-    private void hookIntoCoreProtect() {
-        var plugin = getServer().getPluginManager().getPlugin("CoreProtect");
-        // Check that CoreProtect is loaded (null check first: the instanceof below loads the
-        // CoreProtect class, which throws NoClassDefFoundError if the plugin isn't installed)
-        if (plugin == null || !(plugin instanceof CoreProtect)) {
-            return;
-        }
-
-        // Check that the API is enabled
-        var coreProtect = ((CoreProtect) plugin).getAPI();
-        if (!coreProtect.isEnabled()) {
-            return;
-        }
-        coreProtectAPI = coreProtect;
-    }
-
-
 }

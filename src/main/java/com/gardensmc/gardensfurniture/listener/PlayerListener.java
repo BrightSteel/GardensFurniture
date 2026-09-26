@@ -13,13 +13,8 @@ import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.ProbabilityUtil;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
-import com.gardensmc.gardensfurniture.wrap.WrapHandler;
-import com.hibiscusmc.hmccosmetics.api.HMCCosmeticsAPI;
-import com.hibiscusmc.hmccosmetics.cosmetic.CosmeticSlot;
 import de.tr7zw.nbtapi.NBT;
-import io.papermc.paper.event.entity.EntityEquipmentChangedEvent;
 import me.ryanhamshire.GriefPrevention.ClaimPermission;
-import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -43,7 +38,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.InventoryHolder;
@@ -56,7 +50,6 @@ import org.joml.Vector3f;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
 
 import static com.gardensmc.gardensfurniture.listener.BlockListener.handleFeature;
@@ -187,7 +180,6 @@ public class PlayerListener implements Listener {
             }
         }
     }
-
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
     public void onNoteBlockInteract(PlayerInteractEvent e) {
@@ -347,7 +339,6 @@ public class PlayerListener implements Listener {
                 e.setCancelled(true);
             }
         }
-
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -368,24 +359,6 @@ public class PlayerListener implements Listener {
                 .filter(block -> FurnitureStoreHandler.INSTANCE.getFurnitureStore(block) != null)
                 .toList();
     }
-
-//    @EventHandler
-//    public void onItemInteract(PlayerInteractEvent e) {
-//
-//
-//        if (e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
-//        if (e.isCancelled()) return;
-//        if (e.getClickedBlock() == null) return;
-//
-//        // cancel all note block right clicks that are custom blocks
-//        if (e.getClickedBlock().getType() == Material.NOTE_BLOCK && e.getClickedBlock().getBlockData() instanceof NoteBlock noteBlock) {
-//            CustomItem customItem = CustomBlockManager.getItemFromNoteBlock(noteBlock);
-//            if (customItem != null) {
-//                e.setCancelled(true);
-//                System.out.println("Cancelling note block interaction");
-//            }
-//        }
-//    }
 
     @EventHandler
     public void onHitBarrier(PlayerInteractEvent e) {
@@ -409,22 +382,6 @@ public class PlayerListener implements Listener {
         return CustomBlockManager.getCustomItemFromBlock(block) instanceof CustomPlaceableItem placeable
                 && placeable.getCustomBlock().getMaterialTraits() != null;
     }
-
-//    @EventHandler(ignoreCancelled = true)
-//    public void onRightClickBarrier(PlayerInteractEvent e) {
-//        if (e.getAction() == Action.RIGHT_CLICK_BLOCK && e.getHand() == EquipmentSlot.HAND) { // called for each hand
-//            var block = e.getClickedBlock();
-//            if (block != null && block.getType() == Material.BARRIER) {
-//                if (!ProtectionUtil.canBuild(block.getLocation(), e.getPlayer())) return;
-//                var itemEntity = CustomBlockManager.getItemEntity(block.getLocation());
-//                if (itemEntity == null) return;
-//                CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
-//                Bukkit.getPluginManager().callEvent(new CustomBlockInteractEvent(
-//                        e.getPlayer(), customItem, e.getHand(), e.getItem(), block
-//                ));
-//            }
-//        }
-//    }
 
     private Location getLocationFromBlockFace(Location location, BlockFace blockFace) {
         Location temp = location;
@@ -539,12 +496,6 @@ public class PlayerListener implements Listener {
         return INTERACTABLES.contains(block.getType()) || block.getType().toString().toLowerCase().endsWith("bed");
     }
 
-//    @EventHandler(ignoreCancelled = true)
-//    public void onPlayerDropBackpack(PlayerDropItemEvent e) {
-//        var item = e.getItemDrop().getItemStack();
-//        handleBackpackLeaveInventory(item, e.getPlayer());
-//    }
-
     @EventHandler(ignoreCancelled = true)
     public void onPlayerDeath(EntityDamageEvent e) {
         if (e.getEntity() instanceof Player player && e.getFinalDamage() >= player.getHealth()) {
@@ -552,95 +503,6 @@ public class PlayerListener implements Listener {
             player.getOpenInventory().close();
         }
     }
-
-//    @EventHandler
-//    public void onOffhand(EntityEquipmentChangedEvent e) {
-//        if (!GardensFurniture.isCosmeticsHooked) {
-//            return;
-//        }
-//        if (e.getEntity() instanceof Player player) {
-//            var change = e.getEquipmentChanges().entrySet().stream()
-//                    .filter(entry -> entry.getKey() == EquipmentSlot.OFF_HAND)
-//                    .findFirst()
-//                    .orElse(null);
-//            if (change != null) {
-//                var offhand = change.getValue().newItem();
-//                var user = HMCCosmeticsAPI.getUser(player.getUniqueId());
-//                if (user == null) {
-//                    return;
-//                }
-//                if (GardensFurniture.itemRegistry.getCustomItem(offhand) instanceof CustomBackpackItem backpackItem) {
-//                    var wrapItem = new WrapHandler(offhand).getWrapFromItem();
-//                    var cosmeticId = wrapItem != null ? wrapItem.getCosmeticId() : backpackItem.getCosmeticId();
-//                    if (cosmeticId != null) {
-//                        var cosmetic = HMCCosmeticsAPI.getCosmetic(cosmeticId);
-//                        if (cosmetic != null) {
-//                            HMCCosmeticsAPI.equipCosmetic(user, cosmetic);
-//                        }
-//                    }
-//                } else if (user.hasCosmeticInSlot(CosmeticSlot.BACKPACK)) {
-//                    user.removeCosmeticSlot(CosmeticSlot.BACKPACK);
-//                }
-//            }
-//        }
-//    }
-
-//    @EventHandler
-//    public void onOffHand(PlayerSwapHandItemsEvent e) {
-//        var offhand = e.getOffHandItem();
-//        var user = HMCCosmeticsAPI.getUser(e.getPlayer().getUniqueId());
-//        if (user == null) {
-//            return;
-//        }
-//        if (GardensFurniture.itemRegistry.getCustomItem(offhand) instanceof CustomBackpackItem backpackItem) {
-//            var cosmeticId = backpackItem.getCosmeticId();
-//            if (cosmeticId != null) {
-//                var cosmetic = HMCCosmeticsAPI.getCosmetic(cosmeticId);
-//                if (cosmetic != null) {
-//                    HMCCosmeticsAPI.equipCosmetic(user, cosmetic);
-//                }
-//            }
-//        } else if (user.hasCosmeticInSlot(CosmeticSlot.BACKPACK)) {
-//            user.removeCosmeticSlot(CosmeticSlot.BACKPACK);
-//        }
-//    }
-
-//    @EventHandler(priority = EventPriority.LOW)
-//    public void onPlaceInitialCaveVineBlock(PlayerInteractEvent e) {
-//        Player player = e.getPlayer();
-//        if (e.getHand() == null) return;
-//        if (e.getBlockFace() != BlockFace.DOWN) return;
-//
-//        // only want to enable placement on leaves
-//        if (e.getClickedBlock() == null || !e.getClickedBlock().getType().toString().toUpperCase().endsWith("LEAVES")) {
-//            return;
-//        }
-//        Block target = e.getClickedBlock().getRelative(e.getBlockFace());
-//        if (target.getType() != Material.AIR) return;
-//
-//        ItemStack itemStack = player.getInventory().getItem(e.getHand());
-//        if (itemStack.getType() != Material.GLOW_BERRIES) return;
-//
-//        CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemStack);
-//        if (customItem instanceof CustomCaveVineItem customCaveVineItem) {
-//            if(!ProtectionUtil.canBuild(e.getClickedBlock().getLocation(), player)) {
-//                return;
-//            }
-//            // swing hand
-//            switch (e.getHand()) {
-//                case HAND -> e.getPlayer().swingMainHand();
-//                case OFF_HAND -> e.getPlayer().swingOffHand();
-//            }
-//            // place item
-//            target.setType(Material.CAVE_VINES);
-//            // use up item
-//            if (e.getPlayer().getGameMode() == GameMode.SURVIVAL) {
-//                ItemStack usedItem = e.getPlayer().getInventory().getItem(e.getHand());
-//                usedItem.setAmount(usedItem.getAmount() - 1);
-//                e.getPlayer().getInventory().setItem(e.getHand(), usedItem);
-//            }
-//        }
-//    }
 
     // world access has to stay on the main thread; a 30 block column check is cheap enough
     @Nullable
@@ -691,6 +553,4 @@ public class PlayerListener implements Listener {
         }
         return false;
     }
-
-
 }

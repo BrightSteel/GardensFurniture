@@ -1,6 +1,5 @@
 package com.gardensmc.gardensfurniture.custom.block;
 
-import com.gardensmc.gardensfurniture.custom.item.BedrockBlockState;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
@@ -14,11 +13,9 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Bisected;
 import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.Openable;
-import org.bukkit.block.data.Waterlogged;
 import org.bukkit.block.data.type.Door;
 import org.bukkit.block.data.type.Slab;
 import org.bukkit.block.data.type.Stairs;
-import org.bukkit.block.data.type.TrapDoor;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -109,39 +106,6 @@ public class CustomWaxedBlock extends CustomBlock {
 
         private final Material material;
     }
-
-//    @Override
-//    public Map<String, String> getBlockStates(Block block) {
-//        var states = new HashMap<String, String>();
-//        var blockData = block.getBlockData();
-//        switch (blockData) {
-//            case Stairs stairs -> {
-//                states.put("shape", stairs.getShape().toString().toLowerCase());
-//                states.put("facing", stairs.getFacing().toString().toLowerCase());
-//                states.put("half", stairs.getHalf().toString().toLowerCase());
-//                states.put("waterlogged", String.valueOf(stairs.isWaterlogged()));
-//            }
-//            case Slab slab -> {
-//                states.put("type", slab.getType().toString().toLowerCase());
-//                states.put("waterlogged", String.valueOf(slab.isWaterlogged()));
-//            }
-//            case Door door -> {
-//                states.put("hinge", door.getHinge().toString().toLowerCase());
-//                states.put("facing", door.getFacing().toString().toLowerCase());
-//                states.put("half", door.getHalf().toString().toLowerCase());
-//                states.put("open", String.valueOf(door.isOpen()));
-//                states.put("powered", String.valueOf(door.isPowered()));
-//            }
-//            case TrapDoor trapDoor -> {
-//                states.put("facing", trapDoor.getFacing().toString().toLowerCase());
-//                states.put("half", trapDoor.getHalf().toString().toLowerCase());
-//                states.put("open", String.valueOf(trapDoor.isOpen()));
-//            }
-//            default -> {
-//            }
-//        }
-//        return states;
-//    }
 
     @Override
     public void onBuildGeyserBlockData(CustomBlockData.Builder builder) {

@@ -40,7 +40,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.regex.Pattern;
 
 public class ItemRegistry {
 
@@ -67,9 +66,6 @@ public class ItemRegistry {
     private static final NamespacedKey ENTITY_INTERACTION_RANGE_KEY = new NamespacedKey("gardensfurniture", "entity_interaction_range");
     public static final File generatedDir = new File(GardensFurniture.plugin.getDataFolder(), "generated");
 
-    // Regular expression to match text between ":" and "/"
-    private static final Pattern OUTER_DIR_PATTERN = Pattern.compile("(?<=:)([^/]+)(?=/)");
-
     public ItemRegistry() {
         customItemFactory = new CustomItemFactory();
         customBlockFactory = new CustomBlockFactory();
@@ -83,7 +79,6 @@ public class ItemRegistry {
                 e.printStackTrace();
             }
         }
-//        Set<String> outerFolders = new HashSet<>();
         Map<String, CustomItem> customItems = new HashMap<>();
         Map<String, Set<CustomItem>> customItemByCategory = new HashMap<>();
         loadingBlockStates = new HashMap<>();
@@ -126,10 +121,6 @@ public class ItemRegistry {
                                 if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock && displayBlock.getLitModel() != null) {
                                     writeOutModelFile(displayBlock.getLitModel(), tint, false);
                                 }
-//                                var outerFolder = OUTER_DIR_PATTERN.matcher(itemModel);
-//                                if (outerFolder.find()) {
-//                                    outerFolders.add(outerFolder.group(1));
-//                                }
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
@@ -148,10 +139,6 @@ public class ItemRegistry {
         }
         GenDefinitionsHandler.INSTANCE.generate();
         GenOverworldDimensionHandler.INSTANCE.generate();
-
-//        if (!outerFolders.isEmpty()) {
-//            writeOutAtlases(outerFolders);
-//        }
     }
 
     @AllArgsConstructor
@@ -196,22 +183,6 @@ public class ItemRegistry {
         mapper.writerWithDefaultPrettyPrinter().writeValue(output, node);
     }
 
-    private void writeOutAtlases(Set<String> outerFolders) {
-        JsonMapper jsonMapper = new JsonMapper();
-        var atlas = new Atlases(outerFolders
-                .stream()
-                .map(folder -> new Atlas("directory", folder, folder + "/"))
-                .toList()
-        );
-        var output = new File(generatedDir, "minecraft/atlases/blocks.json");
-        output.getParentFile().mkdirs();
-        try {
-            jsonMapper.writerWithDefaultPrettyPrinter().writeValue(output, atlas);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     public List<String> getItemIdentifiers() {
         return customItems.keySet().stream().toList();
     }
@@ -235,7 +206,6 @@ public class ItemRegistry {
         CustomItem customItem = getItem(identifier);
         return buildItem(customItem);
     }
-
 
     @Nullable
     public ItemStack buildItem(CustomItem customItem) {

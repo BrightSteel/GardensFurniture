@@ -12,9 +12,7 @@ import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.api.block.custom.CustomBlockPermutation;
 import org.geysermc.geyser.api.block.custom.CustomBlockState;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public abstract class CustomPlaceableItem extends CustomItem {
@@ -72,9 +70,6 @@ public abstract class CustomPlaceableItem extends CustomItem {
         if (!placeTags.isEmpty()) {
             return placeTags.stream().anyMatch(materialTag -> materialTag.isTagged(target.getType()));
         }
-//        if (player == null && !getIdentifier().equals("log_mushroom") && getCustomBlock().isSolid()) { // world-gen, avoid placing in air
-//            return target.isSolid();
-//        }
         return true;
     }
 

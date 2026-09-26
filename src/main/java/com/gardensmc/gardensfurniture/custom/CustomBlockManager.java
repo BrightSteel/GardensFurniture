@@ -8,18 +8,15 @@ import com.gardensmc.gardensfurniture.events.Furniture;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.events.FurnitureInteractEvent;
 import com.gardensmc.gardensfurniture.itementity.DisplayItemEntity;
-import com.gardensmc.gardensfurniture.itementity.FrameItemEntity;
 import com.gardensmc.gardensfurniture.itementity.ItemEntity;
 import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import de.tr7zw.nbtapi.NBT;
 import de.tr7zw.nbtapi.NBTEntity;
-import de.tr7zw.nbtapi.iface.ReadableNBTList;
 import dev.geco.gsit.api.GSitAPI;
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.block.data.type.NoteBlock;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -100,16 +97,7 @@ public class CustomBlockManager {
         if (displayEntity != null) {
             return new DisplayItemEntity(displayEntity);
         }
-//        var itemFrame = getBlock(location);
-//        if (itemFrame != null) {
-//            return new FrameItemEntity(itemFrame);
-//        }
         return null;
-    }
-
-    @Nullable
-    private static ItemFrame getBlock(Location location) {
-        return (ItemFrame) getEntityByClass(location, ItemFrame.class);
     }
 
     @Nullable
@@ -399,6 +387,4 @@ public class CustomBlockManager {
         }
         return color;
     }
-
-
 }

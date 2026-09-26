@@ -37,17 +37,13 @@ import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.world.StructureGrowEvent;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.gardensmc.gardensfurniture.custom.CustomBlockManager.*;
 import static com.gardensmc.gardensfurniture.util.CustomDropUtil.dropCustomItem;
@@ -88,31 +84,7 @@ public class BlockListener implements Listener {
                 FurnitureStoreHandler.INSTANCE.removeFurnitureStore(partner);
             }
         }
-
     }
-
-    // When a waxed slab is combined into a double, the Bedrock client has already predicted the
-    // slab in the block it clicked toward (the neighbour cell) and drew a ghost there; the server
-    // merged it into a double here instead. Resend the neighbouring cells to the player so the
-    // Bedrock client discards its prediction (Java clients just get a harmless redundant update).
-//    @EventHandler(ignoreCancelled = true)
-//    public void onWaxedSlabDoublePlace(BlockPlaceEvent e) {
-//        var block = e.getBlockPlaced();
-//        if (!CustomWaxedBlock.WaxedType.materials().contains(block.getType())
-//                || !(block.getBlockData() instanceof org.bukkit.block.data.type.Slab slab)
-//                || slab.getType() != org.bukkit.block.data.type.Slab.Type.DOUBLE) {
-//            return;
-//        }
-//        var player = e.getPlayer();
-//        System.out.println("Player did a double slab");
-//        Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> {
-//            for (BlockFace face : new BlockFace[]{BlockFace.UP, BlockFace.DOWN, BlockFace.SELF}) {
-//                var b = block.getRelative(face);
-//                player.sendBlockChange(b.getLocation(), b.getBlockData());
-//                System.out.println("Updating anove");
-//            }
-//        }, 2L);
-//    }
 
     @EventHandler
     public void onSaplingOrTripwireBreak(BlockPhysicsEvent e) {
@@ -199,12 +171,6 @@ public class BlockListener implements Listener {
 
     @EventHandler
     public void onPick(PlayerPickItemEvent e) {
-//        if (e.getSourceSlot() != -1) {
-//            var source = e.getPlayer().getInventory().getItem(e.getSourceSlot());
-//            if (source != null && source.getType() != Material.NOTE_BLOCK) {
-//                return; // item is present in inventory and not a note block, we dont care
-//            }
-//        }
         final RayTraceResult rayTraceResult = e.getPlayer().rayTraceBlocks(6.0);
         if (rayTraceResult == null) return;
         final Block block = rayTraceResult.getHitBlock();
@@ -396,7 +362,6 @@ public class BlockListener implements Listener {
                 e.setCancelled(true);
             }
         }
-
     }
 
     @EventHandler(ignoreCancelled = true)

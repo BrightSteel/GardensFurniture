@@ -43,30 +43,6 @@ public class EucalyptusTree extends TStructure {
         var topBranchBlockY = "minecraft:note_block[instrument=custom_head,note=20]";
         var topBranchBlockZ = "minecraft:note_block[instrument=custom_head,note=21]";
 
-        // Generate roots at base of trunk
-//        var roots = 0;
-//        var rootMaxDepth = 3;
-//        var rootHeight = 5;
-//        var rootLength = 2;
-//        var rootAngle = randomInt(randPrecision)/randPrecision*2*pi;
-//        for (var r = 0; r < roots; r = r + 1) {
-//            var dx = sin(rootAngle);
-//            var dz = cos(rootAngle);
-//            for (var l = 0; l <= rootLength; l = l + 1) {
-//                var height = rootHeight * (1-(l/rootLength));
-//                var bottomedOut = false;
-//                for (var h = height; h >= -rootMaxDepth; h = h - 1) {
-//                    if (check(round(l*dx),round(h),round(l*dz)) != "AIR") {
-//                        bottomedOut = true;
-//                        break;
-//                    }
-//                    block(l*dx, h, l*dz, rootBlock);
-//                }
-//                if (!bottomedOut) break;
-//            }
-//            rootAngle = rootAngle + goldenAngle;
-//        }
-
         double branchAngle = (double) randomInt(randPrecision) /randPrecision*2*pi;
         for (var i = 0; i < trunkHeight; i = i + 1) {
             if (i > sideBranchMinHeight) {

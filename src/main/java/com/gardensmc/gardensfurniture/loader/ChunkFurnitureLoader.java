@@ -55,11 +55,6 @@ public class ChunkFurnitureLoader {
                 }
             }
         }
-
-        // limit cache update to once per chunk
-//        if (updateCache) {
-//            Bukkit.getScheduler().runTask(GardensFurniture.plugin, () -> FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(chunkSnapshot.getWorldName(), chunkSnapshot.getX(),chunkSnapshot.getZ())));
-//        }
     }
 
     // report mappings that point at nothing once at startup instead of once per generated block

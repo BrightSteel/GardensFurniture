@@ -74,14 +74,4 @@ public class ConnectableHandler {
             default -> throw new RuntimeException("Illegal rotation origin: " + origin);
         };
     }
-
-    private BlockFace offsetCounterClockwise(BlockFace origin) {
-        return switch (origin) {
-            case NORTH -> BlockFace.WEST;
-            case WEST -> BlockFace.SOUTH;
-            case SOUTH -> BlockFace.EAST;
-            case EAST -> BlockFace.NORTH;
-            default -> throw new RuntimeException("Illegal rotation origin: " + origin);
-        };
-    }
 }

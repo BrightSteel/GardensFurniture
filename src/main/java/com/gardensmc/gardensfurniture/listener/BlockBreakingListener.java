@@ -13,7 +13,6 @@ import io.papermc.paper.registry.set.RegistryKeySet;
 import net.kyori.adventure.util.TriState;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
-import org.bukkit.SoundGroup;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockType;
 import org.bukkit.entity.Player;
@@ -27,15 +26,11 @@ import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
-import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 
 public class BlockBreakingListener implements Listener {
@@ -186,21 +181,6 @@ public class BlockBreakingListener implements Listener {
         removeBreaking(e.getPlayer(), e.getBlock());
     }
 
-//    @EventHandler
-//    public void onPlayerQuit(PlayerQuitEvent e) {
-//        removeBreaking(e.getPlayer());
-//    }
-//
-//    @EventHandler
-//    public void onPlayerTeleport(PlayerTeleportEvent e) {
-//        removeBreaking(e.getPlayer());
-//    }
-//
-//    @EventHandler
-//    public void onPlayerChangeWorld(PlayerChangedWorldEvent e) {
-//        removeBreaking(e.getPlayer());
-//    }
-
     // A dig can end without a BlockDamageAbortEvent or BlockBreakEvent ever firing
     // (quit, teleport, world change, death). These close any lingering break state for that
     // player - both the hit-sound loop and the custom break loop (which would otherwise keep
@@ -252,5 +232,4 @@ public class BlockBreakingListener implements Listener {
         var breakingBlock = customBreakingBlocks.get(player.getUniqueId());
         return breakingBlock != null && breakingBlock.isBreakingInProgress();
     }
-
 }

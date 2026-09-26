@@ -6,7 +6,6 @@ import com.gardensmc.gardensfurniture.custom.block.*;
 import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.store.FurnitureCache;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
-import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerAbstract;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
@@ -29,9 +28,6 @@ import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSe
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSetSlot;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerWindowItems;
 import io.github.retrooper.packetevents.util.SpigotConversionUtil;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import org.bukkit.*;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
@@ -39,7 +35,6 @@ import org.bukkit.entity.Player;
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import static java.util.Map.entry;
 
@@ -49,15 +44,6 @@ import static java.util.Map.entry;
  * Realistic Seasons and other biome-adders basically caused clients to crash with that
  */
 public class BlockPacketListener {
-
-    private static final LoadingCache<String, Integer> recentPacketsSent = CacheBuilder.newBuilder()
-            .expireAfterWrite(2, TimeUnit.SECONDS)
-            .build(new CacheLoader<>() {
-                @Override
-                public Integer load(String key) {
-                    return 0;
-                }
-            });
 
     private final Set<StateType> leavesTypes = Set.of(
             StateTypes.SPRUCE_LEAVES,
@@ -97,31 +83,6 @@ public class BlockPacketListener {
         PacketEvents.getAPI().getEventManager().registerListener(new PacketListenerAbstract() {
             @Override
             public void onPacketSend(PacketSendEvent event) {
-//                if (event.getPacketType() == PacketType.Play.Server.DECLARE_RECIPES) {
-//                    var wrapper = new WrapperPlayServerDeclareRecipes(event);
-//                    var recipes = wrapper.getRecipes();
-//                    for (int i = 0; i < recipes.length; i++) {
-//                        var recipe = recipes[i];
-//                        if (recipe.getIdentifier().startsWith("customcrafting:cc_display.gardens")) {
-//                            var data = recipe.getData();
-//                            try {
-//                                if (data instanceof ShapedRecipeData recipeData) {
-//                                    Field category = recipeData.getClass().getDeclaredField("category");
-//                                    category.setAccessible(true);
-//                                    category.set(recipeData, CraftingCategory.BUILDING);
-//                                } else if (data instanceof ShapelessRecipeData recipeData) {
-//                                    Field category = recipeData.getClass().getDeclaredField("category");
-//                                    category.setAccessible(true);
-//                                    category.set(recipeData, CraftingCategory.BUILDING);
-//
-//                                }
-//                            } catch (Exception e) {
-//                                e.printStackTrace();
-//                            }
-//                        }
-//
-//                    }
-//                }
                 if (!(event.getPlayer() instanceof Player player)) return;
                 if (event.getPacketType() == PacketType.Play.Server.CHUNK_DATA) {
                     // editing this packet directly takes too long and causes ping spikes to the client.
@@ -214,12 +175,6 @@ public class BlockPacketListener {
     }
 
     private void sendChunkDataPacket(Player player, WrapperPlayServerChunkData packet) {
-//        var key = makeRecentPacketKey(player, packet);
-//        int packetsSentCount = recentPacketsSent.getUnchecked(key);
-//        if (packetsSentCount >= 1) {
-//            return;
-//        }
-//        recentPacketsSent.put(key, packetsSentCount + 1);
         try {
             handleChunkChange(packet, player);
         } catch (Exception e) {
@@ -227,11 +182,6 @@ public class BlockPacketListener {
             GardensFurniture.plugin.getLogger().log(java.util.logging.Level.WARNING, "Failed to remap chunk packet", e);
         }
         PacketEvents.getAPI().getPlayerManager().sendPacketSilently(player, packet);
-    }
-
-    private String makeRecentPacketKey(Player player, WrapperPlayServerChunkData packet) {
-        var column = packet.getColumn();
-        return player.getUniqueId() + "-" + column.getX() + "-" + column.getZ();
     }
 
     // returns true if modified packet otherwise false
@@ -676,7 +626,6 @@ public class BlockPacketListener {
         blockState.setStage(1);
         return blockState;
     }
-
 
     private WrappedBlockState getNormalTripwire(WrappedBlockState blockstate) {
         // strip off un-needed states so we can use them in conjunction with the directions

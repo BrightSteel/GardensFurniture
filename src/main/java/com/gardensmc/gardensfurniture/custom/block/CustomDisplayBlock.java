@@ -6,7 +6,6 @@ import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.custom.type.Facing;
 import com.gardensmc.gardensfurniture.custom.type.Rotation;
-import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.events.Furniture;
 import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
 import com.gardensmc.gardensfurniture.util.LightUtil;
@@ -122,10 +121,6 @@ public class CustomDisplayBlock extends CustomBlock {
     @Override
     public boolean placeBlock(Player player, ItemStack heldItem, CustomPlaceableItem customItem, Location location, PlaceOptions placeOptions, Block clickedBlock) {
 
-//        Color color = null;
-//        if (heldItem != null && heldItem.getItemMeta() instanceof LeatherArmorMeta leather) {
-//            color = leather.getColor();
-//        }
         var yaw = player != null ? player.getYaw() : placeOptions.getYaw();
         var placed = placeDisplay(customItem, getItemToDisplay(heldItem), player, yaw, location, placeOptions.getBlockFace());
         if (placed) {
@@ -227,13 +222,6 @@ public class CustomDisplayBlock extends CustomBlock {
         locationOffset.setPitch(rotation.getPitch());
 
         ItemDisplay display = (ItemDisplay) world.spawnEntity(locationOffset.clone().add(0, 0.5, 0), EntityType.ITEM_DISPLAY);
-//        var meta = item.getItemMeta();
-//        if (meta != null) {
-//            if (color != null && meta instanceof LeatherArmorMeta leatherMeta) {
-//                leatherMeta.setColor(color);
-//            }
-//            item.setItemMeta(meta);
-//        }
         if (modelengine_id != null) {
             var model = ModelEngineAPI.createActiveModel(modelengine_id);
             // todo - apply other transformations to meg display

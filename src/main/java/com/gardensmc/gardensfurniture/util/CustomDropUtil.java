@@ -20,8 +20,6 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 public class CustomDropUtil {
 
     // I guess this is a custom handler for tripwire? Why is it hidden in this util, there should be a factory or something
@@ -29,9 +27,6 @@ public class CustomDropUtil {
         e.setDropItems(false);
         if (customItem.getIdentifier().equals("tripwire_top")) {
             Block bottom = e.getBlock().getRelative(BlockFace.DOWN);
-//            var furnitureStore = FurnitureStoreHandler.INSTANCE.getFurnitureStore(bottom);
-//            var tripItem = GardensFurniture.itemRegistry.getItem(furnitureStore.itemIdentifier());
-            // wait are we going to support multiplier big ones ?
             CustomItem tripItem = CustomBlockManager.getItemFromLeaves(bottom);
 
             // remove top from store
@@ -116,7 +111,6 @@ public class CustomDropUtil {
                         FurnitureStoreHandler.removedBlockData.remove();
                     }
                 }, 1);
-
             }
         }
     }
