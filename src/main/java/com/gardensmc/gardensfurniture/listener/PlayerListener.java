@@ -53,6 +53,7 @@ import org.bukkit.util.Transformation;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -504,15 +505,7 @@ public class PlayerListener implements Listener {
         if (e.getPlayer().isSneaking()) return;
         if (!isStandingOnEnderPad(e.getPlayer())) return;
 
-        CompletableFuture.supplyAsync(() -> {
-            for (int i = 2; i <= 30; i++) {
-                Block block = e.getPlayer().getWorld().getBlockAt(e.getPlayer().getLocation().add(0, i, 0));
-                if (block.getType() == Material.BARRIER) {
-                    return block;
-                }
-            }
-            return null;
-        }).thenAccept(ender_pad -> runTeleportation(e.getPlayer(), ender_pad));
+        runTeleportation(e.getPlayer(), findEnderPadBarrier(e.getPlayer(), 1));
     }
 
     @EventHandler
@@ -520,15 +513,7 @@ public class PlayerListener implements Listener {
         if (!e.isSneaking()) return;
         if (!isStandingOnEnderPad(e.getPlayer())) return;
 
-        CompletableFuture.supplyAsync(() -> {
-            for (int i = 2; i <= 30; i++) {
-                Block block = e.getPlayer().getWorld().getBlockAt(e.getPlayer().getLocation().subtract(0, i, 0));
-                if (block.getType() == Material.BARRIER) {
-                    return block;
-                }
-            }
-            return null;
-        }).thenAccept(ender_pad -> runTeleportation(e.getPlayer(), ender_pad));
+        runTeleportation(e.getPlayer(), findEnderPadBarrier(e.getPlayer(), -1));
     }
 
     private static final Set<Material> INTERACTABLES = Set.of(
@@ -656,6 +641,18 @@ public class PlayerListener implements Listener {
 //            }
 //        }
 //    }
+
+    // world access has to stay on the main thread; a 30 block column check is cheap enough
+    @Nullable
+    private Block findEnderPadBarrier(Player player, int direction) {
+        for (int i = 2; i <= 30; i++) {
+            Block block = player.getWorld().getBlockAt(player.getLocation().add(0, i * direction, 0));
+            if (block.getType() == Material.BARRIER) {
+                return block;
+            }
+        }
+        return null;
+    }
 
     private void runTeleportation(Player player, Block ender_pad) {
         Bukkit.getScheduler().runTask(GardensFurniture.plugin, () -> {
