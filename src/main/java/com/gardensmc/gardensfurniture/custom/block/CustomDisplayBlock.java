@@ -178,11 +178,7 @@ public class CustomDisplayBlock extends CustomBlock {
 
         var lightLocation = display.getLocation().add(0, getLightOffset(), 0);
         if (lit) {
-            var lightBlock = lightLocation.getBlock().getType();
-            // never overwrite a block that was placed in the light spot while the light was off
-            if (isSolid() || lightBlock == Material.AIR || lightBlock == Material.LIGHT) {
-                LightUtil.placeLight(lightLocation, getLight(), isSolid());
-            }
+            LightUtil.placeLight(lightLocation, getLight(), isSolid());
         } else {
             LightUtil.removeLight(lightLocation, isSolid());
         }

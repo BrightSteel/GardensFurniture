@@ -29,19 +29,22 @@ public class LightUtil {
     public static void placeLight(Location location, int level, boolean isSolid) {
         if (isSolid) {
             for (var blockFace : blockFaces) {
-                var block = location.getBlock().getRelative(blockFace);
-                if (block.getType() == Material.AIR) {
-                    block.setType(Material.LIGHT);
-                    Light lightBlock = (Light) block.getBlockData();
-                    lightBlock.setLevel(level);
-                }
+                setLight(location.getBlock().getRelative(blockFace), level);
             }
         } else {
-            var block = location.getBlock();
-            block.setType(Material.LIGHT);
-            Light lightBlock = (Light) block.getBlockData();
-            lightBlock.setLevel(level);
+            setLight(location.getBlock(), level);
         }
+    }
+
+    // only ever fills empty space - a light offset must never replace a real block
+    private static void setLight(Block block, int level) {
+        var type = block.getType();
+        if (type != Material.AIR && type != Material.CAVE_AIR && type != Material.LIGHT) {
+            return;
+        }
+        Light lightBlock = (Light) Material.LIGHT.createBlockData();
+        lightBlock.setLevel(level);
+        block.setBlockData(lightBlock);
     }
 
     public static void removeLight(Location location, boolean isSolid) {
@@ -63,8 +66,7 @@ public class LightUtil {
     public static void addLightBack(Block block) {
         var light = LightUtil.getCoveringLight(block);
         if (light > 0) {
-            block.setType(Material.LIGHT);
-            ((Light) block.getBlockData()).setLevel(light);
+            setLight(block, light);
         }
     }
 
