@@ -24,6 +24,7 @@ import org.bukkit.util.Vector;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 
@@ -125,7 +126,8 @@ public class CustomDisplayBlock extends CustomBlock {
 //        if (heldItem != null && heldItem.getItemMeta() instanceof LeatherArmorMeta leather) {
 //            color = leather.getColor();
 //        }
-        var placed = placeDisplay(customItem, getItemToDisplay(heldItem), player, location, placeOptions.getBlockFace());
+        var yaw = player != null ? player.getYaw() : placeOptions.getYaw();
+        var placed = placeDisplay(customItem, getItemToDisplay(heldItem), player, yaw, location, placeOptions.getBlockFace());
         if (placed) {
             var block = location.getBlock();
             var sound = getSoundToPlay(block, "place");
@@ -185,9 +187,9 @@ public class CustomDisplayBlock extends CustomBlock {
         }
     }
 
-    public static Vector offsetVector(Vector vector, Player player) {
+    public static Vector offsetVector(Vector vector, float yaw) {
         var offsetVector = vector.clone();
-        var rotation = Rotation.fromPlayerFacing(player.getYaw());
+        var rotation = Rotation.fromPlayerFacing(yaw);
         return switch ((int) rotation.getYaw()) {
             case 90 -> new Vector(-offsetVector.getZ(), offsetVector.getY(), offsetVector.getX());
             case 180 -> new Vector(-offsetVector.getX(), offsetVector.getY(), -offsetVector.getZ());
@@ -196,13 +198,13 @@ public class CustomDisplayBlock extends CustomBlock {
         };
     }
 
-    protected boolean placeDisplay(CustomPlaceableItem customItem, ItemStack item, Player player, Location location, BlockFace blockFace) {
+    protected boolean placeDisplay(CustomPlaceableItem customItem, ItemStack item, @Nullable Player player, float yaw, Location location, BlockFace blockFace) {
         var world = location.getWorld();
         if (world == null) return false;
 
         List<Vector> barrierVectors;
         if (hitbox == Hitbox.BARRIER && !barriers.isEmpty()) {
-            var remappedVectors = barriers.stream().map(v -> offsetVector(v, player)).toList();
+            var remappedVectors = barriers.stream().map(v -> offsetVector(v, yaw)).toList();
             // every barrier cell must be free, and (for players) buildable and not occupied by a mob or player
             if (remappedVectors.stream().map(vector -> location.clone().add(vector)).allMatch(cell ->
                     CustomBlockManager.isPlaceableMaterial(cell.getBlock().getType())
@@ -215,7 +217,7 @@ public class CustomDisplayBlock extends CustomBlock {
             barrierVectors = Collections.emptyList();
         }
 
-        var rotation = facePlayer ? Rotation.fromPlayerFacing(player.getYaw()) : Rotation.fromBlockFace(blockFace);
+        var rotation = facePlayer ? Rotation.fromPlayerFacing(yaw) : Rotation.fromBlockFace(blockFace);
         var locationOffset = location.clone().add(0.5, 0.0, 0.5); // move to center of block
         if (centerLeft) {
             locationOffset = getLocationOffset(locationOffset, Facing.fromYaw(rotation.getYaw()));

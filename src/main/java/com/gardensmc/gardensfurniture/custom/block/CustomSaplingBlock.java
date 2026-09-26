@@ -48,7 +48,7 @@ public class CustomSaplingBlock extends CustomDisplayBlock {
         var furnitureStore = new FurnitureStore(customItem.getIdentifier());
         FurnitureStoreHandler.INSTANCE.addFurnitureStore(location.getBlock(), furnitureStore, heldItem != null);
         var modelItem = GardensFurniture.itemRegistry.buildItem(identifier + "_model");
-        this.placeDisplay(customItem, modelItem != null ? modelItem : heldItem, player, location, BlockFace.UP);
+        this.placeDisplay(customItem, modelItem != null ? modelItem : heldItem, player, player != null ? player.getYaw() : 0, location, BlockFace.UP);
     }
 
     @AllArgsConstructor

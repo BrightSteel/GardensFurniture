@@ -72,10 +72,11 @@ import java.util.logging.Level;
  * <p>When an admin runs {@code /pr rollback|restore}, Prism invokes our handler synchronously for
  * the affected furniture activities and we own the world mutation: rebuild or tear down.</p>
  *
- * <p><b>Needs live-server validation:</b> DISPLAY rebuild replays {@code placeBlock} with a null
- * player (furniture that rotates to face the placer, or uses player-relative barrier vectors, may
- * need the stored yaw instead); multi-block waxed doors and barrier-vector furniture; and that
- * Prism's item-action rollback defers entirely to our handler.</p>
+ * <p>DISPLAY rebuilds replay {@code placeBlock} with no player, using the display's yaw recorded in
+ * the descriptor's facing slot so rotation and barrier vectors match the original.</p>
+ *
+ * <p><b>Needs live-server validation:</b> multi-block waxed doors and barrier-vector furniture, and
+ * that Prism's item-action rollback defers entirely to our handler.</p>
  */
 public class PrismHook implements Listener {
 
@@ -139,7 +140,9 @@ public class PrismHook implements Listener {
         if (item == null) {
             item = GardensFurniture.itemRegistry.buildItem(identifier);
         }
-        String blockData = block.getBlockData().getAsString();
+        // a delayed removal runs after the block is gone - use the state captured before the break
+        String removedBlockData = added ? null : FurnitureStoreHandler.removedBlockData.get();
+        String blockData = removedBlockData != null ? removedBlockData : block.getBlockData().getAsString();
         String descriptor = encode(kind, identifier,
                 store.getFacing(), store.getMultiplier(), blockData);
 
@@ -169,7 +172,8 @@ public class PrismHook implements Listener {
         Block block = baseBlock(display, interaction);
         // Hybrid furniture (sapling) is recorded via the store path; don't double-record here.
         if (FurnitureStoreHandler.INSTANCE.getFurnitureStore(block) != null) return;
-        String descriptor = encode(Kind.DISPLAY, customItem.getIdentifier(), null, 0, "");
+        // display furniture has no facing: store its yaw in that slot so a rebuild faces the same way
+        String descriptor = encode(Kind.DISPLAY, customItem.getIdentifier(), Float.toString(display.getLocation().getYaw()), 0, "");
         record(type, block.getLocation(), display.getItemStack(), descriptor, cause);
     }
 
@@ -263,7 +267,7 @@ public class PrismHook implements Listener {
         try {
             switch (spec.kind) {
                 case BLOCK -> rebuildBlock(block, loc, placeable, spec, item);
-                case DISPLAY -> placeable.placeBlock(null, item, loc, options(spec), null);
+                case DISPLAY -> placeable.placeBlock(null, item, loc, displayOptions(spec), null);
                 case HYBRID -> {
                     // Set the sapling's base block, then let the sapling re-add its store + display model.
                     if (spec.blockData != null && !spec.blockData.isEmpty()) {
@@ -307,6 +311,18 @@ public class PrismHook implements Listener {
         var options = new PlaceOptions().setForce(true).setMultiplier(spec.multiplier);
         if (spec.facing != null) {
             options.setFacing(spec.facing);
+        }
+        return options;
+    }
+
+    private static PlaceOptions displayOptions(Spec spec) {
+        var options = new PlaceOptions().setForce(true);
+        if (spec.facing != null) {
+            try {
+                options.setYaw(Float.parseFloat(spec.facing));
+            } catch (NumberFormatException ignored) {
+                // recorded before yaw was stored - keep the default rotation
+            }
         }
         return options;
     }

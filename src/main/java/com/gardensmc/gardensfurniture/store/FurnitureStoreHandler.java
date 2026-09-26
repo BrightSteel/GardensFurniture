@@ -41,6 +41,12 @@ public class FurnitureStoreHandler {
      */
     public static final ThreadLocal<Object> currentActor = new ThreadLocal<>();
 
+    /**
+     * Block state of a store's block from before it was broken, for removals that run after the block
+     * is already gone (so lifecycle recording captures the real block rather than air).
+     */
+    public static final ThreadLocal<String> removedBlockData = new ThreadLocal<>();
+
     public void addFurnitureStore(Block block, FurnitureStore furnitureStore, boolean refresh) {
         var nbtChunk = new NBTChunk(block.getChunk()).getPersistentDataContainer().getOrCreateCompound("GardensFurniture");
         var chunkBlockCompound = nbtChunk.getOrCreateCompound(getBlockKey(block));

@@ -102,8 +102,20 @@ public class CustomDropUtil {
 
             Bukkit.getPluginManager().callEvent(new CustomBlockBreakEvent(e.getPlayer(), customBlockItem, e.getBlock()));
             if (removeFurniture) {
-                // run later for other listeners to see furniture data before removal
-                Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock()), 1);
+                // run later for other listeners to see furniture data before removal; carry the breaking
+                // player and the pre-break block state so the removal is recorded against them (Prism)
+                var player = e.getPlayer();
+                var brokenBlockData = e.getBlock().getBlockData().getAsString();
+                Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> {
+                    FurnitureStoreHandler.currentActor.set(player);
+                    FurnitureStoreHandler.removedBlockData.set(brokenBlockData);
+                    try {
+                        FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
+                    } finally {
+                        FurnitureStoreHandler.currentActor.remove();
+                        FurnitureStoreHandler.removedBlockData.remove();
+                    }
+                }, 1);
 
             }
         }
