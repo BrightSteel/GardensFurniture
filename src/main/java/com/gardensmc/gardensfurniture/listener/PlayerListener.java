@@ -160,12 +160,7 @@ public class PlayerListener implements Listener {
                         && ProtectionUtil.hasForeignClaimNear(block.getLocation(), StructureHandler.FEATURE_CLAIM_RADIUS)) {
                     return; // datapack features can't be limited per block
                 }
-                block.setType(Material.AIR);
-                FurnitureStoreHandler.INSTANCE.removeFurnitureStore(block);
-                var itemEntity = CustomBlockManager.getItemEntity(block.getLocation());
-                if (itemEntity != null) {
-                    itemEntity.getEntity().remove();
-                }
+                CustomBlockManager.removeCustomBlock(block);
                 // deplete bone meal by 1
                 heldItem.setAmount(heldItem.getAmount() - 1);
                 e.getPlayer().getInventory().setItem(e.getHand(), heldItem);

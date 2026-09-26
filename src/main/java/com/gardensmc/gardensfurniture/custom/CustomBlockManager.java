@@ -3,6 +3,7 @@ package com.gardensmc.gardensfurniture.custom;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.block.Barriers;
 import com.gardensmc.gardensfurniture.custom.block.CustomDisplayBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomTripwireBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomWaxedBlock;
 import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.events.Furniture;
@@ -17,6 +18,7 @@ import de.tr7zw.nbtapi.NBTEntity;
 import dev.geco.gsit.api.GSitAPI;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -249,6 +251,34 @@ public class CustomBlockManager {
             Material.OAK_SAPLING,
             Material.DARK_OAK_SAPLING
     };
+
+    /**
+     * Remove a store-backed custom block and everything that belongs to it, without dropping anything:
+     * a model display in its cell (saplings), the other half of a door or large tripwire, its light, its
+     * store, and the block itself. Callers handle drops, since those differ per cause.
+     */
+    public static void removeCustomBlock(Block block) {
+        var customBlock = getItemFromLeaves(block) instanceof CustomPlaceableItem placeable ? placeable.getCustomBlock() : null;
+        var itemEntity = getItemEntity(block.getLocation());
+        if (itemEntity != null) {
+            itemEntity.getEntity().remove();
+        }
+        Block partner = null;
+        if (block.getBlockData() instanceof org.bukkit.block.data.type.Door door) {
+            partner = door.getHalf() == org.bukkit.block.data.Bisected.Half.BOTTOM ? block.getRelative(BlockFace.UP) : block.getRelative(BlockFace.DOWN);
+        } else if (customBlock instanceof CustomTripwireBlock tripwire && tripwire.isLarge()) {
+            partner = block.getRelative(BlockFace.UP);
+        }
+        if (partner != null && FurnitureStoreHandler.INSTANCE.getFurnitureStore(partner) != null) {
+            FurnitureStoreHandler.INSTANCE.removeFurnitureStore(partner);
+            partner.setType(Material.AIR, false);
+        }
+        block.setType(Material.AIR);
+        FurnitureStoreHandler.INSTANCE.removeFurnitureStore(block);
+        if (customBlock != null) {
+            customBlock.removeLight(block.getLocation());
+        }
+    }
 
     // every block type whose custom item lives in a furniture store rather than a display entity
     private static final Set<Material> STORE_BACKED_TYPES = Collections.unmodifiableSet(EnumSet.copyOf(

@@ -4,7 +4,6 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.CustomLeavesBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
-import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.CustomDropUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -14,7 +13,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.LeavesDecayEvent;
 
-import java.util.Arrays;
 
 public class LeafListener implements Listener {
 
@@ -27,8 +25,7 @@ public class LeafListener implements Listener {
             var customItem = CustomBlockManager.getItemFromLeaves(leafBlock);
             if (!(customItem instanceof CustomPlaceableItem placeable)) return;
             if (!preventDecay(leafBlock, leaf)) {
-                FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
-                e.getBlock().setType(Material.AIR);
+                CustomBlockManager.removeCustomBlock(leafBlock);
                 Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> CustomDropUtil.leafDrop(leafBlock.getLocation().add(0.5, 0.1, 0.5), (CustomLeavesBlock) placeable.getCustomBlock()), 1);
             }
             e.setCancelled(true);

@@ -266,26 +266,7 @@ public class BlockListener implements Listener {
                 block.getWorld().dropItemNaturally(block.getLocation().add(0.5, 0.1, 0.5), itemStack);
             }
         }
-        if (customBlock instanceof CustomSaplingBlock) {
-            var itemEntity = getItemEntity(block.getLocation());
-            if (itemEntity != null) {
-                itemEntity.getEntity().remove();
-            }
-        }
-        // the other half of a door / large tripwire keeps its own store
-        Block partner = null;
-        if (block.getBlockData() instanceof org.bukkit.block.data.type.Door door) {
-            partner = door.getHalf() == org.bukkit.block.data.Bisected.Half.BOTTOM ? block.getRelative(BlockFace.UP) : block.getRelative(BlockFace.DOWN);
-        } else if (customBlock instanceof CustomTripwireBlock tripwire && tripwire.isLarge()) {
-            partner = block.getRelative(BlockFace.UP);
-        }
-        if (partner != null && FurnitureStoreHandler.INSTANCE.getFurnitureStore(partner) != null) {
-            FurnitureStoreHandler.INSTANCE.removeFurnitureStore(partner);
-            partner.setType(Material.AIR, false);
-        }
-        block.setType(Material.AIR);
-        FurnitureStoreHandler.INSTANCE.removeFurnitureStore(block);
-        customBlock.removeLight(block.getLocation());
+        CustomBlockManager.removeCustomBlock(block);
     }
 
     // burning leaves leave nothing behind, but their store (and any light) must go with them
@@ -426,14 +407,7 @@ public class BlockListener implements Listener {
                         .getFirst().getLocation();
             }
 
-            blocks.forEach(b -> {
-                b.setType(Material.AIR);
-                FurnitureStoreHandler.INSTANCE.removeFurnitureStore(b);
-                var itemEntity = CustomBlockManager.getItemEntity(b.getLocation());
-                if (itemEntity != null) {
-                    itemEntity.getEntity().remove();
-                }
-            });
+            blocks.forEach(CustomBlockManager::removeCustomBlock);
 
             if (!StructureHandler.INSTANCE.spawnGrownStructure(saplingStructure, location)) {
                 try {
