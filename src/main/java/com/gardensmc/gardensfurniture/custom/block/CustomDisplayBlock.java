@@ -26,8 +26,6 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 
-import static com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener.*;
-
 public class CustomDisplayBlock extends CustomBlock {
 
     protected Hitbox hitbox = Hitbox.INTERACTION;
@@ -121,10 +119,7 @@ public class CustomDisplayBlock extends CustomBlock {
         var placed = placeDisplay(customItem, getItemToDisplay(heldItem), player, yaw, location, placeOptions.getBlockFace());
         if (placed) {
             var block = location.getBlock();
-            var sound = getSoundToPlay(block, "place");
-            if (sound != null) {
-                block.getWorld().playSound(block.getLocation(), sound, SoundCategory.BLOCKS, VANILLA_PLACE_VOLUME, VANILLA_PLACE_PITCH);
-            }
+            playPlaceSound(block, null);
         }
         return placed;
     }

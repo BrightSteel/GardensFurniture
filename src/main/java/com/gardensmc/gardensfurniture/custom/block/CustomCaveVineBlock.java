@@ -7,14 +7,11 @@ import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import lombok.Getter;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-
-import static com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener.*;
 
 @Getter
 public class CustomCaveVineBlock extends CustomBlock {
@@ -53,11 +50,7 @@ public class CustomCaveVineBlock extends CustomBlock {
         }
         block.setType(Material.CAVE_VINES, true);
         // play place sound
-        var sound = getSoundToPlay(block, "place");
-        if (sound == null) {
-            sound = "block.cave_vines.place";
-        }
-        block.getWorld().playSound(block.getLocation(), sound, SoundCategory.BLOCKS, VANILLA_PLACE_VOLUME, VANILLA_PLACE_PITCH);
+        playPlaceSound(block, "block.cave_vines.place");
 
         return true;
     }

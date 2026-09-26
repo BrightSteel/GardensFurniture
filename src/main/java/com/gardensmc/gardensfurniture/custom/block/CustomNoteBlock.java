@@ -13,8 +13,6 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import static com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener.*;
-
 @Getter
 public class CustomNoteBlock extends CustomBlock {
 
@@ -52,10 +50,7 @@ public class CustomNoteBlock extends CustomBlock {
                 heldItem != null
         );
         // play place sound
-        var sound = getSoundToPlay(block, "place");
-        if (sound != null) {
-            block.getWorld().playSound(block.getLocation(), sound, SoundCategory.BLOCKS, VANILLA_PLACE_VOLUME, VANILLA_PLACE_PITCH);
-        }
+        playPlaceSound(block, null);
 
         placeLight(location);
         return true;

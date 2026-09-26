@@ -3,10 +3,12 @@ package com.gardensmc.gardensfurniture.custom.block;
 import com.gardensmc.gardensfurniture.custom.block.bedrock.BedrockBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
+import com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener;
 import com.gardensmc.gardensfurniture.util.LightUtil;
 import lombok.Getter;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -15,6 +17,7 @@ import org.geysermc.geyser.api.block.custom.CustomBlockData;
 import org.geysermc.geyser.api.block.custom.CustomBlockPermutation;
 import org.geysermc.geyser.api.block.custom.CustomBlockState;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 
@@ -71,6 +74,18 @@ public abstract class CustomBlock {
     public void placeLight(Location anchor) {
         if (light > 0) {
             LightUtil.placeLight(anchor.clone().add(0, lightOffset, 0), light, isSolid());
+        }
+    }
+
+    // the block's configured place sound, or `fallback` (null for none) when it doesn't have one
+    protected static void playPlaceSound(Block block, @Nullable String fallback) {
+        var sound = VanillaBlockSoundListener.getSoundToPlay(block, "place");
+        if (sound == null) {
+            sound = fallback;
+        }
+        if (sound != null) {
+            block.getWorld().playSound(block.getLocation(), sound, SoundCategory.BLOCKS,
+                    VanillaBlockSoundListener.VANILLA_PLACE_VOLUME, VanillaBlockSoundListener.VANILLA_PLACE_PITCH);
         }
     }
 
