@@ -128,7 +128,12 @@ public class CustomBlockManager {
      */
     @Nullable
     public static ItemEntity getFurnitureEntity(Location location) {
-        var displayEntity = getDisplayEntity(location, true, CustomBlockManager::isFurnitureDisplay);
+        return getFurnitureEntity(location, true);
+    }
+
+    @Nullable
+    public static ItemEntity getFurnitureEntity(Location location, boolean isCheckAdjacent) {
+        var displayEntity = getDisplayEntity(location, isCheckAdjacent, CustomBlockManager::isFurnitureDisplay);
         return displayEntity == null ? null : new DisplayItemEntity(displayEntity);
     }
 
@@ -275,13 +280,31 @@ public class CustomBlockManager {
             Material.DARK_OAK_SAPLING
     };
 
+    // every block type whose custom item lives in a furniture store rather than a display entity
+    private static final Set<Material> STORE_BACKED_TYPES = Collections.unmodifiableSet(EnumSet.copyOf(
+            Stream.concat(Arrays.stream(packetTypes), CustomWaxedBlock.WaxedType.materials().stream()).toList()
+    ));
+
+    public static boolean isStoreBacked(Material material) {
+        return STORE_BACKED_TYPES.contains(material);
+    }
+
     @Nullable
     public static CustomItem getCustomItemFromBlock(Block block) {
-        if (Stream.concat(Arrays.stream(packetTypes), CustomWaxedBlock.WaxedType.materials().stream()).toList().contains(block.getType())) {
+        var type = block.getType();
+        if (isStoreBacked(type)) {
             return CustomBlockManager.getItemFromLeaves(block);
         }
-
-        ItemEntity itemEntity = getFurnitureEntity(block.getLocation());
+        // Display furniture only ever occupies barrier cells or the free cell it was placed in, so skip the
+        // entity lookup for everything else - this runs on every mob step, block place and block break.
+        ItemEntity itemEntity;
+        if (type == Material.BARRIER) {
+            itemEntity = getFurnitureEntity(block.getLocation());
+        } else if (type == Material.CAVE_AIR || isPlaceableMaterial(type)) {
+            itemEntity = getFurnitureEntity(block.getLocation(), false); // interaction hitboxes: own cell only
+        } else {
+            return null;
+        }
         if (itemEntity != null) {
             return GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
         }

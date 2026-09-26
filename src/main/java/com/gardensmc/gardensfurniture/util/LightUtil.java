@@ -82,8 +82,9 @@ public class LightUtil {
             }
         }
 
-        // account for displays with light offsets
-        return block.getLocation().getNearbyEntitiesByType(ItemDisplay.class, 5)
+        // account for displays with light offsets - offsets are vertical, so only this block's column can
+        // hold one (runs a tick after every block break, so keep the search small)
+        return block.getLocation().add(0.5, 0, 0.5).getNearbyEntitiesByType(ItemDisplay.class, 0.5, 6, 0.5)
                 .stream()
                 .map(itemDisplay -> {
                     var customItem = GardensFurniture.itemRegistry.getCustomItem(itemDisplay.getItemStack());

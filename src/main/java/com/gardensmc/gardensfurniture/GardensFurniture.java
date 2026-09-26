@@ -92,6 +92,7 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
         // init packet events
         PacketEvents.getAPI().init();
 
+        MapleTapHandler.INSTANCE.trackLoadedTaps();
         Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, MapleTapHandler.INSTANCE::tick, 0, 20);
 
         // hook into hmc cosmetics

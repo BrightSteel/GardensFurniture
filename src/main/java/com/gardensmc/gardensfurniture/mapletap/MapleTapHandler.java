@@ -5,17 +5,24 @@ import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import de.tr7zw.nbtapi.NBTCompound;
 import de.tr7zw.nbtapi.NBTEntity;
 import org.bukkit.Bukkit;
-import org.bukkit.World;
+import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemDisplay;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.world.EntitiesLoadEvent;
+import org.bukkit.event.world.EntitiesUnloadEvent;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 
-public class MapleTapHandler {
+public class MapleTapHandler implements Listener {
 
     public static final MapleTapHandler INSTANCE = new MapleTapHandler();
     public static final String TAP_NBT = "GardensFurnitureMapleTap";
@@ -34,11 +41,47 @@ public class MapleTapHandler {
     private MapleTapHandler() {
     }
 
+    // tap displays in loaded chunks, kept up to date by entity load/unload and placement instead of
+    // scanning (and reading the NBT of) every item display in every world each second
+    private final Set<ItemDisplay> taps = new HashSet<>();
+
     public void tick() {
-        Bukkit.getWorlds()
-                .stream()
-                .flatMap(world -> getTaps(world).stream())
-                .forEach(this::tickTap);
+        taps.removeIf(display -> !display.isValid());
+        for (var display : List.copyOf(taps)) {
+            var tap = getTap(display);
+            if (tap != null) {
+                tickTap(tap);
+            }
+        }
+    }
+
+    // pick up taps in chunks that were already loaded when the plugin enabled
+    public void trackLoadedTaps() {
+        Bukkit.getWorlds().forEach(world -> world.getEntitiesByClass(ItemDisplay.class).forEach(this::track));
+    }
+
+    private void track(Entity entity) {
+        if (entity instanceof ItemDisplay display && display.getItemStack() != null) {
+            var customItem = GardensFurniture.itemRegistry.getCustomItem(display.getItemStack());
+            if (customItem != null && customItem.getIdentifier().startsWith(MAPLE_ID)) {
+                taps.add(display);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onEntitiesLoad(EntitiesLoadEvent e) {
+        e.getEntities().forEach(this::track);
+    }
+
+    @EventHandler
+    public void onEntitiesUnload(EntitiesUnloadEvent e) {
+        e.getEntities().forEach(taps::remove);
+    }
+
+    @EventHandler
+    public void onTapPlaced(FurniturePlaceEvent e) {
+        track(e.getFurniture().itemDisplay());
     }
 
     private void tickTap(Tap tap) {
@@ -79,14 +122,6 @@ public class MapleTapHandler {
             var time = ThreadLocalRandom.current().nextInt(timing.min, timing.max) * 20;
             tapNBT.setInteger(timingEntry.getKey(), time);
         }
-    }
-
-    private List<Tap> getTaps(World world) {
-        return world.getEntitiesByClass(ItemDisplay.class)
-                .stream()
-                .map(this::getTap)
-                .filter(Objects::nonNull)
-                .toList();
     }
 
     @Nullable

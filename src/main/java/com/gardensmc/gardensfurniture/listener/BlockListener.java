@@ -61,7 +61,7 @@ public class BlockListener implements Listener {
             if (customItem instanceof CustomPlaceableItem placeableItem && placeableItem.getCustomBlock() instanceof CustomTripwireBlock customTripwireBlock) {
                 dropCustomItem(e, customItem, customTripwireBlock);
             }
-        } else if (Stream.concat(Arrays.stream(packetTypes), CustomWaxedBlock.WaxedType.materials().stream()).toList().contains(e.getBlock().getType())) {
+        } else if (CustomBlockManager.isStoreBacked(e.getBlock().getType())) {
             CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getBlock());
             if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomSaplingBlock) {
                 // remove sapling display
@@ -231,6 +231,10 @@ public class BlockListener implements Listener {
 
     @EventHandler
     public void onConnectablePhysics(BlockPhysicsEvent e) {
+        // physics events are extremely frequent; skip the entity lookup when nothing is connectable
+        if (!GardensFurniture.itemRegistry.hasConnectableItems()) {
+            return;
+        }
         var block = e.getBlock();
         if (!DISPLAY_BLOCK_TYPES.contains(block.getType())) {
             return;

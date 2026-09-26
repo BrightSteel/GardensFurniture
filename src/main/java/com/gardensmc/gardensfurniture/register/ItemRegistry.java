@@ -20,6 +20,7 @@ import io.papermc.paper.datacomponent.item.UseCooldown;
 import io.papermc.paper.datacomponent.item.consumable.ItemUseAnimation;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.experimental.Accessors;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
@@ -54,6 +55,9 @@ public class ItemRegistry {
     // also can be for leaves too: distance,persistent -> identifier
     // note,instrument,powered -> custom_item_identifier
     private volatile Map<String, String> customNoteBlocks = new HashMap<>();
+    @Getter
+    @Accessors(fluent = true)
+    private volatile boolean hasConnectableItems;
     // block states registered by the items currently being loaded
     private Map<String, String> loadingBlockStates = new HashMap<>();
 
@@ -134,6 +138,8 @@ public class ItemRegistry {
                 }
             }
         }
+        this.hasConnectableItems = customItems.values().stream().anyMatch(item ->
+                item instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock && displayBlock.isConnectable());
         this.customItems = customItems;
         this.customItemByCategory = customItemByCategory;
         this.customNoteBlocks = loadingBlockStates;
