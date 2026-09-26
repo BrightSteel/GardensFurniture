@@ -79,7 +79,11 @@ public class BlockBreakingListener implements Listener {
         var player = e.getPlayer();
         var heldItem = e.getItemInHand();
         var playerUUID = player.getUniqueId();
-        customBreakingBlocks.put(playerUUID, new CustomBreakingBlock(player, block, heldItem, hardnessMaterial));
+        // a player breaks one block at a time: stop any previous break so its timer can't finish later
+        var previous = customBreakingBlocks.put(playerUUID, new CustomBreakingBlock(player, block, heldItem, hardnessMaterial));
+        if (previous != null) {
+            previous.close();
+        }
     }
 
     // the hit-sound loop can play a little past the moment the block actually breaks
