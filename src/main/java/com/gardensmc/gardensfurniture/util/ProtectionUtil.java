@@ -9,6 +9,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class ProtectionUtil {
 
@@ -21,7 +22,7 @@ public class ProtectionUtil {
 
     @Nullable
     public static ClaimPermission getClaimPermission(Location location, Player player) {
-        if (!GriefPrevention.instance.claimsEnabledForWorld(location.getWorld())) {
+        if (!GardensFurniture.isGriefPreventionHooked || !GriefPrevention.instance.claimsEnabledForWorld(location.getWorld())) {
             return null;
         }
         var dataStore = GriefPrevention.instance.dataStore;
@@ -40,5 +41,54 @@ public class ProtectionUtil {
             return true;
         }
         return claimPermission.isGrantedBy(permission);
+    }
+
+    /**
+     * Mirrors GriefPrevention's own tree rule: something growing from {@code origin} may only change
+     * {@code cell} if the cell is unclaimed or claimed by the same owner as the origin.
+     */
+    public static boolean canGrowInto(Location origin, Location cell) {
+        if (!GardensFurniture.isGriefPreventionHooked) {
+            return true;
+        }
+        var dataStore = GriefPrevention.instance.dataStore;
+        Claim cellClaim = dataStore.getClaimAt(cell, true, null);
+        if (cellClaim == null) {
+            return true;
+        }
+        Claim originClaim = dataStore.getClaimAt(origin, true, null);
+        return originClaim != null && Objects.equals(originClaim.getOwnerID(), cellClaim.getOwnerID());
+    }
+
+    /**
+     * True if a claim owned by someone other than the origin's claim owner lies within {@code radius}
+     * blocks (x/z). Used where growth can't be checked block by block (datapack features).
+     */
+    public static boolean hasForeignClaimNear(Location origin, int radius) {
+        if (!GardensFurniture.isGriefPreventionHooked) {
+            return false;
+        }
+        var dataStore = GriefPrevention.instance.dataStore;
+        Claim originClaim = dataStore.getClaimAt(origin, true, null);
+        var originOwner = originClaim == null ? null : originClaim.getOwnerID();
+        int minX = origin.getBlockX() - radius, maxX = origin.getBlockX() + radius;
+        int minZ = origin.getBlockZ() - radius, maxZ = origin.getBlockZ() + radius;
+        for (int cx = minX >> 4; cx <= maxX >> 4; cx++) {
+            for (int cz = minZ >> 4; cz <= maxZ >> 4; cz++) {
+                for (Claim claim : dataStore.getClaims(cx, cz)) {
+                    if (!Objects.equals(claim.getLesserBoundaryCorner().getWorld(), origin.getWorld())
+                            || (originOwner != null && originOwner.equals(claim.getOwnerID()))) {
+                        continue;
+                    }
+                    var lesser = claim.getLesserBoundaryCorner();
+                    var greater = claim.getGreaterBoundaryCorner();
+                    if (lesser.getBlockX() <= maxX && greater.getBlockX() >= minX
+                            && lesser.getBlockZ() <= maxZ && greater.getBlockZ() >= minZ) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 }

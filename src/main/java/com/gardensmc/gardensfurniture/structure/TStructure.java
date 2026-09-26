@@ -15,6 +15,7 @@ import org.bukkit.block.data.BlockData;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Predicate;
 
 /**
  * Utility class for easy implementation of structure gen from terra files (.tesf)
@@ -24,6 +25,13 @@ public abstract class TStructure {
 
     protected Location origin;
     private final Set<Chunk> furnitureAffectedChunks = new HashSet<>();
+    // cells this structure may write to; unrestricted for world gen, limited for player-grown trees
+    private Predicate<Location> cellFilter = location -> true;
+
+    public TStructure setCellFilter(Predicate<Location> cellFilter) {
+        this.cellFilter = cellFilter;
+        return this;
+    }
 
     public TStructure setOrigin(Location origin) {
         this.origin = origin;
@@ -41,6 +49,9 @@ public abstract class TStructure {
             throwOriginException();
         }
         Location loc = origin.clone().add(x, y, z);
+        if (!cellFilter.test(loc)) {
+            return;
+        }
         BlockData blockData1 = Bukkit.createBlockData(blockData);
         loc.getBlock().setBlockData(blockData1, false);
     }
@@ -58,6 +69,9 @@ public abstract class TStructure {
             throwOriginException();
         }
         Location loc = origin.clone().add(x, y, z);
+        if (!cellFilter.test(loc)) {
+            return;
+        }
         CustomItem customItem = GardensFurniture.itemRegistry.getItem(identifier);
         if (customItem instanceof CustomPlaceableItem placeableItem) {
             placeableItem.placeBlock(null, null, loc, placeOptions, null);

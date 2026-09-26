@@ -10,6 +10,7 @@ import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.events.Furniture;
 import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
 import com.gardensmc.gardensfurniture.util.LightUtil;
+import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import com.ticxo.modelengine.api.ModelEngineAPI;
 import de.tr7zw.nbtapi.NBT;
 import lombok.Getter;
@@ -202,7 +203,10 @@ public class CustomDisplayBlock extends CustomBlock {
         List<Vector> barrierVectors;
         if (hitbox == Hitbox.BARRIER && !barriers.isEmpty()) {
             var remappedVectors = barriers.stream().map(v -> offsetVector(v, player)).toList();
-            if (remappedVectors.stream().allMatch(vector -> CustomBlockManager.isPlaceableMaterial(location.clone().add(vector).getBlock().getType()))) {
+            // every barrier cell must be free, and (for players) buildable and not occupied by a mob or player
+            if (remappedVectors.stream().map(vector -> location.clone().add(vector)).allMatch(cell ->
+                    CustomBlockManager.isPlaceableMaterial(cell.getBlock().getType())
+                            && (player == null || (ProtectionUtil.canBuild(cell, player) && !CustomBlockManager.entityBlocking(cell))))) {
                 barrierVectors = remappedVectors;
             } else {
                 return false;

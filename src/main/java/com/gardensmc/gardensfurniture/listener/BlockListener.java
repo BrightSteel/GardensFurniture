@@ -313,6 +313,11 @@ public class BlockListener implements Listener {
         if (customItem != null && customItem.getMechanics() != null) {
             var saplingStructure = customItem.getMechanics().getSapling_structure();
             e.setCancelled(true);
+            // datapack features can't be limited per block, so don't grow one next to someone else's claim
+            if (!StructureHandler.INSTANCE.hasStructure(saplingStructure)
+                    && ProtectionUtil.hasForeignClaimNear(e.getLocation(), StructureHandler.FEATURE_CLAIM_RADIUS)) {
+                return;
+            }
             // remove block(s)
             var blocks = e.getBlocks()
                     .stream()
@@ -351,7 +356,7 @@ public class BlockListener implements Listener {
                 }
             });
 
-            if (!StructureHandler.INSTANCE.spawnStructure(saplingStructure, location)) {
+            if (!StructureHandler.INSTANCE.spawnGrownStructure(saplingStructure, location)) {
                 try {
                     handleFeature(saplingStructure, location);
                 } catch (Exception ex) {

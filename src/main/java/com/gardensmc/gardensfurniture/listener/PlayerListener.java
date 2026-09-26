@@ -160,6 +160,10 @@ public class PlayerListener implements Listener {
             }
             var fungusStructure = customItem.getMechanics().getFungus_structure();
             if (fungusStructure != null && ProbabilityUtil.roll(40)) {
+                if (!StructureHandler.INSTANCE.hasStructure(fungusStructure)
+                        && ProtectionUtil.hasForeignClaimNear(block.getLocation(), StructureHandler.FEATURE_CLAIM_RADIUS)) {
+                    return; // datapack features can't be limited per block
+                }
                 block.setType(Material.AIR);
                 FurnitureStoreHandler.INSTANCE.removeFurnitureStore(block);
                 var itemEntity = CustomBlockManager.getItemEntity(block.getLocation());
@@ -170,7 +174,7 @@ public class PlayerListener implements Listener {
                 heldItem.setAmount(heldItem.getAmount() - 1);
                 e.getPlayer().getInventory().setItem(e.getHand(), heldItem);
 
-                if (!StructureHandler.INSTANCE.spawnStructure(fungusStructure, block.getLocation())) {
+                if (!StructureHandler.INSTANCE.spawnGrownStructure(fungusStructure, block.getLocation())) {
                     try {
                         handleFeature(fungusStructure, block.getLocation());
                     } catch (Exception ex) {

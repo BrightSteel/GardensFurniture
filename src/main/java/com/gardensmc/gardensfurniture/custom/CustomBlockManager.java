@@ -68,7 +68,7 @@ public class CustomBlockManager {
                 || material == Material.SNOW;
     }
 
-    private static boolean entityBlocking(Location loc) {
+    public static boolean entityBlocking(Location loc) {
         if (loc.getWorld() != null) {
             return loc.getWorld().getNearbyEntities(loc, 1, 1, 1, entity -> entity instanceof LivingEntity || entity instanceof Display)
                     .stream()
