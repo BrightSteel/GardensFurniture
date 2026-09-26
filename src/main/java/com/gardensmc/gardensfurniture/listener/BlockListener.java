@@ -1,5 +1,6 @@
 package com.gardensmc.gardensfurniture.listener;
 
+import com.destroystokyo.paper.event.block.BlockDestroyEvent;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.*;
@@ -17,7 +18,6 @@ import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.gardensmc.gardensfurniture.util.ProbabilityUtil;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import com.gardensmc.gardensfurniture.util.SpecialItems;
-import com.destroystokyo.paper.event.block.BlockDestroyEvent;
 import de.tr7zw.nbtapi.NBT;
 import io.papermc.paper.configuration.GlobalConfiguration;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
@@ -436,15 +436,15 @@ public class BlockListener implements Listener {
         // both are global/world state: remember the previous values and always put them back
         var blockUpdates = GlobalConfiguration.get().blockUpdates;
         boolean previousNoteblockUpdates = blockUpdates.disableNoteblockUpdates;
-        Boolean previousFeedback = world.getGameRuleValue(GameRule.SEND_COMMAND_FEEDBACK);
+        Boolean previousFeedback = world.getGameRuleValue(GameRules.SEND_COMMAND_FEEDBACK);
         Runnable restore = () -> {
             blockUpdates.disableNoteblockUpdates = previousNoteblockUpdates;
             if (previousFeedback != null) {
-                world.setGameRule(GameRule.SEND_COMMAND_FEEDBACK, previousFeedback);
+                world.setGameRule(GameRules.SEND_COMMAND_FEEDBACK, previousFeedback);
             }
         };
         blockUpdates.disableNoteblockUpdates = true;
-        world.setGameRule(GameRule.SEND_COMMAND_FEEDBACK, false);
+        world.setGameRule(GameRules.SEND_COMMAND_FEEDBACK, false);
 
         Set<FurnitureCache.BlockKey> existingNoteBlocks;
         try {
