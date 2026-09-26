@@ -31,6 +31,7 @@ public class AnvilListener implements Listener {
         var wrapResult = new WrapHandler(tool).wrapItem(customWrapItem, color);
         e.setResult(wrapResult);
         e.getView().setRepairCost(3);
+        e.getView().setRepairItemCountCost(1); // one wrap per item, not the whole stack
     }
 
 }

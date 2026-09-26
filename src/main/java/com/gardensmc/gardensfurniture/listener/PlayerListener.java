@@ -393,7 +393,7 @@ public class PlayerListener implements Listener {
         if (e.getAction() != Action.LEFT_CLICK_BLOCK) return;
         var block = e.getClickedBlock();
         if (block == null || block.getType() != Material.BARRIER) return;
-        if (e.getPlayer().getInventory().getItem(e.getHand() == null ? EquipmentSlot.HAND : e.getHand()).getType().toString().endsWith("sword")) return;
+        if (e.getPlayer().getInventory().getItem(e.getHand() == null ? EquipmentSlot.HAND : e.getHand()).getType().toString().toLowerCase().endsWith("sword")) return;
         if (!ProtectionUtil.canBuild(block.getLocation(), e.getPlayer())) return;
 
         // In survival, barrier furniture that defines material_traits breaks gradually via the

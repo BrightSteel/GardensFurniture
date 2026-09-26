@@ -247,8 +247,9 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
 
     private void hookIntoCoreProtect() {
         var plugin = getServer().getPluginManager().getPlugin("CoreProtect");
-        // Check that CoreProtect is loaded
-        if (!(plugin instanceof CoreProtect)) {
+        // Check that CoreProtect is loaded (null check first: the instanceof below loads the
+        // CoreProtect class, which throws NoClassDefFoundError if the plugin isn't installed)
+        if (plugin == null || !(plugin instanceof CoreProtect)) {
             return;
         }
 

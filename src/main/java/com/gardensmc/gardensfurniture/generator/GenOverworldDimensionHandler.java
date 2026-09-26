@@ -25,6 +25,8 @@ import static com.gardensmc.gardensfurniture.register.ItemRegistry.generatedDir;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class GenOverworldDimensionHandler {
 
+    private static final long BIOME_SHUFFLE_SEED = 0x6761726465_6e73L;
+
     public static final GenOverworldDimensionHandler INSTANCE = new GenOverworldDimensionHandler();
 
     public void generate() {
@@ -66,7 +68,8 @@ public class GenOverworldDimensionHandler {
 
     public void applyBiomeModifications(Dimension dimension, List<CustomBiome> customBiomes) {
         var biomes = dimension.getGenerator().getBiomeSource().getBiomes();
-        Collections.shuffle(biomes);
+        // fixed seed: the same config must produce the same datapack on every start
+        Collections.shuffle(biomes, new java.util.Random(BIOME_SHUFFLE_SEED));
 
         // apply replacements
         customBiomes.stream()

@@ -169,7 +169,7 @@ public class FurnitureCommand implements TabExecutor {
     public List<String> onTabComplete(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String s, @NotNull String[] arguments) {
         List<String> suggestions = new ArrayList<>();
         if (arguments.length > 0) {
-            switch (arguments[0]) {
+            switch (arguments[0].toUpperCase()) {
                 case "GET" -> suggestions = GardensFurniture.itemRegistry.getItemIdentifiers();
             }
         }
