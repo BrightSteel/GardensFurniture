@@ -14,6 +14,7 @@ import com.gardensmc.gardensfurniture.itementity.ItemEntity;
 import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
+import com.gardensmc.gardensfurniture.util.SpecialItems;
 import de.tr7zw.nbtapi.NBT;
 import de.tr7zw.nbtapi.NBTEntity;
 import dev.geco.gsit.api.GSitAPI;
@@ -374,12 +375,12 @@ public class CustomBlockManager {
         } else if (customBlockItem.getCustomBlock().isSeated()) {
             double offset = customBlockItem.getCustomBlock().getSeatOffset();
             GSitAPI.createSeat(itemEntity.getEntity().getLocation().getBlock(), player, true, 0.0, offset, 0.0, player.getLocation().getYaw(), true);
-        } else if (customItem.getIdentifier().equals("maple_tap_5") && heldItem.getType() == Material.GLASS_BOTTLE) {
+        } else if (customItem.getIdentifier().equals(SpecialItems.mapleTapStage(5)) && heldItem.getType() == Material.GLASS_BOTTLE) {
             if (!canBuild) return;
-            itemEntity.setItem(GardensFurniture.itemRegistry.buildItem("maple_tap_1"));
+            itemEntity.setItem(GardensFurniture.itemRegistry.buildItem(SpecialItems.mapleTapStage(1)));
             var nbt = new NBTEntity(itemEntity.getEntity()).getPersistentDataContainer();
             nbt.removeKey(MapleTapHandler.TAP_NBT);
-            var mapleSyrup = GardensFurniture.itemRegistry.buildItem("maple_syrup");
+            var mapleSyrup = GardensFurniture.itemRegistry.buildItem(SpecialItems.MAPLE_SYRUP);
             if (mapleSyrup == null) {
                 Bukkit.getLogger().log(Level.SEVERE, "Failed to get maple_syrup item!");
                 return;

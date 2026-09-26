@@ -3,9 +3,11 @@ package com.gardensmc.gardensfurniture.menu;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.dye.DyeColorGroup;
 import com.gardensmc.gardensfurniture.util.ItemUtil;
+import com.gardensmc.gardensfurniture.util.SpecialItems;
 import de.themoep.inventorygui.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -14,8 +16,6 @@ import org.bukkit.inventory.meta.LeatherArmorMeta;
 import java.util.stream.IntStream;
 
 public class DyeMenu extends Menu {
-
-    private static final ItemStack DYE_TILE = GardensFurniture.itemRegistry.buildItem("dye_tile");
 
     private static final String[] LAYOUT = new String[] {
             "xxxxxxxxx",
@@ -124,7 +124,11 @@ public class DyeMenu extends Menu {
     }
 
     private ItemStack getDyeTile(Color color) {
-        var tile = DYE_TILE.clone();
+        // built per use so a renamed dye_tile (config.yml) and /furniture reload are picked up
+        var tile = GardensFurniture.itemRegistry.buildItem(SpecialItems.DYE_TILE);
+        if (tile == null) {
+            tile = new ItemStack(Material.LEATHER_HORSE_ARMOR); // dye_tile id doesn't match an item
+        }
         if (tile.getItemMeta() instanceof LeatherArmorMeta leatherMeta) {
             leatherMeta.setColor(color);
             tile.setItemMeta(leatherMeta);

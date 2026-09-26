@@ -6,6 +6,7 @@ import de.tr7zw.nbtapi.NBTCompound;
 import de.tr7zw.nbtapi.NBTEntity;
 import org.bukkit.Bukkit;
 import com.gardensmc.gardensfurniture.events.FurniturePlaceEvent;
+import com.gardensmc.gardensfurniture.util.SpecialItems;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.event.EventHandler;
@@ -27,7 +28,6 @@ public class MapleTapHandler implements Listener {
     public static final MapleTapHandler INSTANCE = new MapleTapHandler();
     public static final String TAP_NBT = "GardensFurnitureMapleTap";
 
-    private static final String MAPLE_ID = "maple_tap";
     private static final int FINAL_STAGE = 5;
     private static final String INITIAL_TAG = "initial";
     // timings in seconds from nbt generation
@@ -63,7 +63,7 @@ public class MapleTapHandler implements Listener {
     private void track(Entity entity) {
         if (entity instanceof ItemDisplay display && display.getItemStack() != null) {
             var customItem = GardensFurniture.itemRegistry.getCustomItem(display.getItemStack());
-            if (customItem != null && customItem.getIdentifier().startsWith(MAPLE_ID)) {
+            if (customItem != null && customItem.getIdentifier().startsWith(SpecialItems.MAPLE_TAP_PREFIX)) {
                 taps.add(display);
             }
         }
@@ -101,7 +101,7 @@ public class MapleTapHandler implements Listener {
             }
             if (!targetStage.equals(tap.stage)) {
                 // replace stage
-                var nextStageId = MAPLE_ID + "_" + targetStage.substring("stage_".length());
+                var nextStageId = SpecialItems.MAPLE_TAP_PREFIX + "_" + targetStage.substring("stage_".length());
                 var itemStack = GardensFurniture.itemRegistry.buildItem(nextStageId);
                 if (itemStack == null) {
                     Bukkit.getLogger().log(Level.SEVERE, "Failed to get next maple tap stage: " + nextStageId);
@@ -132,10 +132,10 @@ public class MapleTapHandler implements Listener {
         if (customItem == null) return null;
 
         var identifier = customItem.getIdentifier();
-        if (!identifier.startsWith(MAPLE_ID)) return null;
+        if (!identifier.startsWith(SpecialItems.MAPLE_TAP_PREFIX)) return null;
 
         try {
-            int stage = Integer.parseInt(identifier.substring(MAPLE_ID.length() + 1));
+            int stage = Integer.parseInt(identifier.substring(SpecialItems.MAPLE_TAP_PREFIX.length() + 1));
             if (stage >= FINAL_STAGE) return null; // no need to tick
             return new Tap(itemDisplay, customItem, "stage_" + stage);
         } catch (NumberFormatException e) {

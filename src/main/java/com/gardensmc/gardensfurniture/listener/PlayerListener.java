@@ -13,6 +13,7 @@ import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.ProbabilityUtil;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
+import com.gardensmc.gardensfurniture.util.SpecialItems;
 import de.tr7zw.nbtapi.NBT;
 import me.ryanhamshire.GriefPrevention.ClaimPermission;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -197,7 +198,7 @@ public class PlayerListener implements Listener {
                     return;
                 }
 
-                if (customItem.getIdentifier().equals("paint_bench")) {
+                if (customItem.getIdentifier().equals(SpecialItems.PAINT_BENCH)) {
                     if (ProtectionUtil.hasClaimPermission(e.getClickedBlock().getLocation(), e.getPlayer(), ClaimPermission.Access)) {
                         new DyeMenu(e.getPlayer()).open();
                     } else {
@@ -384,7 +385,7 @@ public class PlayerListener implements Listener {
         ItemStack heldItem = e.getPlayer().getInventory().getItem(e.getHand());
         var customItem = GardensFurniture.itemRegistry.getCustomItem(heldItem);
         if (customItem == null) return;
-        if (customItem.getIdentifier().equalsIgnoreCase("destroy_stick") && e.getPlayer().hasPermission("gardens.destroy_stick")) {
+        if (customItem.getIdentifier().equalsIgnoreCase(SpecialItems.DESTROY_STICK) && e.getPlayer().hasPermission("gardens.destroy_stick")) {
             var clicked = e.getRightClicked();
             // furniture is a display plus hitbox entities/barriers: remove the whole piece (no drop), not
             // just the part that was clicked, which would leave the rest orphaned
@@ -507,7 +508,7 @@ public class PlayerListener implements Listener {
             return true;
         }
         var customItem = CustomBlockManager.getItemFromLeaves(block);
-        if (customItem != null && customItem.getIdentifier().equals("paint_bench")) {
+        if (customItem != null && customItem.getIdentifier().equals(SpecialItems.PAINT_BENCH)) {
             return true;
         }
         return INTERACTABLES.contains(block.getType()) || block.getType().toString().toLowerCase().endsWith("bed");
@@ -542,7 +543,7 @@ public class PlayerListener implements Listener {
                 CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemDisplay.getItemStack());
                 if (customItem == null) return;
 
-                if (!customItem.getIdentifier().startsWith("ender_pad")) {
+                if (!customItem.getIdentifier().startsWith(SpecialItems.ENDER_PAD_PREFIX)) {
                     return;
                 }
                 Location loc = player.getLocation();
@@ -564,7 +565,7 @@ public class PlayerListener implements Listener {
             if (display != null && display.getItemStack() != null) {
                 CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(display.getItemStack());
                 if (customItem != null) {
-                    return customItem.getIdentifier().startsWith("ender_pad");
+                    return customItem.getIdentifier().startsWith(SpecialItems.ENDER_PAD_PREFIX);
                 }
             }
         }

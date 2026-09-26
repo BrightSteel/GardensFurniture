@@ -25,7 +25,7 @@ public class CustomDropUtil {
     // I guess this is a custom handler for tripwire? Why is it hidden in this util, there should be a factory or something
     public static void dropCustomItem(BlockBreakEvent e, CustomItem customItem, CustomTripwireBlock customTripwireBlock) {
         e.setDropItems(false);
-        if (customItem.getIdentifier().equals("tripwire_top")) {
+        if (customItem.getIdentifier().equals(SpecialItems.TRIPWIRE_TOP)) {
             Block bottom = e.getBlock().getRelative(BlockFace.DOWN);
             CustomItem tripItem = CustomBlockManager.getItemFromLeaves(bottom);
 

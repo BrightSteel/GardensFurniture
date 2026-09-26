@@ -18,6 +18,11 @@ public class ConfigUtil {
     public static FileConfiguration itemsYaml, itemSaverYaml;
 
     public static void loadConfigs() {
+        // config.yml: written from the jar's defaults on first start, re-read on /furniture reload
+        GardensFurniture.plugin.saveDefaultConfig();
+        GardensFurniture.plugin.reloadConfig();
+        SpecialItems.load(GardensFurniture.plugin.getConfig().getConfigurationSection("special_items"));
+
         all_items.clear();
         all_items = getAllConfigs("items");
 

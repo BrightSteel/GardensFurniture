@@ -6,6 +6,7 @@ import com.gardensmc.gardensfurniture.custom.item.PlaceOptions;
 import com.gardensmc.gardensfurniture.events.CustomBlockPlaceEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
+import com.gardensmc.gardensfurniture.util.SpecialItems;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -92,13 +93,13 @@ public class CustomTripwireBlock extends CustomBlock {
             if (top.getType() != Material.AIR) return false;
 
             // ensure tripwire top is registered
-            if (GardensFurniture.itemRegistry.getItem("tripwire_top") == null) {
+            if (GardensFurniture.itemRegistry.getItem(SpecialItems.TRIPWIRE_TOP) == null) {
                 return false;
             }
 
             // place blank tripwire as hitbox
             top.setType(Material.TRIPWIRE);
-            FurnitureStoreHandler.INSTANCE.addFurnitureStore(top, new FurnitureStore("tripwire_top"), heldItem != null);
+            FurnitureStoreHandler.INSTANCE.addFurnitureStore(top, new FurnitureStore(SpecialItems.TRIPWIRE_TOP), heldItem != null);
         }
 
 

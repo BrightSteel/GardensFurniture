@@ -1,0 +1,19 @@
+# Items with special behaviour, by their id in items/*.yml.
+# Change these if you rename one of these items; missing keys fall back to the defaults shown here.
+special_items:
+  # right-click opens the dye menu
+  paint_bench: paint_bench
+  # colour swatch shown in the dye menu
+  dye_tile: dye_tile
+  # right-click deletes an entity or furniture piece (needs gardens.destroy_stick)
+  destroy_stick: destroy_stick
+  # items whose id starts with this teleport players up (jump) or down (sneak) to the next pad
+  ender_pad_prefix: ender_pad
+  # <prefix>_1 to <prefix>_5 are the growth stages of a maple tap
+  maple_tap_prefix: maple_tap
+  # given for emptying a full maple tap with a glass bottle
+  maple_syrup: maple_syrup
+  # hidden block placed on top of tall tripwire furniture
+  tripwire_top: tripwire_top
+  # <prefix> and <prefix>_<color> are crafted from (dyed) shulker boxes
+  backpack_prefix: backpack

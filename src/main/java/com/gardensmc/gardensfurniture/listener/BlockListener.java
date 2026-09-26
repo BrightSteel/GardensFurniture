@@ -16,6 +16,7 @@ import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.gardensmc.gardensfurniture.util.ProbabilityUtil;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
+import com.gardensmc.gardensfurniture.util.SpecialItems;
 import com.destroystokyo.paper.event.block.BlockDestroyEvent;
 import de.tr7zw.nbtapi.NBT;
 import io.papermc.paper.configuration.GlobalConfiguration;
@@ -262,7 +263,7 @@ public class BlockListener implements Listener {
 
     private void destroyCustomBlock(Block block, CustomPlaceableItem placeable, boolean drop) {
         var customBlock = placeable.getCustomBlock();
-        if (drop && !customBlock.cancelDrop() && !placeable.getIdentifier().equals("tripwire_top")) {
+        if (drop && !customBlock.cancelDrop() && !placeable.getIdentifier().equals(SpecialItems.TRIPWIRE_TOP)) {
             var itemStack = customBlock.getDropOverride() != null
                     ? GardensFurniture.itemRegistry.buildItem(customBlock.getDropOverride())
                     : GardensFurniture.itemRegistry.buildItem(placeable);
