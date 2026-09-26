@@ -57,6 +57,10 @@ public class CustomDisplayBlock extends CustomBlock {
     @Getter
     private boolean rotatable;
     private int rotationStep = 90;
+    // how the item model is drawn (display_data: display_transform). Default NONE draws the model as it
+    // is; FIXED applies the model's own "fixed" display block (rotation, offset, scale), which is what
+    // Nexo and Oraxen packs are made for
+    private ItemDisplay.ItemDisplayTransform displayTransform = ItemDisplay.ItemDisplayTransform.NONE;
 
     public static final String LIGHT_ON_KEY = "FurnitureLightOn";
 
@@ -116,6 +120,14 @@ public class CustomDisplayBlock extends CustomBlock {
         this.litModel = displaySection.getString("lit_model");
         this.itemIdentifier = identifier;
         this.connectable = displaySection.getBoolean("connectable");
+        var transformName = displaySection.getString("display_transform");
+        if (transformName != null) {
+            try {
+                this.displayTransform = ItemDisplay.ItemDisplayTransform.valueOf(transformName.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                GardensFurniture.plugin.getLogger().warning(identifier + ": unknown display_transform " + transformName + ", using NONE");
+            }
+        }
         this.rotatable = displaySection.getBoolean("rotatable");
         if (rotatable) {
             int step = displaySection.getInt("rotation_step", 90);
@@ -276,12 +288,18 @@ public class CustomDisplayBlock extends CustomBlock {
         } else {
             display.setItemStack(item);
         }
+        if (displayTransform != ItemDisplay.ItemDisplayTransform.NONE) {
+            display.setItemDisplayTransform(displayTransform);
+        }
 
         // transformations
         var transform = display.getTransformation();
         if (scale != 1.0) {
             transform.getScale().set(scale);
-            transform.getTranslation().set(0, scale * 0.25, 0);
+            // recentre a scaled model drawn as-is; a FIXED model is placed by its own "fixed" block instead
+            if (displayTransform == ItemDisplay.ItemDisplayTransform.NONE) {
+                transform.getTranslation().set(0, scale * 0.25, 0);
+            }
         }
 
         if (translation != null) {
