@@ -446,7 +446,7 @@ public class PlayerListener implements Listener {
     @EventHandler
     public void interactFurniture(PlayerInteractEntityEvent e) {
         if (e.getRightClicked() instanceof Interaction interaction) {
-            var itemEntity = CustomBlockManager.getItemEntity(e.getRightClicked().getLocation());
+            var itemEntity = CustomBlockManager.getFurnitureEntity(e.getRightClicked().getLocation());
             if (itemEntity == null) return;
             if (GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem()) == null) {
                 return;
@@ -486,7 +486,7 @@ public class PlayerListener implements Listener {
         if (e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         var block = e.getClickedBlock();
         if (block != null && block.getType() == Material.BARRIER) {
-            var itemEntity = CustomBlockManager.getItemEntity(block.getLocation());
+            var itemEntity = CustomBlockManager.getFurnitureEntity(block.getLocation());
             if (itemEntity == null) return;
             CustomBlockManager.onInteractFurniture(e.getPlayer(), e.getHand(), itemEntity, null);
             e.setCancelled(true);

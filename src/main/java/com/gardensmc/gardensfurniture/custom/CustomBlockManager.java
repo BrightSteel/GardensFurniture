@@ -119,7 +119,22 @@ public class CustomBlockManager {
 
     @Nullable
     public static ItemDisplay getDisplayEntity(Location location, boolean isCheckAdjacent) {
-        var display = (ItemDisplay) getEntityByClass(location, ItemDisplay.class);
+        return getDisplayEntity(location, isCheckAdjacent, display -> true);
+    }
+
+    /**
+     * Like {@link #getItemEntity(Location, boolean)} but only matches placed furniture, never another
+     * plugin's display (or our own sapling/pot model displays). Use for break and interact handling.
+     */
+    @Nullable
+    public static ItemEntity getFurnitureEntity(Location location) {
+        var displayEntity = getDisplayEntity(location, true, CustomBlockManager::isFurnitureDisplay);
+        return displayEntity == null ? null : new DisplayItemEntity(displayEntity);
+    }
+
+    @Nullable
+    private static ItemDisplay getDisplayEntity(Location location, boolean isCheckAdjacent, java.util.function.Predicate<ItemDisplay> filter) {
+        var display = (ItemDisplay) getEntityByClass(location, ItemDisplay.class, entity -> filter.test((ItemDisplay) entity));
         if (display != null) {
             return display;
         }
@@ -127,10 +142,17 @@ public class CustomBlockManager {
             return location.getNearbyEntitiesByType(ItemDisplay.class, 5)
                     .stream()
                     .filter(entity -> getBarrierVectors(entity).stream().anyMatch(vector -> entity.getLocation().toBlockLocation().toVector().clone().add(vector).equals(location.toBlockLocation().toVector())))
+                    .filter(filter)
                     .findFirst()
                     .orElse(null);
         }
         return null;
+    }
+
+    // other plugins (pets, cosmetics, holograms) spawn item displays too - only ours hold a placeable item
+    public static boolean isFurnitureDisplay(ItemDisplay display) {
+        var item = new DisplayItemEntity(display).getItem();
+        return item != null && GardensFurniture.itemRegistry.getCustomItem(item) instanceof CustomPlaceableItem;
     }
 
     private static List<Vector> getBarrierVectors(Entity entity) {
@@ -157,11 +179,16 @@ public class CustomBlockManager {
 
     @Nullable
     public static Entity getEntityByClass(Location location, Class<? extends Entity> entityClass) {
+        return getEntityByClass(location, entityClass, entity -> true);
+    }
+
+    @Nullable
+    public static Entity getEntityByClass(Location location, Class<? extends Entity> entityClass, java.util.function.Predicate<Entity> filter) {
         Collection<Entity> entities = location.getWorld().getNearbyEntities(location, 1, 1, 1);
         Block center = location.getBlock();
 
         for (Entity entity : entities) {
-            if (entityClass.isInstance(entity)) {
+            if (entityClass.isInstance(entity) && filter.test(entity)) {
                 if (entity.getLocation().getBlock().getLocation().equals(center.getLocation()))
                     return entity;
             }
@@ -184,11 +211,13 @@ public class CustomBlockManager {
     }
 
     private static void breakFurnitureInternal(Player player, Location location, boolean isBreakingSystem) {
-        ItemEntity itemEntity = getItemEntity(location, true);
+        ItemEntity itemEntity = getFurnitureEntity(location);
         if (itemEntity == null) return;
 
         CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
-        var placeable = (CustomPlaceableItem) customItem;
+        if (!(customItem instanceof CustomPlaceableItem placeable)) {
+            return; // not our furniture - never remove another plugin's entity
+        }
         // TODO temp disabled since breaking system is disabled
 //        if (player != null && player.getGameMode() != GameMode.CREATIVE && !isBreakingSystem && location.getBlock().getType() == Material.BARRIER && placeable != null && placeable.getCustomBlock().getMaterialTraits() != null) {
 //            return; // breaks with breaking handler
@@ -252,7 +281,7 @@ public class CustomBlockManager {
             return CustomBlockManager.getItemFromLeaves(block);
         }
 
-        ItemEntity itemEntity = getItemEntity(block.getLocation(), true);
+        ItemEntity itemEntity = getFurnitureEntity(block.getLocation());
         if (itemEntity != null) {
             return GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
         }
