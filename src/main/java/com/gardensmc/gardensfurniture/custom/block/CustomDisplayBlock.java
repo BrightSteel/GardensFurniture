@@ -305,9 +305,19 @@ public class CustomDisplayBlock extends CustomBlock {
         if (translation != null) {
             transform.getTranslation().set(translation);
         }
-        if (this.rotation != null) {
-            transform.getLeftRotation().set(this.rotation);
+        // FIXED draws the model as an item frame would, and a pack's "fixed" block is written for a frame
+        // lying on the floor facing up (the halloween standing mirror's -80 degrees stands it up from
+        // there). So a FIXED piece on the floor faces up first, and one on the ceiling faces down - a wall
+        // piece already faces out like a wall frame.
+        var base = new Quaternionf();
+        if (displayTransform == ItemDisplay.ItemDisplayTransform.FIXED) {
+            if (blockFace == BlockFace.UP) base.rotateX((float) Math.toRadians(-90));
+            else if (blockFace == BlockFace.DOWN) base.rotateX((float) Math.toRadians(90));
         }
+        if (this.rotation != null) {
+            base.mul(this.rotation);
+        }
+        transform.getLeftRotation().set(base);
         // display needs to face downwards
         if (!facePlayer && blockFace == BlockFace.DOWN) {
             transform.getLeftRotation().set(new Quaternionf().fromAxisAngleDeg(1, 0, 0, 180));
