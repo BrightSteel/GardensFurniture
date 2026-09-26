@@ -60,16 +60,18 @@ public class DyeMenu extends Menu {
     private void onClose() {
         var input = storage.getItem(0);
         if (input != null) {
-            viewer.getInventory().addItem(input);
+            storage.setItem(0, null);
+            viewer.getInventory().addItem(input).values()
+                    .forEach(leftover -> viewer.getWorld().dropItemNaturally(viewer.getLocation(), leftover));
         }
     }
 
     private void onClickResult() {
-        // run task later so it doesn't trigger removal of held item
-        Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> {
-            storage.setItem(0, null);
-            gui.draw();
-        }, 1);
+        // consume the input in the same tick the result is taken, otherwise closing the menu (or taking
+        // the input) before the next tick hands back both. The GUI refuses clicks on slots whose display
+        // no longer matches storage, so only the redraw needs delaying (drawing mid-click clears the cursor).
+        storage.setItem(0, null);
+        Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> gui.draw(), 1);
     }
 
     private DynamicGuiElement createSubColorElement(int i) {
@@ -114,13 +116,11 @@ public class DyeMenu extends Menu {
     }
 
     private void onApplyItem() {
-        Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> {
-            var item = storage.getItem(0);
-            if (ItemUtil.isEmpty(item)) {
-                storage.setItem(1, null);
-            }
-            gui.draw();
-        }, 1);
+        // input taken: remove the result immediately so it can't also be taken this tick
+        if (ItemUtil.isEmpty(storage.getItem(0))) {
+            storage.setItem(1, null);
+        }
+        Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> gui.draw(), 1);
     }
 
     private ItemStack getDyeTile(Color color) {
