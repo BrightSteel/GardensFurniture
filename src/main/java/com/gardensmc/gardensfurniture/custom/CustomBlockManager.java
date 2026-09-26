@@ -359,7 +359,13 @@ public class CustomBlockManager {
             return;
         }
         if (player.isSneaking()) {
-//            itemEntity.rotate(45);
+            // sneak + right-click with an empty hand turns rotatable furniture (once, on the main hand)
+            if (hand == EquipmentSlot.HAND && heldItem.getType().isAir() && canBuild
+                    && customBlockItem.getCustomBlock() instanceof CustomDisplayBlock displayBlock
+                    && displayBlock.isRotatable()
+                    && displayBlock.rotate((ItemDisplay) itemEntity.getEntity(), player)) {
+                location.getWorld().playSound(location, Sound.BLOCK_WOOD_HIT, 0.6f, 1.2f);
+            }
         } else if (heldItem.getType().toString().toUpperCase().endsWith("DYE") && customItem.isDyeable() && itemEntity.getItem().getItemMeta() instanceof LeatherArmorMeta leatherMeta) {
             if (!canBuild) return;
             leatherMeta.setColor(getColorFromDye(heldItem.getType()));

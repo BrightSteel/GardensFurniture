@@ -39,6 +39,15 @@ public final class Barriers {
         });
     }
 
+    // after a rotation: the cells the display now covers, in place of the old ones
+    public static void replace(Entity display, List<Vector> barriers) {
+        NBT.modifyPersistentData(display, nbt -> {
+            nbt.removeKey(NBT_KEY);
+            var stringList = nbt.getStringList(NBT_KEY);
+            barriers.forEach(barrier -> stringList.add(barrier.toString()));
+        });
+    }
+
     public static List<Vector> read(Entity display) {
         List<String> stored = new ArrayList<>();
         NBT.getPersistentData(display, nbt -> {

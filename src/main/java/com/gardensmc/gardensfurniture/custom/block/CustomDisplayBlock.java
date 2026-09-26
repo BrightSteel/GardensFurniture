@@ -52,6 +52,11 @@ public class CustomDisplayBlock extends CustomBlock {
     private final boolean lightToggleable;
     @Getter
     private String litModel;
+    // sneak + right-click with an empty hand turns it by rotationStep degrees (display_data: rotatable,
+    // rotation_step 90 or 45); see rotate
+    @Getter
+    private boolean rotatable;
+    private int rotationStep = 90;
 
     public static final String LIGHT_ON_KEY = "FurnitureLightOn";
 
@@ -111,6 +116,56 @@ public class CustomDisplayBlock extends CustomBlock {
         this.litModel = displaySection.getString("lit_model");
         this.itemIdentifier = identifier;
         this.connectable = displaySection.getBoolean("connectable");
+        this.rotatable = displaySection.getBoolean("rotatable");
+        if (rotatable) {
+            int step = displaySection.getInt("rotation_step", 90);
+            boolean multiCell = hitbox == Hitbox.BARRIER && barriers.size() > 1;
+            if (step != 45 && step != 90) {
+                GardensFurniture.plugin.getLogger().warning(identifier + ": rotation_step must be 90 or 45, using 90");
+                step = 90;
+            } else if (step == 45 && multiCell) {
+                // barrier cells sit on the block grid, so a multi-block piece can only turn in quarters
+                GardensFurniture.plugin.getLogger().warning(identifier + ": multi-block furniture can only turn by 90, using 90");
+                step = 90;
+            }
+            this.rotationStep = step;
+            if (centerLeft) {
+                // center_left moves the display off its block by the hitbox width, which a turn would undo
+                GardensFurniture.plugin.getLogger().warning(identifier + ": center_left furniture can't be rotatable, ignoring rotatable");
+                this.rotatable = false;
+            }
+        }
+    }
+
+    /**
+     * Turns placed furniture one step clockwise, its barrier cells with it. False when it can't: not
+     * rotatable, mounted flat on a wall or ceiling, or a cell it would swing into is taken or the player
+     * can't build there - in which case nothing changes.
+     */
+    public boolean rotate(ItemDisplay display, @Nullable Player player) {
+        if (!rotatable || display.getPitch() != 0) return false;
+        float newYaw = Location.normalizeYaw(display.getYaw() + rotationStep);
+
+        List<Vector> oldCells = Barriers.read(display);
+        List<Vector> newCells = hitbox == Hitbox.BARRIER && barriers.size() > 1
+                ? barriers.stream().map(v -> Barriers.rotate(v, new Rotation(newYaw, 0))).toList()
+                : oldCells;
+        var anchor = display.getLocation().toBlockLocation();
+        for (Vector cell : newCells) {
+            if (oldCells.contains(cell)) continue; // already ours
+            var at = anchor.clone().add(cell);
+            if (!CustomBlockManager.isPlaceableMaterial(at.getBlock().getType())) return false;
+            if (player != null && (!ProtectionUtil.canBuild(at, player) || CustomBlockManager.entityBlocking(at))) return false;
+        }
+        if (newCells != oldCells) {
+            oldCells.stream().filter(cell -> !newCells.contains(cell))
+                    .forEach(cell -> anchor.clone().add(cell).getBlock().setType(Material.AIR));
+            newCells.stream().filter(cell -> !oldCells.contains(cell))
+                    .forEach(cell -> anchor.clone().add(cell).getBlock().setType(Material.BARRIER));
+            Barriers.replace(display, newCells);
+        }
+        display.setRotation(newYaw, display.getPitch());
+        return true;
     }
 
     @Override
