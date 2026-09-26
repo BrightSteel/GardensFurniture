@@ -3,6 +3,8 @@ version: 1.0.0
 author: Bright_Steel
 main: com.gardensmc.gardensfurniture.GardensFurniture
 api-version: 1.20
+libraries:
+  - com.fasterxml.jackson.core:jackson-databind:2.20.0
 commands:
   furniture:
     description: Furniture command

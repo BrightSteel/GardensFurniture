@@ -54,7 +54,8 @@ public class CustomMultiplierItem extends CustomPlaceableItem {
 
     // returns -1 if at max already, otherwise 1 through blocks.size() inclusive
     private int getBlockMultiplier(Block clickedBlock, Player player) {
-        var furnitureStore = FurnitureStoreHandler.INSTANCE.getFurnitureStore(clickedBlock);
+        // clickedBlock is null for terrain gen placement
+        var furnitureStore = clickedBlock == null ? null : FurnitureStoreHandler.INSTANCE.getFurnitureStore(clickedBlock);
         // existing multiplier block - increment its multiplier
         if (furnitureStore != null && furnitureStore.getItemIdentifier().equals(this.getIdentifier())) {
             // multiplier - shouldn't be null

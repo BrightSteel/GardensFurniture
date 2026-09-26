@@ -49,9 +49,18 @@ public class CustomDisplayBlock extends CustomBlock {
     @Getter
     private boolean connectable;
     private List<Vector> barriers = Collections.emptyList();
+    // right-click toggles light on/off; placed off, lit_model is shown while on
+    @Getter
+    private final boolean lightToggleable;
+    @Getter
+    private String litModel;
+
+    public static final String LIGHT_ON_KEY = "FurnitureLightOn";
 
     public CustomDisplayBlock(ConfigurationSection blockSection, String identifier, String blockId) {
         super(blockSection, blockId);
+        this.lightToggleable = blockSection.getBoolean("toggleable") && getLight() > 0;
+        this.itemIdentifier = identifier;
         ConfigurationSection displaySection = blockSection.getConfigurationSection("display_data");
         if (displaySection == null) return;
 
@@ -98,6 +107,7 @@ public class CustomDisplayBlock extends CustomBlock {
         }
         this.modelengine_id = displaySection.getString("modelengine_id");
         this.model_override = displaySection.getString("model_override");
+        this.litModel = displaySection.getString("lit_model");
         this.itemIdentifier = identifier;
         this.connectable = displaySection.getBoolean("connectable");
     }
@@ -138,8 +148,44 @@ public class CustomDisplayBlock extends CustomBlock {
         if (itemStack != null && model_override != null) {
             var override = GardensFurniture.itemRegistry.getItem(model_override);
             itemStack.editMeta(meta -> meta.setItemModel(NamespacedKey.fromString(override.getComponents().getItem_model())));
+        } else if (itemStack != null && lightToggleable) {
+            // always place in the off state, even if the source item carries the lit model
+            setDisplayModel(itemStack, false);
         }
         return itemStack;
+    }
+
+    private void setDisplayModel(ItemStack itemStack, boolean lit) {
+        var customItem = GardensFurniture.itemRegistry.getItem(itemIdentifier);
+        var model = lit && litModel != null ? litModel : customItem.getComponents().getItem_model();
+        itemStack.editMeta(meta -> meta.setItemModel(NamespacedKey.fromString(model)));
+    }
+
+    public boolean isLightOn(ItemDisplay display) {
+        if (!lightToggleable) return true;
+        return NBT.getPersistentData(display, nbt -> nbt.getBoolean(LIGHT_ON_KEY));
+    }
+
+    public void toggleLight(ItemDisplay display) {
+        if (!lightToggleable || modelengine_id != null) return;
+        boolean lit = !isLightOn(display);
+        NBT.modifyPersistentData(display, nbt -> { nbt.setBoolean(LIGHT_ON_KEY, lit); });
+
+        var item = display.getItemStack();
+        setDisplayModel(item, lit);
+        display.setItemStack(item);
+        display.setBrightness(lit && light > 0 ? new Display.Brightness(light, 0) : null);
+
+        var lightLocation = display.getLocation().add(0, getLightOffset(), 0);
+        if (lit) {
+            var lightBlock = lightLocation.getBlock().getType();
+            // never overwrite a block that was placed in the light spot while the light was off
+            if (isSolid() || lightBlock == Material.AIR || lightBlock == Material.LIGHT) {
+                LightUtil.placeLight(lightLocation, getLight(), isSolid());
+            }
+        } else {
+            LightUtil.removeLight(lightLocation, isSolid());
+        }
     }
 
     public static Vector offsetVector(Vector vector, Player player) {
@@ -219,8 +265,11 @@ public class CustomDisplayBlock extends CustomBlock {
         }
         display.setTransformation(transform);
 
-        if (light > 0) {
+        if (light > 0 && !lightToggleable) {
             display.setBrightness(new Display.Brightness(light, 0));
+        }
+        if (lightToggleable) {
+            NBT.modifyPersistentData(display, nbt -> { nbt.setBoolean(LIGHT_ON_KEY, false); });
         }
 
         // hitbox data
@@ -232,7 +281,7 @@ public class CustomDisplayBlock extends CustomBlock {
         }
 
         spawnHitbox(locationOffset, barrierVectors);
-        if (getLight() > 0) {
+        if (getLight() > 0 && !lightToggleable) {
             LightUtil.placeLight(location.add(0, getLightOffset(), 0), getLight(), hitbox == Hitbox.BARRIER);
         }
         Bukkit.getPluginManager().callEvent(new FurniturePlaceEvent(player, new Furniture(customItem, display, null)));

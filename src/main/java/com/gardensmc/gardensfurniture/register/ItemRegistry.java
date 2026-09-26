@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.*;
+import com.gardensmc.gardensfurniture.custom.block.CustomDisplayBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomLeavesBlock;
 import com.gardensmc.gardensfurniture.custom.item.*;
 import com.gardensmc.gardensfurniture.custom.item.attributes.Attributes;
@@ -103,6 +104,9 @@ public class ItemRegistry {
                                     tint = Tint.CONSTANT;
                                 }
                                 writeOutModelFile(itemModel, tint, customItem.getMaterial() == Material.PLAYER_HEAD);
+                                if (customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock && displayBlock.getLitModel() != null) {
+                                    writeOutModelFile(displayBlock.getLitModel(), tint, false);
+                                }
 //                                var outerFolder = OUTER_DIR_PATTERN.matcher(itemModel);
 //                                if (outerFolder.find()) {
 //                                    outerFolders.add(outerFolder.group(1));

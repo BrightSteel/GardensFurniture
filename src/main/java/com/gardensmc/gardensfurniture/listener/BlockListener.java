@@ -371,8 +371,12 @@ public class BlockListener implements Listener {
                 .flatMap(chunk -> getExistingNoteBlocks(chunk, location.getWorld(), location.getBlockY()).stream())
                 .collect(Collectors.toSet()))
                 .get();
-        Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), "place feature gardens:%s %s %s %s".formatted(
-                feature, location.getBlockX(), location.getBlockY(), location.getBlockZ()
+        // Run in the sapling's world explicitly: the console command source is anchored to the
+        // primary/respawn overworld, so an unqualified "place feature" checks the position in the
+        // wrong world and fails with "That position is not loaded". World#getKey() yields the
+        // dimension key that "execute in" expects (minecraft:overworld / minecraft:<worldname>).
+        Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), "execute in %s run place feature gardens:%s %s %s %s".formatted(
+                location.getWorld().getKey(), feature, location.getBlockX(), location.getBlockY(), location.getBlockZ()
         ));
         // run in future to allow feature to finish placing
         Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> {

@@ -269,7 +269,7 @@ public class CustomBlockManager {
             return GardensFurniture.itemRegistry.buildItem(override);
         }
         var item = itemEntity.getItem();
-        if (block instanceof CustomDisplayBlock displayBlock && displayBlock.getModel_override() != null) {
+        if (block instanceof CustomDisplayBlock displayBlock && (displayBlock.getModel_override() != null || displayBlock.isLightToggleable())) {
             // re-place original item model
             item.editMeta(meta -> meta.setItemModel(NamespacedKey.fromString(customPlaceableItem.getComponents().getItem_model())));
         }
@@ -298,6 +298,11 @@ public class CustomBlockManager {
             item.setItemMeta(leatherMeta);
             itemEntity.setItem(item);
             heldItem.setAmount(heldItem.getAmount() - 1);
+        } else if (customBlockItem.getCustomBlock() instanceof CustomDisplayBlock displayBlock && displayBlock.isLightToggleable()) {
+            // interact fires once per hand, only toggle on the main hand
+            if (hand == EquipmentSlot.HAND) {
+                displayBlock.toggleLight((ItemDisplay) itemEntity.getEntity());
+            }
         } else if (customBlockItem.getCustomBlock().isSeated()) {
             double offset = customBlockItem.getCustomBlock().getSeatOffset();
             GSitAPI.createSeat(itemEntity.getEntity().getLocation().getBlock(), player, true, 0.0, offset, 0.0, player.getLocation().getYaw(), true);
