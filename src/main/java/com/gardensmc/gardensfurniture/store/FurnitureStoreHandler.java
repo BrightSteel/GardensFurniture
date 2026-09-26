@@ -122,6 +122,23 @@ public class FurnitureStoreHandler {
         );
     }
 
+    /** Every block in this chunk with a store, read from the chunk's own data (for the cleanup scan). */
+    public java.util.List<Block> storedBlocks(Chunk chunk) {
+        var stores = new NBTChunk(chunk).getPersistentDataContainer().getCompound("GardensFurniture");
+        if (stores == null) return java.util.List.of();
+        var blocks = new java.util.ArrayList<Block>();
+        for (String key : stores.getKeys()) {
+            var parts = key.split("\\.");
+            if (parts.length != 3) continue;
+            try {
+                blocks.add(chunk.getWorld().getBlockAt(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]), Integer.parseInt(parts[2])));
+            } catch (NumberFormatException ignored) {
+                // not one of ours
+            }
+        }
+        return blocks;
+    }
+
     private FurnitureCache.BlockKey blockKey(Block block) {
         return new FurnitureCache.BlockKey(block.getX(), block.getY(), block.getZ());
     }

@@ -8,8 +8,10 @@ import com.gardensmc.gardensfurniture.permission.Permissions;
 import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.CommandSenderUtil;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
+import com.gardensmc.gardensfurniture.util.FurnitureCleanup;
 import com.gardensmc.gardensfurniture.util.PlayerUtil;
 import de.tr7zw.nbtapi.NBTItem;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
 import org.bukkit.command.Command;
@@ -39,6 +41,7 @@ public class FurnitureCommand implements TabExecutor {
                 case "GIVE" -> executeGive(commandSender, args);
                 case "INFO" -> executeInfo(commandSender);
                 case "LOAD_SPAWN" -> loadSpawnFurniture(commandSender);
+                case "CLEANUP" -> executeCleanup(commandSender, args);
             }
         } else if (commandSender instanceof Player player) {
             new FurnitureMenu(player).open();
@@ -138,6 +141,70 @@ public class FurnitureCommand implements TabExecutor {
         }
     }
 
+    /**
+     * /furniture cleanup [radius] [confirm] - what broken furniture left behind within `radius` blocks
+     * (default 32) of you. Reports only, unless "confirm" is given; see FurnitureCleanup for why.
+     */
+    private void executeCleanup(CommandSender commandSender, String[] args) {
+        if (!commandSender.hasPermission(Permissions.CLEANUP)) {
+            CommandSenderUtil.sendPermissionError(commandSender);
+            return;
+        }
+        if (!(commandSender instanceof Player player)) {
+            CommandSenderUtil.sendPlayerOnly(commandSender);
+            return;
+        }
+        int radius = 32;
+        if (args.length > 1) {
+            try {
+                radius = Integer.parseInt(args[1]);
+            } catch (NumberFormatException e) {
+                radius = -1;
+            }
+        }
+        if (radius < 1 || radius > FurnitureCleanup.MAX_RADIUS) {
+            player.sendMessage(MiniMessage.miniMessage().deserialize("<red>Radius must be 1-" + FurnitureCleanup.MAX_RADIUS));
+            return;
+        }
+        boolean confirm = args.length > 2 && args[2].equalsIgnoreCase("confirm");
+        int finalRadius = radius;
+        player.sendMessage(MiniMessage.miniMessage().deserialize("<gray>Scanning " + radius + " blocks around you…"));
+        FurnitureCleanup.scan(player.getLocation(), radius).thenAccept(report -> {
+            if (confirm) {
+                int removed = FurnitureCleanup.remove(report);
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<green>Removed " + removed + " leftover(s)."));
+                if (!report.unknownItems().isEmpty()) {
+                    player.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>" + report.unknownItems().size()
+                            + " furniture display(s) have items no longer in config - left alone."));
+                }
+                return;
+            }
+            player.sendMessage(MiniMessage.miniMessage().deserialize("<gold>Furniture leftovers within " + finalRadius + " blocks:"));
+            line(player, "Stores for blocks that are gone", report.stores().stream().map(FurnitureCommand::at).toList());
+            line(player, "Barriers no furniture uses", report.barriers().stream().map(FurnitureCommand::at).toList());
+            line(player, "Light blocks no furniture lights", report.lights().stream().map(FurnitureCommand::at).toList());
+            line(player, "Hitboxes with no furniture", report.hitboxes().stream().map(e -> at(e.getLocation().getBlock())).toList());
+            line(player, "Displays whose item isn't in config (not removed)", report.unknownItems().stream().map(e -> at(e.getLocation().getBlock())).toList());
+            if (report.removable() > 0) {
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<gray>Check these aren't barriers or lights you placed on purpose, then run <white>/furniture cleanup "
+                        + finalRadius + " confirm</white> to remove them."));
+            } else {
+                player.sendMessage(MiniMessage.miniMessage().deserialize("<green>Nothing to clean up."));
+            }
+        });
+    }
+
+    private static String at(org.bukkit.block.Block block) {
+        return block.getX() + " " + block.getY() + " " + block.getZ();
+    }
+
+    // "Barriers no furniture uses: 3 (12 64 -40, 13 64 -40, …)"
+    private static void line(Player player, String label, List<String> spots) {
+        String sample = spots.isEmpty() ? "" : " <dark_gray>(" + String.join(", ", spots.subList(0, Math.min(3, spots.size())))
+                + (spots.size() > 3 ? ", …" : "") + ")";
+        player.sendMessage(MiniMessage.miniMessage().deserialize("<gray>" + label + ": <white>" + spots.size() + sample));
+    }
+
     private void loadSpawnFurniture(CommandSender commandSender) {
         if (!commandSender.hasPermission(Permissions.LOAD_SPAWN_FURNITURE)) {
             CommandSenderUtil.sendPermissionError(commandSender);
@@ -171,6 +238,7 @@ public class FurnitureCommand implements TabExecutor {
         if (arguments.length > 0) {
             switch (arguments[0].toUpperCase()) {
                 case "GET" -> suggestions = GardensFurniture.itemRegistry.getItemIdentifiers();
+                case "CLEANUP" -> suggestions = arguments.length == 2 ? List.of("16", "32", "64") : arguments.length == 3 ? List.of("confirm") : List.of();
             }
         }
         return suggestions;

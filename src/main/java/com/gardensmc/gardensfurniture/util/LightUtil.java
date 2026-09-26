@@ -111,6 +111,21 @@ public class LightUtil {
                 .orElse(0);
     }
 
+    /**
+     * Whether furniture accounts for a LIGHT block here: a solid custom block beside it, a display with a
+     * light offset below it, or a lit display in this very block. False means nothing of ours put it
+     * there - an orphan, or one an admin placed (the cleanup command only removes on confirm).
+     */
+    public static boolean isLitByFurniture(Block block) {
+        if (getCoveringLight(block) > 0) return true;
+        return block.getLocation().add(0.5, 0.5, 0.5).getNearbyEntitiesByType(ItemDisplay.class, 0.5, 0.5, 0.5)
+                .stream()
+                .anyMatch(display -> GardensFurniture.itemRegistry.getCustomItem(display.getItemStack()) instanceof CustomPlaceableItem placeable
+                        && placeable.getCustomBlock().getLight() > 0
+                        && placeable.getCustomBlock().getLightOffset() == 0
+                        && isLightOn(placeable, display));
+    }
+
     // toggleable displays that are switched off shouldn't have their light restored
     private static boolean isLightOn(CustomPlaceableItem placeable, ItemDisplay display) {
         if (placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock && displayBlock.isLightToggleable()) {
