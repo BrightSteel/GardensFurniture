@@ -15,6 +15,7 @@ import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.gardensmc.gardensfurniture.util.ProbabilityUtil;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
+import com.destroystokyo.paper.event.block.BlockDestroyEvent;
 import de.tr7zw.nbtapi.NBT;
 import io.papermc.paper.configuration.GlobalConfiguration;
 import io.papermc.paper.event.player.PlayerPickItemEvent;
@@ -29,6 +30,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.world.StructureGrowEvent;
@@ -143,12 +145,49 @@ public class BlockListener implements Listener {
         };
     }
 
+    // Cells whose custom sapling/tripwire was just destroyed without a player (physics, water, pistons,
+    // explosions) -> tick the mark expires. Vanilla drops the plain sapling/string there; only drops
+    // spawning in a marked cell become the custom item, so items dropped into a live cell aren't converted.
+    private static final Map<Location, Integer> pendingCustomDrops = new HashMap<>();
+    private static final Set<Material> CUSTOM_DROP_BLOCK_TYPES = Set.of(Material.OAK_SAPLING, Material.DARK_OAK_SAPLING, Material.TRIPWIRE);
+
+    private static void markCustomDrop(Block block) {
+        if (!CUSTOM_DROP_BLOCK_TYPES.contains(block.getType())) return;
+        int now = Bukkit.getCurrentTick();
+        pendingCustomDrops.values().removeIf(expiry -> expiry < now);
+        pendingCustomDrops.put(block.getLocation(), now + 2);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void markDestroyedDrop(BlockDestroyEvent e) {
+        markCustomDrop(e.getBlock());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void markWashedAwayDrop(BlockFromToEvent e) {
+        markCustomDrop(e.getToBlock());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void markExplodedDrops(BlockExplodeEvent e) {
+        e.blockList().forEach(BlockListener::markCustomDrop);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void markExplodedDrops(EntityExplodeEvent e) {
+        e.blockList().forEach(BlockListener::markCustomDrop);
+    }
+
     @EventHandler
     public void onSaplingOrStringDrop(ItemSpawnEvent e) {
         var itemStack = e.getEntity().getItemStack();
         if (itemStack.getType() == Material.OAK_SAPLING || itemStack.getType() == Material.DARK_OAK_SAPLING || itemStack.getType() == Material.STRING) {
-            CustomItem customItem = CustomBlockManager.getItemFromLeaves(e.getLocation().getBlock());
+            var cell = e.getLocation().getBlock();
+            var expiry = pendingCustomDrops.get(cell.getLocation());
+            if (expiry == null || expiry < Bukkit.getCurrentTick()) return;
+            CustomItem customItem = CustomBlockManager.getItemFromLeaves(cell);
             if (customItem instanceof CustomPlaceableItem placeable && (placeable.getCustomBlock() instanceof CustomSaplingBlock || placeable.getCustomBlock() instanceof CustomTripwireBlock)) {
+                pendingCustomDrops.remove(cell.getLocation()); // one destroyed block, one converted drop
                 e.getEntity().setItemStack(GardensFurniture.itemRegistry.buildItem(placeable));
             }
         }
