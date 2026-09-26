@@ -5,6 +5,7 @@ import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.*;
 import com.gardensmc.gardensfurniture.custom.item.CustomCaveVineItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
+import com.gardensmc.gardensfurniture.custom.item.CustomMultiplierItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.itementity.ItemEntity;
 import com.gardensmc.gardensfurniture.loader.ChunkFurnitureLoader;
@@ -13,6 +14,7 @@ import com.gardensmc.gardensfurniture.store.FurnitureStore;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
+import com.gardensmc.gardensfurniture.util.LightUtil;
 import com.gardensmc.gardensfurniture.util.ProbabilityUtil;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import com.destroystokyo.paper.event.block.BlockDestroyEvent;
@@ -26,6 +28,7 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.CaveVines;
 import org.bukkit.block.data.type.NoteBlock;
+import org.bukkit.block.data.type.Slab;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -42,6 +45,7 @@ import org.bukkit.util.RayTraceResult;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -249,16 +253,88 @@ public class BlockListener implements Listener {
         }
     }
 
+    // a piston would move the block but not its furniture store (which is keyed by position), so custom
+    // store-backed blocks can't be pushed or pulled
     private boolean cancelNoteBlockExtend(List<Block> blocks) {
         for (Block block : blocks) {
-            if (block.getType() == Material.NOTE_BLOCK && block.getBlockData() instanceof NoteBlock) {
-                CustomItem customItem = CustomBlockManager.getItemFromLeaves(block);
-                if (customItem != null) {
-                    return true;
-                }
+            if (CustomBlockManager.isStoreBacked(block.getType()) && CustomBlockManager.getItemFromLeaves(block) != null) {
+                return true;
             }
         }
         return false;
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onBlockExplode(BlockExplodeEvent e) {
+        explodeCustomBlocks(e.blockList(), e.getYield());
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onEntityExplode(EntityExplodeEvent e) {
+        explodeCustomBlocks(e.blockList(), e.getYield());
+    }
+
+    // Vanilla would drop the disguise block (note block, oak sapling, ...) and leave the store behind, so
+    // take custom blocks out of the explosion and destroy them ourselves.
+    private void explodeCustomBlocks(List<Block> blocks, float yield) {
+        blocks.removeIf(block -> {
+            if (!CustomBlockManager.isStoreBacked(block.getType())) return false;
+            if (!(CustomBlockManager.getItemFromLeaves(block) instanceof CustomPlaceableItem placeable)) return false;
+            destroyCustomBlock(block, placeable, ThreadLocalRandom.current().nextFloat() < yield);
+            return true;
+        });
+    }
+
+    private void destroyCustomBlock(Block block, CustomPlaceableItem placeable, boolean drop) {
+        var customBlock = placeable.getCustomBlock();
+        if (drop && !customBlock.cancelDrop() && !placeable.getIdentifier().equals("tripwire_top")) {
+            var itemStack = customBlock.getDropOverride() != null
+                    ? GardensFurniture.itemRegistry.buildItem(customBlock.getDropOverride())
+                    : GardensFurniture.itemRegistry.buildItem(placeable);
+            if (itemStack != null) {
+                var store = FurnitureStoreHandler.INSTANCE.getFurnitureStore(block);
+                if (placeable instanceof CustomMultiplierItem && store != null && store.getMultiplier() > 0) {
+                    itemStack.setAmount(store.getMultiplier());
+                } else if (block.getBlockData() instanceof Slab slab && slab.getType() == Slab.Type.DOUBLE) {
+                    itemStack.setAmount(2);
+                }
+                block.getWorld().dropItemNaturally(block.getLocation().add(0.5, 0.1, 0.5), itemStack);
+            }
+        }
+        if (customBlock instanceof CustomSaplingBlock) {
+            var itemEntity = getItemEntity(block.getLocation());
+            if (itemEntity != null) {
+                itemEntity.getEntity().remove();
+            }
+        }
+        // the other half of a door / large tripwire keeps its own store
+        Block partner = null;
+        if (block.getBlockData() instanceof org.bukkit.block.data.type.Door door) {
+            partner = door.getHalf() == org.bukkit.block.data.Bisected.Half.BOTTOM ? block.getRelative(BlockFace.UP) : block.getRelative(BlockFace.DOWN);
+        } else if (customBlock instanceof CustomTripwireBlock tripwire && tripwire.isLarge()) {
+            partner = block.getRelative(BlockFace.UP);
+        }
+        if (partner != null && FurnitureStoreHandler.INSTANCE.getFurnitureStore(partner) != null) {
+            FurnitureStoreHandler.INSTANCE.removeFurnitureStore(partner);
+            partner.setType(Material.AIR, false);
+        }
+        block.setType(Material.AIR);
+        FurnitureStoreHandler.INSTANCE.removeFurnitureStore(block);
+        if (customBlock.getLight() > 0) {
+            LightUtil.removeLight(block.getLocation(), customBlock.isSolid());
+        }
+    }
+
+    // burning leaves leave nothing behind, but their store (and any light) must go with them
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onCustomBlockBurn(BlockBurnEvent e) {
+        var block = e.getBlock();
+        if (!CustomBlockManager.isStoreBacked(block.getType())) return;
+        if (!(CustomBlockManager.getItemFromLeaves(block) instanceof CustomPlaceableItem placeable)) return;
+        FurnitureStoreHandler.INSTANCE.removeFurnitureStore(block);
+        if (placeable.getCustomBlock().getLight() > 0) {
+            LightUtil.removeLight(block.getLocation(), placeable.getCustomBlock().isSolid());
+        }
     }
 
     @EventHandler(ignoreCancelled = true)
