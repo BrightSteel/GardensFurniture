@@ -175,13 +175,24 @@ public class BlockPacketListener {
     }
 
     private void sendChunkDataPacket(Player player, WrapperPlayServerChunkData packet) {
+        var world = player.getWorld();
         try {
             handleChunkChange(packet, player);
         } catch (Exception e) {
             // still send the (partly remapped) chunk - never leave the client with a hole
             GardensFurniture.plugin.getLogger().log(java.util.logging.Level.WARNING, "Failed to remap chunk packet", e);
         }
-        PacketEvents.getAPI().getPlayerManager().sendPacketSilently(player, packet);
+        // The rewrite ran async, so the player may have moved on meanwhile. Send from the main thread, where
+        // chunk unloads happen, and skip it if the server has since told the client to forget this chunk -
+        // otherwise the late copy would bring it back as a ghost chunk.
+        var chunkKey = Chunk.getChunkKey(packet.getColumn().getX(), packet.getColumn().getZ());
+        if (!GardensFurniture.plugin.isEnabled()) return; // shutting down: can't schedule, player is leaving anyway
+        Bukkit.getScheduler().runTask(GardensFurniture.plugin, () -> {
+            if (!player.isOnline() || !player.getWorld().equals(world) || !player.isChunkSent(chunkKey)) {
+                return;
+            }
+            PacketEvents.getAPI().getPlayerManager().sendPacketSilently(player, packet);
+        });
     }
 
     // returns true if modified packet otherwise false
