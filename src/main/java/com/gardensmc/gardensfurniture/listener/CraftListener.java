@@ -40,6 +40,8 @@ public class CraftListener implements Listener {
                 if (blockStateMeta.getBlockState() instanceof ShulkerBox shulkerBox) {
                     var dye = shulkerBox.getColor() == null ? "" : "_" + shulkerBox.getColor().toString().toLowerCase();
                     var backpack = GardensFurniture.itemRegistry.buildItem(SpecialItems.BACKPACK_PREFIX + dye);
+                    // a color with no backpack of its own still makes one, the plain one, rather than nothing
+                    if (backpack == null) backpack = GardensFurniture.itemRegistry.buildItem(SpecialItems.BACKPACK_PREFIX);
                     if (backpack != null) {
                         backpack.setData(DataComponentTypes.CONTAINER, shulker.getData(DataComponentTypes.CONTAINER));
                         e.getInventory().setResult(backpack);
@@ -80,7 +82,10 @@ public class CraftListener implements Listener {
         }
         // modify item model
         var backpackClone = backpack.clone();
-        var desiredBackpack = GardensFurniture.itemRegistry.getItem(SpecialItems.BACKPACK_PREFIX + "_" + dye.getType().toString().toLowerCase().split("_")[0]);
+        // the dye's whole color, "light_blue" from LIGHT_BLUE_DYE (cut at the first underscore it was "light", and
+        // light blue and light gray dyed nothing)
+        var color = dye.getType().toString().toLowerCase().replaceFirst("_dye$", "");
+        var desiredBackpack = GardensFurniture.itemRegistry.getItem(SpecialItems.BACKPACK_PREFIX + "_" + color);
         if (desiredBackpack == null) {
             return;
         }
