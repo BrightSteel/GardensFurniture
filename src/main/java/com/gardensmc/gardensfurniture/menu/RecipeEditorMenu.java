@@ -56,8 +56,8 @@ public class RecipeEditorMenu extends Menu {
     private final boolean exists;
 
     private RecipeType type;
-    // grid slots 0-8, then the result
-    private final Inventory storage = Bukkit.createInventory(null, 10);
+    // grid slots 0-8, then the result; the rest unused (inventories come in rows of 9)
+    private final Inventory storage = Bukkit.createInventory(null, 18);
     private boolean tagMode;
     // set while the player types in chat with the editor closed, so closing doesn't hand items back
     private boolean prompting;
