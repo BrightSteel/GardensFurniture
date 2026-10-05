@@ -26,6 +26,10 @@ public class StructureHandler {
     // radius checked for foreign claims before placing a datapack feature, which can't be filtered per block
     public static final int FEATURE_CLAIM_RADIUS = 16;
 
+    public java.util.Set<String> getStructureNames() {
+        return structureMap.keySet();
+    }
+
     public boolean hasStructure(String structureName) {
         return structureMap.containsKey(structureName);
     }

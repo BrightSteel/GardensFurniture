@@ -234,17 +234,62 @@ public class FurnitureCommand implements TabExecutor {
         }
     }
 
+    // subcommand -> permission needed to see it suggested
+    private static final java.util.Map<String, String> SUBCOMMANDS = new java.util.LinkedHashMap<>();
+
+    static {
+        SUBCOMMANDS.put("get", Permissions.FURNITURE_GIVE);
+        SUBCOMMANDS.put("give", Permissions.FURNITURE_GIVE);
+        SUBCOMMANDS.put("info", Permissions.FURNITURE_INFO);
+        SUBCOMMANDS.put("recipe", Permissions.RECIPES);
+        SUBCOMMANDS.put("reload", Permissions.RELOAD);
+        SUBCOMMANDS.put("cleanup", Permissions.CLEANUP);
+        SUBCOMMANDS.put("structure", Permissions.SPAWN_STRUCTURE);
+        SUBCOMMANDS.put("load_spawn", Permissions.LOAD_SPAWN_FURNITURE);
+    }
+
     @Nullable
     @Override
     public List<String> onTabComplete(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String s, @NotNull String[] arguments) {
-        List<String> suggestions = new ArrayList<>();
-        if (arguments.length > 0) {
-            switch (arguments[0].toUpperCase()) {
-                case "GET" -> suggestions = GardensFurniture.itemRegistry.getItemIdentifiers();
-                case "RECIPE", "RECIPES" -> suggestions = RecipeCommand.tabComplete(arguments);
-                case "CLEANUP" -> suggestions = arguments.length == 2 ? List.of("16", "32", "64") : arguments.length == 3 ? List.of("confirm") : List.of();
-            }
+        if (!commandSender.hasPermission("gardensfurniture.furniture") || arguments.length == 0) {
+            return List.of();
         }
-        return suggestions;
+        if (arguments.length == 1) {
+            return matching(SUBCOMMANDS.entrySet().stream()
+                    .filter(e -> commandSender.hasPermission(e.getValue()))
+                    .map(java.util.Map.Entry::getKey).toList(), arguments[0]);
+        }
+        var sub = arguments[0].toLowerCase();
+        var permission = SUBCOMMANDS.get(sub.equals("recipes") ? "recipe" : sub);
+        if (permission == null || !commandSender.hasPermission(permission)) {
+            return List.of();
+        }
+        var last = arguments[arguments.length - 1];
+        List<String> options = switch (sub) {
+            case "get" -> arguments.length == 2 ? itemIds() : List.of();
+            case "give" -> switch (arguments.length) {
+                case 2 -> Bukkit.getOnlinePlayers().stream().map(org.bukkit.entity.Player::getName).toList();
+                case 3 -> itemIds();
+                case 4 -> List.of("1", "16", "64");
+                default -> List.of();
+            };
+            case "structure" -> arguments.length == 2 ? StructureHandler.INSTANCE.getStructureNames().stream().sorted().toList() : List.of();
+            case "cleanup" -> arguments.length == 2 ? List.of("16", "32", "64") : arguments.length == 3 ? List.of("confirm") : List.of();
+            case "recipe", "recipes" -> RecipeCommand.tabComplete(arguments);
+            default -> List.of();
+        };
+        return matching(options, last);
+    }
+
+    private static List<String> itemIds() {
+        return GardensFurniture.itemRegistry.getItemIdentifiers().stream().sorted().toList();
+    }
+
+    // only what starts with what's typed so far; ids also match on any _-separated word ("planks" finds maple_planks)
+    private static List<String> matching(List<String> options, String typed) {
+        var prefix = typed.toLowerCase();
+        return options.stream()
+                .filter(o -> o.toLowerCase().startsWith(prefix) || o.toLowerCase().contains("_" + prefix))
+                .toList();
     }
 }

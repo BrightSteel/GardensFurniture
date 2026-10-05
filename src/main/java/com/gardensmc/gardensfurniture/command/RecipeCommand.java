@@ -130,7 +130,7 @@ final class RecipeCommand {
     static List<String> tabComplete(String[] args) {
         if (args.length == 2) return List.of("list", "create", "edit", "reload", "import");
         if (args.length == 3 && args[1].equalsIgnoreCase("edit")) {
-            return RecipeManager.INSTANCE.getRecipes().keySet().stream().filter(id -> id.startsWith(args[2].toLowerCase(Locale.ROOT))).sorted().toList();
+            return RecipeManager.INSTANCE.getRecipes().keySet().stream().sorted().toList();
         }
         if (args.length == 3 && args[1].equalsIgnoreCase("import")) return List.of("confirm");
         return List.of();
