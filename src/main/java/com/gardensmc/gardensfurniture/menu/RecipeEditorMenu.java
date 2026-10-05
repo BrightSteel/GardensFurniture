@@ -318,9 +318,8 @@ public class RecipeEditorMenu extends Menu {
         var options = new ArrayList<Ingredient>(List.of(exact));
         if (original[i] != null && !options.contains(original[i])) options.add(original[i]);
         var key = RecipeManager.keyOf(grid[i]);
-        if (!key.isCustom()) {
-            RecipeManager.INSTANCE.vanillaTagsOf(key.material()).forEach(tag -> options.add(Ingredient.of(ItemRef.tag(tag.toString()))));
-        }
+        var vanillaTags = key.isCustom() ? RecipeManager.INSTANCE.vanillaTagsOf(key.customId()) : RecipeManager.INSTANCE.vanillaTagsOf(key.material());
+        vanillaTags.forEach(tag -> options.add(Ingredient.of(ItemRef.tag(tag.toString()))));
         RecipeManager.INSTANCE.customTagsOf(key).forEach(tag -> options.add(Ingredient.of(ItemRef.tag(ItemRef.CUSTOM_NAMESPACE + ":" + tag))));
         int current = Math.max(0, options.indexOf(ingredients[i]));
         ingredients[i] = options.get(Math.floorMod(current + direction, options.size()));

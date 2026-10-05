@@ -68,9 +68,12 @@ public class RecipeManager {
     private volatile Map<String, Integer> customFuels = Map.of();
     private volatile Map<Material, Integer> vanillaFuels = Map.of();
     private volatile Map<String, List<ItemRef>> customTags = Map.of();
+    private volatile CustomItemTags itemTags = CustomItemTags.EMPTY;
     private final Set<NamespacedKey> registeredKeys = new HashSet<>();
     private final Set<NamespacedKey> bookKeys = new HashSet<>();
     private final Set<NamespacedKey> looseKeys = new HashSet<>();
+    // kept out of players' books: loose copies, hidden: true recipes, copies of vanilla recipes
+    private final Set<NamespacedKey> hiddenKeys = new HashSet<>();
 
     private RecipeManager() {
     }
@@ -86,6 +89,7 @@ public class RecipeManager {
     /** (Re)reads every recipe file and replaces the server recipes with them. Items must be loaded first. */
     public void reload() {
         loadTags();
+        itemTags = CustomItemTags.build(GardensFurniture.itemRegistry.getCustomItems().values(), log());
         var loaded = new LinkedHashMap<String, GardensRecipe>();
         int failed = 0;
         var dir = recipesDir();
@@ -111,7 +115,14 @@ public class RecipeManager {
             }
         }
         this.recipes = Collections.unmodifiableMap(loaded);
-        failed += register(loaded.values());
+        var all = new ArrayList<>(loaded.values());
+        // after yours, so a recipe of yours for the same grid wins
+        var copies = VanillaRecipeCopies.make(itemTags);
+        all.addAll(copies);
+        failed += register(all);
+        if (!copies.isEmpty()) {
+            log().info("%d vanilla recipe(s) also take GardensFurniture items through their tags".formatted(copies.size()));
+        }
         log().info("Loaded %d recipe(s)%s".formatted(loaded.size() - failed, failed > 0 ? ", %d failed (see above)".formatted(failed) : ""));
     }
 
@@ -188,6 +199,7 @@ public class RecipeManager {
         registeredKeys.clear();
         bookKeys.clear();
         looseKeys.clear();
+        hiddenKeys.clear();
 
         var world = Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().getFirst();
         var compiledList = new ArrayList<Compiled>();
@@ -207,11 +219,15 @@ public class RecipeManager {
                 }
                 var compiled = compile(recipe);
                 var result = buildResult(recipe);
-                toAdd.add(toServerRecipe(compiled, compiled.bookKey(), result, false));
+                // a crafting copy of a vanilla recipe needs no book recipe: vanilla's is in the book
+                boolean book = !(recipe.isVanillaCopy() && recipe.getType().isCrafting());
+                if (book) toAdd.add(toServerRecipe(compiled, compiled.bookKey(), result, false));
                 if (compiled.looseKey() != null) {
                     var loose = toServerRecipe(compiled, compiled.looseKey(), result, true);
                     var clash = world == null ? null : vanillaClash(compiled, world);
-                    if (clash != null) {
+                    if (clash != null && recipe.isVanillaCopy()) {
+                        continue; // nothing to add that vanilla doesn't already do
+                    } else if (clash != null) {
                         // the server would pick one of the two at random-ish; keep vanilla's working
                         log().warning(("Recipe '%s': with its items' base materials the grid is also vanilla's %s, so only "
                                 + "up-to-date copies of its GardensFurniture items will craft it").formatted(recipe.getId(), clash));
@@ -240,10 +256,10 @@ public class RecipeManager {
             }
         }
         for (var compiled : byId.values()) {
-            if (!compiled.recipe().isHidden() && registeredKeys.contains(compiled.bookKey())) {
-                bookKeys.add(compiled.bookKey());
-            }
+            if (!registeredKeys.contains(compiled.bookKey())) continue;
+            (compiled.recipe().isHidden() ? hiddenKeys : bookKeys).add(compiled.bookKey());
         }
+        hiddenKeys.addAll(looseKeys);
         this.crafting = List.copyOf(compiledList);
         this.compiledById = Map.copyOf(byId);
         this.customFuels = Map.copyOf(fuelsCustom);
@@ -319,6 +335,8 @@ public class RecipeManager {
                     var tag = Bukkit.getTag(Tag.REGISTRY_ITEMS, key, Material.class);
                     if (tag == null) throw new IllegalArgumentException("unknown item tag " + ref);
                     tag.getValues().stream().filter(m -> m.isItem() && !m.isAir()).forEach(materials::add);
+                    // GardensFurniture items that list the tag in their tags:
+                    customIds.addAll(itemTags.idsIn(key));
                 }
             }
         }
@@ -474,19 +492,24 @@ public class RecipeManager {
         return looseKeys.contains(key);
     }
 
+    /** Using a recipe unlocks it; these get locked again so the book doesn't show them. */
+    public boolean isHiddenFromBook(NamespacedKey key) {
+        return hiddenKeys.contains(key);
+    }
+
     @Nullable
     public Compiled getCompiled(String id) {
         return compiledById.get(id);
     }
 
-    /** Book recipes in, loose copies out (crafting with one unlocks it like any recipe). */
+    /** Book recipes in, hidden ones out (using one unlocks it like any recipe). */
     public void updateRecipeBook(Player player) {
-        if (!looseKeys.isEmpty()) player.undiscoverRecipes(looseKeys);
+        hideHiddenRecipes(player);
         if (!bookKeys.isEmpty()) player.discoverRecipes(bookKeys);
     }
 
-    public void hideLooseRecipes(Player player) {
-        if (!looseKeys.isEmpty()) player.undiscoverRecipes(looseKeys);
+    public void hideHiddenRecipes(Player player) {
+        if (!hiddenKeys.isEmpty()) player.undiscoverRecipes(hiddenKeys);
     }
 
     // ---- fuel ----
@@ -495,12 +518,16 @@ public class RecipeManager {
     public int fuelTicks(@Nullable ItemStack stack) {
         var key = keyOf(stack);
         if (key == null) return 0;
-        if (key.isCustom()) return customFuels.getOrDefault(key.customId(), 0);
+        if (key.isCustom()) {
+            // a fuel recipe wins over what the item's tags would give it
+            var explicit = customFuels.get(key.customId());
+            return explicit != null ? explicit : itemTags.burnTicks(key.customId());
+        }
         return vanillaFuels.getOrDefault(key.material(), 0);
     }
 
     public boolean hasCustomFuels() {
-        return !customFuels.isEmpty() || !vanillaFuels.isEmpty();
+        return !customFuels.isEmpty() || !vanillaFuels.isEmpty() || !itemTags.usedTags().isEmpty();
     }
 
     // ---- editing ----
@@ -555,6 +582,13 @@ public class RecipeManager {
         for (var tag : Bukkit.getTags(Tag.REGISTRY_ITEMS, Material.class)) {
             if (tag.isTagged(material)) tags.add(tag.getKey());
         }
+        tags.sort(Comparator.comparing(NamespacedKey::toString));
+        return tags;
+    }
+
+    /** Vanilla item tags a GardensFurniture item is in through its tags:, for the editor. */
+    public List<NamespacedKey> vanillaTagsOf(String customId) {
+        var tags = new ArrayList<>(itemTags.tagsOf(customId));
         tags.sort(Comparator.comparing(NamespacedKey::toString));
         return tags;
     }

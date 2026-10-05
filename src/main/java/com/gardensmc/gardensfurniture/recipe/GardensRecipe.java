@@ -63,6 +63,9 @@ public class GardensRecipe {
     @Nullable
     private String category;
 
+    // made from a vanilla recipe for items with tags: (see VanillaRecipeCopies), never saved
+    private boolean vanillaCopy = false;
+
     // the file under recipes/ it was read from, written back to on save
     @Nullable
     private String file;

@@ -65,6 +65,9 @@ public class CustomItem implements Comparable<CustomItem> {
     @Nullable
     @Getter
     private final BedrockBlock bedrockBlock;
+    // vanilla item tags the item counts as, e.g. minecraft:planks: it burns and crafts like one
+    @Getter
+    private final List<String> tags;
 
     public CustomItem(String identifier, ConfigurationSection itemSection) {
         this.identifier = identifier;
@@ -99,6 +102,10 @@ public class CustomItem implements Comparable<CustomItem> {
         this.bedrockItem = itemSection.getBoolean("bedrock");
         var bedrockSection = itemSection.getConfigurationSection("bedrock");
         this.bedrockBlock = bedrockSection == null ? null : new BedrockBlock(bedrockSection, identifier);
+        this.tags = itemSection.getStringList("tags").stream()
+                .map(tag -> tag.trim().toLowerCase().replaceFirst("^#", ""))
+                .map(tag -> tag.contains(":") ? tag : "minecraft:" + tag)
+                .toList();
     }
 
     public int getCustomModel() {
