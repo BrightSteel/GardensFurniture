@@ -64,6 +64,7 @@ public class RecipeManager {
     private volatile Map<String, GardensRecipe> recipes = Map.of();
     private volatile List<Compiled> crafting = List.of();
     private volatile Map<String, Compiled> compiledById = Map.of();
+    private volatile Set<String> cookingInputs = Set.of();
     // fuel burn time in ticks, by GardensFurniture id or vanilla material
     private volatile Map<String, Integer> customFuels = Map.of();
     private volatile Map<Material, Integer> vanillaFuels = Map.of();
@@ -74,6 +75,10 @@ public class RecipeManager {
     private final Set<NamespacedKey> looseKeys = new HashSet<>();
     // kept out of players' books: loose copies, hidden: true recipes, copies of vanilla recipes
     private final Set<NamespacedKey> hiddenKeys = new HashSet<>();
+    // vanilla recipes whose copy (taking GardensFurniture items too) is in the book in their place
+    private final Set<NamespacedKey> replacedVanilla = new HashSet<>();
+    // every vanilla recipe ever replaced, so one no longer replaced goes back in players' books
+    private final Set<NamespacedKey> everReplacedVanilla = new HashSet<>();
 
     private RecipeManager() {
     }
@@ -200,6 +205,7 @@ public class RecipeManager {
         bookKeys.clear();
         looseKeys.clear();
         hiddenKeys.clear();
+        replacedVanilla.clear();
 
         var world = Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().getFirst();
         var compiledList = new ArrayList<Compiled>();
@@ -219,17 +225,13 @@ public class RecipeManager {
                 }
                 var compiled = compile(recipe);
                 var result = buildResult(recipe);
-                // a crafting copy of a vanilla recipe needs no book recipe: vanilla's is in the book
-                boolean book = !(recipe.isVanillaCopy() && recipe.getType().isCrafting());
-                if (book) toAdd.add(toServerRecipe(compiled, compiled.bookKey(), result, false));
+                toAdd.add(toServerRecipe(compiled, compiled.bookKey(), result, false));
                 if (compiled.looseKey() != null) {
                     var loose = toServerRecipe(compiled, compiled.looseKey(), result, true);
                     var clash = world == null ? null : vanillaClash(compiled, world);
-                    if (clash != null && recipe.isVanillaCopy()) {
-                        continue; // nothing to add that vanilla doesn't already do
-                    } else if (clash != null) {
+                    if (clash != null) {
                         // the server would pick one of the two at random-ish; keep vanilla's working
-                        log().warning(("Recipe '%s': with its items' base materials the grid is also vanilla's %s, so only "
+                        if (!recipe.isVanillaCopy()) log().warning(("Recipe '%s': with its items' base materials the grid is also vanilla's %s, so only "
                                 + "up-to-date copies of its GardensFurniture items will craft it").formatted(recipe.getId(), clash));
                         compiled = new Compiled(compiled.recipe(), compiled.shape(), compiled.key(), compiled.ingredients(), compiled.input(), compiled.bookKey(), null);
                     } else {
@@ -260,8 +262,18 @@ public class RecipeManager {
             (compiled.recipe().isHidden() ? hiddenKeys : bookKeys).add(compiled.bookKey());
         }
         hiddenKeys.addAll(looseKeys);
+        for (var compiled : byId.values()) {
+            if (compiled.recipe().isVanillaCopy() && bookKeys.contains(compiled.bookKey())) {
+                replacedVanilla.add(NamespacedKey.minecraft(compiled.recipe().getId().substring(VanillaRecipeCopies.ID_PREFIX.length())));
+            }
+        }
+        saveReplacedVanilla();
         this.crafting = List.copyOf(compiledList);
         this.compiledById = Map.copyOf(byId);
+        this.cookingInputs = byId.values().stream()
+                .filter(c -> c.recipe().getType().isCooking() && c.input() != null)
+                .flatMap(c -> c.input().customIds().stream())
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
         this.customFuels = Map.copyOf(fuelsCustom);
         this.vanillaFuels = Map.copyOf(fuelsVanilla);
 
@@ -423,8 +435,8 @@ public class RecipeManager {
             return new RecipeChoice.MaterialChoice(new ArrayList<>(materials));
         }
         var stacks = new ArrayList<ItemStack>();
-        for (var id : ingredient.customIds()) stacks.add(GardensFurniture.itemRegistry.buildItem(id));
         for (var material : ingredient.materials()) stacks.add(new ItemStack(material));
+        for (var id : ingredient.customIds()) stacks.add(GardensFurniture.itemRegistry.buildItem(id));
         return new RecipeChoice.ExactChoice(stacks);
     }
 
@@ -497,19 +509,57 @@ public class RecipeManager {
         return hiddenKeys.contains(key);
     }
 
+    /** Whether one of our furnace, blast furnace, smoker or campfire recipes takes this item. */
+    public boolean isCookingInput(String customId) {
+        return cookingInputs.contains(customId);
+    }
+
     @Nullable
     public Compiled getCompiled(String id) {
         return compiledById.get(id);
     }
 
-    /** Book recipes in, hidden ones out (using one unlocks it like any recipe). */
+    /** Book recipes in, hidden ones and the vanilla recipes our copies stand in for out. */
     public void updateRecipeBook(Player player) {
         hideHiddenRecipes(player);
+        var restored = new HashSet<>(everReplacedVanilla);
+        restored.removeAll(replacedVanilla);
+        if (!restored.isEmpty()) player.discoverRecipes(restored);
         if (!bookKeys.isEmpty()) player.discoverRecipes(bookKeys);
     }
 
     public void hideHiddenRecipes(Player player) {
         if (!hiddenKeys.isEmpty()) player.undiscoverRecipes(hiddenKeys);
+        if (!replacedVanilla.isEmpty()) player.undiscoverRecipes(replacedVanilla);
+    }
+
+    /** A vanilla recipe whose copy is in the book instead; vanilla unlocking it would show it twice. */
+    public boolean isReplacedVanilla(NamespacedKey key) {
+        return replacedVanilla.contains(key);
+    }
+
+    private File replacedVanillaFile() {
+        return new File(GardensFurniture.plugin.getDataFolder(), "replaced_vanilla_recipes.txt");
+    }
+
+    private void saveReplacedVanilla() {
+        var file = replacedVanillaFile();
+        try {
+            if (file.exists()) {
+                for (var line : Files.readAllLines(file.toPath())) {
+                    var key = line.startsWith("#") ? null : NamespacedKey.fromString(line.trim());
+                    if (key != null) everReplacedVanilla.add(key);
+                }
+            }
+            everReplacedVanilla.addAll(replacedVanilla);
+            var lines = new ArrayList<String>();
+            lines.add("# Vanilla recipes GardensFurniture has kept out of recipe books in favour of a copy that also");
+            lines.add("# takes items with tags:. Kept so they go back in the book if the copy goes. Don't edit.");
+            everReplacedVanilla.stream().map(NamespacedKey::toString).sorted().forEach(lines::add);
+            Files.write(file.toPath(), lines);
+        } catch (IOException e) {
+            log().warning("Couldn't update " + file.getName() + ": " + e.getMessage());
+        }
     }
 
     // ---- fuel ----

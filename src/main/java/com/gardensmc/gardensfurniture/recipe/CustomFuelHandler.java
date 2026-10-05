@@ -4,6 +4,7 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.util.ItemUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.Furnace;
 import org.bukkit.block.data.Lightable;
 import org.bukkit.event.EventHandler;
@@ -12,6 +13,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.FurnaceBurnEvent;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.inventory.FurnaceInventory;
 import org.bukkit.inventory.ItemStack;
@@ -24,8 +26,8 @@ import java.util.Set;
  * paper underneath, so players' clicks into the fuel slot are done here, and furnaces holding one are
  * lit by hand whenever they run out of burn time with something to smelt.
  *
- * <p>Hoppers still can't feed custom fuel, and a furnace left with custom fuel over a restart starts
- * again once someone opens it.
+ * <p>Hoppers beside a furnace feed it custom fuel the same way. A furnace left with custom fuel over a
+ * restart starts again once someone opens it or a hopper feeds it.
  */
 public class CustomFuelHandler implements Listener {
 
@@ -42,6 +44,41 @@ public class CustomFuelHandler implements Listener {
     public void onBurn(FurnaceBurnEvent e) {
         int ticks = RecipeManager.INSTANCE.fuelTicks(e.getFuel());
         if (ticks > 0) e.setBurnTime(ticks);
+    }
+
+    /**
+     * A hopper beside a furnace fills its fuel slot, but vanilla only lets fuel in, so move custom fuel
+     * across here. The event comes before vanilla's check; a hopper above still fills the input slot.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onHopperMove(InventoryMoveItemEvent e) {
+        if (!(e.getDestination() instanceof FurnaceInventory furnace) || !isCustomFuel(furnace, e.getItem())) return;
+        var from = e.getSource().getLocation();
+        if (from == null || !(from.getBlock().getBlockData() instanceof org.bukkit.block.data.type.Hopper hopper)
+                || hopper.getFacing() == BlockFace.DOWN) {
+            return;
+        }
+        e.setCancelled(true);
+        var item = e.getItem();
+        var fuel = furnace.getFuel();
+        if (!ItemUtil.isEmpty(fuel) && (!fuel.isSimilar(item) || fuel.getAmount() >= fuel.getMaxStackSize())) return;
+        var source = e.getSource();
+        for (int i = 0; i < source.getSize(); i++) {
+            var stack = source.getItem(i);
+            if (ItemUtil.isEmpty(stack) || !stack.isSimilar(item)) continue;
+            stack.setAmount(stack.getAmount() - 1);
+            source.setItem(i, stack.getAmount() > 0 ? stack : null);
+            if (ItemUtil.isEmpty(fuel)) {
+                var one = item.clone();
+                one.setAmount(1);
+                furnace.setFuel(one);
+            } else {
+                fuel.setAmount(fuel.getAmount() + 1);
+                furnace.setFuel(fuel);
+            }
+            track(furnace);
+            return;
+        }
     }
 
     @EventHandler

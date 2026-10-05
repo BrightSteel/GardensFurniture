@@ -13,6 +13,7 @@ import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerRecipeDiscoverEvent;
 import org.bukkit.inventory.ItemStack;
 
 public class RecipeListener implements Listener {
@@ -67,6 +68,12 @@ public class RecipeListener implements Listener {
     public void onFurnaceExtract(FurnaceExtractEvent e) {
         var player = e.getPlayer();
         Bukkit.getScheduler().runTask(GardensFurniture.plugin, () -> RecipeManager.INSTANCE.hideHiddenRecipes(player));
+    }
+
+    // vanilla unlocks its recipes as players pick up items; ours stands in for the ones with copies
+    @EventHandler(ignoreCancelled = true)
+    public void onDiscover(PlayerRecipeDiscoverEvent e) {
+        if (RecipeManager.INSTANCE.isReplacedVanilla(e.getRecipe())) e.setCancelled(true);
     }
 
     @EventHandler

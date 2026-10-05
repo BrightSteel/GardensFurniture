@@ -15,8 +15,9 @@ import java.util.*;
  * {@code minecraft:planks}, vanilla's crafting table recipe ("four of #minecraft:planks") gets a copy
  * whose slots are {@code #minecraft:planks}, which now includes maple planks.
  *
- * <p>The copies are hidden from the recipe book; vanilla's own entry is still the one players see.
- * They're never written to recipes/, and are made again on every reload.
+ * <p>A copy takes its vanilla recipe's place in the recipe book (same group and tab), so the book
+ * auto-fills with maple planks as well as oak; the vanilla recipe still crafts, it's just not shown.
+ * Copies are never written to recipes/, and are made again on every reload.
  */
 final class VanillaRecipeCopies {
 
@@ -92,6 +93,8 @@ final class VanillaRecipeCopies {
                 copy.setExperience(cooking.getExperience());
                 copy.setCookingTime(cooking.getCookingTime());
                 copy.setGroup(cooking.getGroup());
+                var category = cooking.getCategory().name().toLowerCase(Locale.ROOT);
+                if (GardensRecipe.categories(type).contains(category)) copy.setCategory(category);
             }
             case StonecuttingRecipe stonecutting -> {
                 copy = new GardensRecipe(ID_PREFIX + key.getKey(), RecipeType.STONECUTTING);
@@ -105,7 +108,6 @@ final class VanillaRecipeCopies {
         if (!extended[0]) return null;
         copy.setResult(ItemRef.material(result.getType()));
         copy.setAmount(result.getAmount());
-        copy.setHidden(true);
         copy.setVanillaCopy(true);
         copy.validate();
         return copy;

@@ -5,6 +5,7 @@ import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener;
 import com.gardensmc.gardensfurniture.menu.ChatPrompt;
 import com.gardensmc.gardensfurniture.recipe.CustomFuelHandler;
+import com.gardensmc.gardensfurniture.recipe.FurnaceInputRefresher;
 import com.gardensmc.gardensfurniture.recipe.RecipeListener;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Listener;
@@ -37,6 +38,7 @@ public class ListenerHandler {
                 new CraftListener(),
                 new RecipeListener(),
                 CustomFuelHandler.INSTANCE,
+                new FurnaceInputRefresher(),
                 ChatPrompt.INSTANCE,
                 new BlockBreakingListener(),
                 new EnderStepListener(),
