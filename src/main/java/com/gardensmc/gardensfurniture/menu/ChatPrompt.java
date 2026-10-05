@@ -21,33 +21,45 @@ public class ChatPrompt implements Listener {
 
     public static final ChatPrompt INSTANCE = new ChatPrompt();
 
-    private final Map<UUID, Consumer<String>> waiting = new ConcurrentHashMap<>();
+    private record Waiting(Consumer<String> answer, Runnable onCancel, Runnable onQuit) {
+    }
+
+    private final Map<UUID, Waiting> waiting = new ConcurrentHashMap<>();
 
     private ChatPrompt() {
     }
 
     /** Closes the player's menu and waits for their next chat message; "cancel" gives up. */
     public void ask(Player player, String question, Consumer<String> answer) {
+        ask(player, question, answer, () -> {
+        }, () -> {
+        });
+    }
+
+    /** As {@link #ask(Player, String, Consumer)}, told when they type cancel or leave without answering. */
+    public void ask(Player player, String question, Consumer<String> answer, Runnable onCancel, Runnable onQuit) {
+        waiting.put(player.getUniqueId(), new Waiting(answer, onCancel, onQuit));
         player.closeInventory();
-        waiting.put(player.getUniqueId(), answer);
         player.sendMessage(MiniMessage.miniMessage().deserialize("<gold>" + question + " <gray>(type <white>cancel</white> to stop)"));
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onChat(AsyncChatEvent e) {
-        var answer = waiting.remove(e.getPlayer().getUniqueId());
-        if (answer == null) return;
+        var prompt = waiting.remove(e.getPlayer().getUniqueId());
+        if (prompt == null) return;
         e.setCancelled(true);
         var text = PlainTextComponentSerializer.plainText().serialize(e.message()).trim();
         if (text.equalsIgnoreCase("cancel")) {
             e.getPlayer().sendMessage(MiniMessage.miniMessage().deserialize("<gray>Cancelled."));
+            Bukkit.getScheduler().runTask(GardensFurniture.plugin, prompt.onCancel());
             return;
         }
-        Bukkit.getScheduler().runTask(GardensFurniture.plugin, () -> answer.accept(text));
+        Bukkit.getScheduler().runTask(GardensFurniture.plugin, () -> prompt.answer().accept(text));
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
-        waiting.remove(e.getPlayer().getUniqueId());
+        var prompt = waiting.remove(e.getPlayer().getUniqueId());
+        if (prompt != null) prompt.onQuit().run();
     }
 }

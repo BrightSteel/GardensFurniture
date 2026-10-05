@@ -1,6 +1,7 @@
 package com.gardensmc.gardensfurniture.recipe;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.menu.RecipeEditorMenu;
 import com.gardensmc.gardensfurniture.util.ItemUtil;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import org.bukkit.Bukkit;
@@ -12,6 +13,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRecipeDiscoverEvent;
 import org.bukkit.inventory.ItemStack;
@@ -74,6 +76,12 @@ public class RecipeListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onDiscover(PlayerRecipeDiscoverEvent e) {
         if (RecipeManager.INSTANCE.isReplacedVanilla(e.getRecipe())) e.setCancelled(true);
+    }
+
+    // the recipe editor's own items (showing a saved recipe) stay in it; it takes back any left in the inventory on close
+    @EventHandler(ignoreCancelled = true)
+    public void onDrop(PlayerDropItemEvent e) {
+        if (e.getItemDrop().getItemStack().getPersistentDataContainer().has(RecipeEditorMenu.EDITOR_ITEM)) e.setCancelled(true);
     }
 
     @EventHandler

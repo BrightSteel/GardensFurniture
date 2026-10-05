@@ -5,33 +5,50 @@ import com.gardensmc.gardensfurniture.util.ItemUtil;
 import de.themoep.inventorygui.DynamicGuiElement;
 import de.themoep.inventorygui.GuiElement;
 import de.themoep.inventorygui.GuiElementGroup;
+import de.themoep.inventorygui.GuiStorageElement;
 import de.themoep.inventorygui.StaticGuiElement;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
 /**
- * Builds or edits one recipe. The grid and result hold copies: click a slot with an item to put a
- * copy there (your item stays on the cursor), click it empty-handed to clear it, right-click it to
- * cycle what the slot accepts: that exact item, or any item in one of its tags ("any plank").
+ * Builds or edits one recipe. The grid and result work like any inventory: put items in, pick them up,
+ * move them around. Tag mode turns the grid into buttons instead: clicking an item cycles what that
+ * slot accepts, the exact item or any item in one of its tags ("any plank").
+ *
+ * <p>Items you put in come back when the editor closes. The ones the editor makes to show a saved
+ * recipe are marked and never leave it: dragged into your inventory, they're taken back on close.
  */
 public class RecipeEditorMenu extends Menu {
 
     private static final String[] LAYOUT = new String[]{
-            "         ",
-            " ggg     ",
-            " ggg   r ",
-            " ggg     ",
+            "  m      ",
+            " ggg  fff",
+            " ggg >frf",
+            " ggg  fff",
             "t a c x k",
             "bhpey  ds"
     };
     private static final MiniMessage MM = MiniMessage.miniMessage();
+    // background and the frame around the result; the grid and result themselves are plain slots
+    private static final Material BACKGROUND = Material.GRAY_STAINED_GLASS_PANE;
+    private static final Material RESULT_FRAME = Material.LIME_STAINED_GLASS_PANE;
+    private static final int RESULT_SLOT = 9;
+    // on items the editor made itself, which never leave it
+    public static final NamespacedKey EDITOR_ITEM = new NamespacedKey("gardensfurniture", "recipe_editor_item");
+    // what a grid item counts as when it isn't just itself ("#minecraft:planks"), stripped when it leaves
+    private static final NamespacedKey COUNTS_AS = new NamespacedKey("gardensfurniture", "recipe_counts_as");
 
     private final String id;
     @Nullable
@@ -39,12 +56,13 @@ public class RecipeEditorMenu extends Menu {
     private final boolean exists;
 
     private RecipeType type;
-    private final ItemStack[] grid = new ItemStack[9];
-    private final Ingredient[] ingredients = new Ingredient[9];
-    // what each slot held when the recipe was opened, kept as a cycle option so a list isn't lost
-    private final Ingredient[] original = new Ingredient[9];
+    // grid slots 0-8, then the result
+    private final Inventory storage = Bukkit.createInventory(null, 10);
+    private boolean tagMode;
+    // set while the player types in chat with the editor closed, so closing doesn't hand items back
+    private boolean prompting;
     @Nullable
-    private ItemStack result;
+    private ItemStack lastResult;
     private int amount;
     private int cookingTime;
     private int burnTime;
@@ -76,6 +94,7 @@ public class RecipeEditorMenu extends Menu {
     }
 
     private void load(GardensRecipe recipe) {
+        // the editor's own items; kept apart from anything the player puts in
         switch (recipe.getType()) {
             case SHAPED -> {
                 var shape = recipe.getShape();
@@ -96,17 +115,48 @@ public class RecipeEditorMenu extends Menu {
         }
         if (recipe.getResult() != null) {
             try {
-                result = RecipeManager.INSTANCE.buildItem(recipe.getResult());
+                var result = RecipeManager.INSTANCE.buildItem(recipe.getResult());
+                result.setAmount(Math.min(recipe.getAmount(), result.getMaxStackSize()));
+                result.editPersistentDataContainer(pdc -> pdc.set(EDITOR_ITEM, PersistentDataType.BOOLEAN, true));
+                storage.setItem(RESULT_SLOT, result);
+                lastResult = result.clone();
             } catch (Exception ignored) {
                 // a result that no longer exists; the slot starts empty
             }
         }
     }
 
-    private void setSlot(int i, @Nullable Ingredient ingredient, boolean fromRecipe) {
-        ingredients[i] = ingredient;
-        grid[i] = ingredient == null ? null : sample(ingredient);
-        if (fromRecipe) original[i] = ingredient;
+    private void setSlot(int i, Ingredient ingredient, boolean fromRecipe) {
+        var stack = sample(ingredient);
+        stack.editPersistentDataContainer(pdc -> {
+            pdc.set(EDITOR_ITEM, PersistentDataType.BOOLEAN, true);
+            if (!ingredient.equals(Ingredient.of(refOf(stack)))) pdc.set(COUNTS_AS, PersistentDataType.STRING, encode(ingredient));
+        });
+        storage.setItem(i, stack);
+    }
+
+    /** What the grid item in slot i counts as, or null for an empty slot. */
+    @Nullable
+    private Ingredient ingredientAt(int i) {
+        var stack = storage.getItem(i);
+        if (ItemUtil.isEmpty(stack)) return null;
+        var countsAs = stack.getPersistentDataContainer().get(COUNTS_AS, PersistentDataType.STRING);
+        if (countsAs != null) {
+            try {
+                return decode(countsAs);
+            } catch (Exception ignored) {
+                // unreadable: the item itself
+            }
+        }
+        return Ingredient.of(refOf(stack));
+    }
+
+    private static String encode(Ingredient ingredient) {
+        return String.join(" ", ingredient.options().stream().map(ItemRef::toString).toList());
+    }
+
+    private static Ingredient decode(String encoded) {
+        return new Ingredient(Arrays.stream(encoded.split(" ")).map(ItemRef::parse).toList());
     }
 
     /** An item to show for an ingredient: the item itself, or the first item of its tag. */
@@ -130,21 +180,40 @@ public class RecipeEditorMenu extends Menu {
     // ---- elements ----
 
     private void buildElements() {
-        if (blankHiddenItem != null) gui.setFiller(blankHiddenItem);
+        gui.setFiller(pane(BACKGROUND));
+        gui.addElement(new StaticGuiElement('f', pane(RESULT_FRAME), " "));
+        gui.addElement(new StaticGuiElement('>', new ItemStack(Material.ARROW), "<yellow>How to use",
+                "<gray>Put the ingredients in the grid and what it",
+                "<gray>makes on the right, like any inventory.",
+                "<gray>Your own items come back when you close this.",
+                "<gray>For \"any plank\" and such, turn on tag mode above."));
 
         var gridGroup = new GuiElementGroup('g');
         for (int i = 0; i < 9; i++) {
             int slot = i;
-            gridGroup.addElement(new DynamicGuiElement('g', () -> gridElement(slot)));
+            gridGroup.addElement(new DynamicGuiElement('g', () -> tagMode ? tagElement(slot) : storageElement(slot)));
         }
         gui.addElement(gridGroup);
         gui.addElement(new DynamicGuiElement('r', this::resultElement));
+
+        gui.addElement(dynamic('m', () -> button(tagMode ? Material.NAME_TAG : Material.PAPER, click -> tagMode = !tagMode,
+                tagMode ? "<gold>Tag mode: on" : "<yellow>Tag mode: off",
+                tagMode ? "<gray>Click a grid item to cycle what it counts as:" : "<gray>Turn on to choose what each grid item counts as:",
+                "<gray>the exact item, any plank, any log…",
+                tagMode ? "<gray>Turn off to move items again." : "<gray>Items can't be moved while it's on.",
+                "<dark_gray>Click to toggle")));
+
+        gui.setCloseAction(close -> {
+            if (!prompting) returnItems();
+            return false;
+        });
 
         gui.addElement(dynamic('t', () -> button(Material.CRAFTING_TABLE, click -> {
             var types = RecipeType.values();
             type = types[Math.floorMod(type.ordinal() + (click.getType().isRightClick() ? -1 : 1), types.length)];
             if (type.isCooking() && cookingTime == RecipeType.FURNACE.defaultCookingTime()) cookingTime = type.defaultCookingTime();
-            if (!GardensRecipe.categories(type).contains(category)) category = null;
+            // List.of(...).contains(null) throws, and no tab set is fine for every type
+            if (category != null && !GardensRecipe.categories(type).contains(category)) category = null;
             if (!type.isCrafting()) copyContents = false;
         }, "<yellow>Type: <white>" + type.configName(), "<gray>" + typeHelp(), "", "<dark_gray>Click: next · Right-click: previous")));
 
@@ -199,9 +268,17 @@ public class RecipeEditorMenu extends Menu {
                 group = "";
                 return;
             }
+            prompting = true;
             ChatPrompt.INSTANCE.ask(viewer, "Type the recipe book group (recipes sharing one stack together):", answer -> {
+                prompting = false;
                 group = answer.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_]", "_");
                 open();
+            }, () -> {
+                prompting = false;
+                open();
+            }, () -> {
+                prompting = false;
+                returnItems();
             });
         }, "<yellow>Group: <white>" + (group.isEmpty() ? "none" : group), "<gray>Recipes in one group share a recipe book slot",
                 "<dark_gray>Click: set in chat · Right-click: clear")));
@@ -210,6 +287,7 @@ public class RecipeEditorMenu extends Menu {
                 enabled ? "<green>Enabled" : "<red>Disabled", "<gray>A disabled recipe stays in its file but can't be crafted", "<dark_gray>Click to toggle")));
 
         gui.addElement(new StaticGuiElement('b', new ItemStack(Material.ARROW), click -> {
+            returnItems();
             new RecipeListMenu(viewer).open();
             return true;
         }, "<yellow>Back to recipes", "<gray>Unsaved changes are lost"));
@@ -219,6 +297,7 @@ public class RecipeEditorMenu extends Menu {
             try {
                 RecipeManager.INSTANCE.delete(id);
                 viewer.sendMessage(MM.deserialize("<green>Deleted recipe " + id));
+                returnItems();
                 new RecipeListMenu(viewer).open();
             } catch (Exception e) {
                 viewer.sendMessage(MM.deserialize("<red>Couldn't delete " + id + ": " + e.getMessage()));
@@ -244,9 +323,9 @@ public class RecipeEditorMenu extends Menu {
         return switch (type) {
             case SHAPED -> "Crafting, in this shape (may be mirrored)";
             case SHAPELESS -> "Crafting, in any slots";
-            case FURNACE, BLASTING, SMOKING, CAMPFIRE -> "Cooks the item in the grid's middle";
-            case STONECUTTING -> "Stonecutter: the item in the grid's middle";
-            case FUEL -> "Makes the item in the grid's middle burn in furnaces";
+            case FURNACE, BLASTING, SMOKING, CAMPFIRE -> "Cooks the one item in the grid";
+            case STONECUTTING -> "Stonecutter: the one item in the grid";
+            case FUEL -> "Makes the one item in the grid burn in furnaces";
         };
     }
 
@@ -266,41 +345,56 @@ public class RecipeEditorMenu extends Menu {
         }, text);
     }
 
-    private GuiElement blank() {
-        return new StaticGuiElement(' ', blankHiddenItem != null ? blankHiddenItem : new ItemStack(Material.AIR), " ");
+    // a glass pane with no tooltip
+    private static ItemStack pane(Material material) {
+        var pane = new ItemStack(material);
+        pane.editMeta(meta -> meta.setHideTooltip(true));
+        return pane;
     }
 
-    private GuiElement gridElement(int i) {
-        boolean usedSlot = !type.hasInput() || i == 4;
-        GuiElement.Action action = click -> {
-            var cursor = click.getCursor();
-            if (!ItemUtil.isEmpty(cursor)) {
-                var copy = cursor.clone();
-                copy.setAmount(1);
-                grid[i] = copy;
-                ingredients[i] = Ingredient.of(refOf(copy));
-                original[i] = null;
-            } else if (grid[i] != null && click.getType().isRightClick()) {
-                cycle(i, click.getType().isShiftClick() ? -1 : 1);
-            } else {
-                setSlot(i, null, false);
-            }
+    private GuiElement blank() {
+        return new StaticGuiElement(' ', pane(BACKGROUND), " ");
+    }
+
+    // a plain inventory slot
+    private GuiElement storageElement(int i) {
+        return new GuiStorageElement(' ', storage, i, this::onStorageChanged, info -> true);
+    }
+
+    private void onStorageChanged() {
+        // a new result sets how many it makes; the amount button can still change it after
+        var result = storage.getItem(RESULT_SLOT);
+        if (!ItemUtil.isEmpty(result) && (lastResult == null || !lastResult.isSimilar(result) || lastResult.getAmount() != result.getAmount())) {
+            amount = result.getAmount();
+        }
+        lastResult = ItemUtil.isEmpty(result) ? null : result.clone();
+        // the GUI redraws mid-click otherwise, losing the cursor
+        Bukkit.getScheduler().runTask(com.gardensmc.gardensfurniture.GardensFurniture.plugin, () -> gui.draw());
+    }
+
+    // tag mode: the grid item with what it counts as; clicking cycles it
+    private GuiElement tagElement(int i) {
+        var stack = storage.getItem(i);
+        if (ItemUtil.isEmpty(stack)) return new StaticGuiElement(' ', null, click -> true);
+        var shown = stack.clone();
+        var lore = new ArrayList<net.kyori.adventure.text.Component>();
+        lore.add(MM.deserialize("<!italic><gray>Counts as: <white>" + describe(ingredientAt(i))));
+        if (type.hasInput() && filledSlots() > 1) {
+            lore.add(MM.deserialize("<!italic><red>" + type.configName() + " takes one item: leave just one in the grid"));
+        }
+        lore.add(MM.deserialize("<!italic><dark_gray>Click: next · Right-click: previous"));
+        shown.lore(lore);
+        return new StaticGuiElement(' ', shown, click -> {
+            cycle(i, click.getType().isRightClick() ? -1 : 1);
             gui.draw();
             return true;
-        };
-        if (grid[i] == null) {
-            var empty = blankHiddenItem != null ? blankHiddenItem : new ItemStack(Material.LIGHT_GRAY_STAINED_GLASS_PANE);
-            return new StaticGuiElement(' ', empty, action, usedSlot ? "<gray>Empty" : "<dark_gray>Unused for " + type.configName(),
-                    "<dark_gray>Click with an item to put a copy here");
-        }
-        var shown = grid[i].clone();
-        var lore = new ArrayList<net.kyori.adventure.text.Component>();
-        lore.add(MM.deserialize("<!italic><gray>Counts as: <white>" + describe(ingredients[i])));
-        if (!usedSlot) lore.add(MM.deserialize("<!italic><red>Ignored: " + type.configName() + " only uses the middle slot"));
-        lore.add(MM.deserialize("<!italic><dark_gray>Right-click: any item of a tag · Shift-right: back"));
-        lore.add(MM.deserialize("<!italic><dark_gray>Click empty-handed: clear · With an item: replace"));
-        shown.lore(lore);
-        return new StaticGuiElement(' ', shown, action);
+        });
+    }
+
+    private int filledSlots() {
+        int filled = 0;
+        for (int i = 0; i < 9; i++) if (!ItemUtil.isEmpty(storage.getItem(i))) filled++;
+        return filled;
     }
 
     private static String describe(Ingredient ingredient) {
@@ -312,52 +406,85 @@ public class RecipeEditorMenu extends Menu {
         };
     }
 
-    /** Steps the slot through: the exact item, what it was loaded with, then each tag holding the item. */
+    /** Steps the slot through: the exact item, what it counts as now, then each tag holding the item. */
     private void cycle(int i, int direction) {
-        var exact = Ingredient.of(refOf(grid[i]));
+        var stack = storage.getItem(i);
+        if (ItemUtil.isEmpty(stack)) return;
+        var exact = Ingredient.of(refOf(stack));
+        var current = ingredientAt(i);
         var options = new ArrayList<Ingredient>(List.of(exact));
-        if (original[i] != null && !options.contains(original[i])) options.add(original[i]);
-        var key = RecipeManager.keyOf(grid[i]);
+        if (!options.contains(current)) options.add(current);
+        var key = RecipeManager.keyOf(stack);
         var vanillaTags = key.isCustom() ? RecipeManager.INSTANCE.vanillaTagsOf(key.customId()) : RecipeManager.INSTANCE.vanillaTagsOf(key.material());
         vanillaTags.forEach(tag -> options.add(Ingredient.of(ItemRef.tag(tag.toString()))));
         RecipeManager.INSTANCE.customTagsOf(key).forEach(tag -> options.add(Ingredient.of(ItemRef.tag(ItemRef.CUSTOM_NAMESPACE + ":" + tag))));
-        int current = Math.max(0, options.indexOf(ingredients[i]));
-        ingredients[i] = options.get(Math.floorMod(current + direction, options.size()));
+        var next = options.get(Math.floorMod(Math.max(0, options.indexOf(current)) + direction, options.size()));
+        stack.editPersistentDataContainer(pdc -> {
+            if (next.equals(exact)) pdc.remove(COUNTS_AS);
+            else pdc.set(COUNTS_AS, PersistentDataType.STRING, encode(next));
+        });
+        storage.setItem(i, stack);
         if (options.size() == 1) {
             viewer.sendMessage(MM.deserialize("<gray>That item isn't in any tag. Add your own in recipe_tags.yml."));
         }
     }
 
     private GuiElement resultElement() {
-        GuiElement.Action action = click -> {
-            var cursor = click.getCursor();
-            if (!ItemUtil.isEmpty(cursor)) {
-                result = cursor.clone();
-                result.setAmount(1);
-                if (cursor.getAmount() > 1) amount = cursor.getAmount();
-            } else {
-                result = null;
-            }
-            gui.draw();
-            return true;
-        };
         if (type == RecipeType.FUEL) {
-            return new StaticGuiElement(' ', new ItemStack(Material.BLAZE_POWDER), action, "<gray>Fuel has no result");
+            return new StaticGuiElement(' ', new ItemStack(Material.BLAZE_POWDER), click -> true, "<gray>Fuel has no result");
         }
-        if (result == null) {
-            return new StaticGuiElement(' ', new ItemStack(Material.LIGHT_GRAY_STAINED_GLASS_PANE), action,
-                    "<yellow>Result", "<gray>Click with the item it should make");
+        if (tagMode) {
+            var result = storage.getItem(RESULT_SLOT);
+            return new StaticGuiElement(' ', ItemUtil.isEmpty(result) ? null : result.clone(), click -> true);
         }
-        var shown = result.clone();
-        shown.setAmount(amount);
-        var lore = new ArrayList<net.kyori.adventure.text.Component>();
-        lore.add(MM.deserialize("<!italic><gray>Makes " + amount + " × <white>" + refOf(result)));
-        lore.add(MM.deserialize("<!italic><dark_gray>Click empty-handed: clear · With an item: replace"));
-        shown.lore(lore);
-        return new StaticGuiElement(' ', shown, action);
+        return storageElement(RESULT_SLOT);
+    }
+
+    /**
+     * Gives back what the player put in, keeps the editor's own items: from the grid, and any the player
+     * dragged into their inventory or holds on the cursor.
+     */
+    private void returnItems() {
+        var back = new ArrayList<ItemStack>();
+        for (int i = 0; i < storage.getSize(); i++) {
+            var stack = storage.getItem(i);
+            storage.setItem(i, null);
+            if (ItemUtil.isEmpty(stack) || isEditorItem(stack)) continue;
+            back.add(stripped(stack));
+        }
+        var inventory = viewer.getInventory();
+        for (int i = 0; i < inventory.getSize(); i++) {
+            var stack = inventory.getItem(i);
+            if (ItemUtil.isEmpty(stack)) continue;
+            if (isEditorItem(stack)) inventory.setItem(i, null);
+            else if (stack.getPersistentDataContainer().has(COUNTS_AS)) inventory.setItem(i, stripped(stack));
+        }
+        var cursor = viewer.getItemOnCursor();
+        if (!ItemUtil.isEmpty(cursor)) {
+            viewer.setItemOnCursor(isEditorItem(cursor) ? null : stripped(cursor));
+        }
+        inventory.addItem(back.toArray(ItemStack[]::new)).values()
+                .forEach(leftover -> viewer.getWorld().dropItemNaturally(viewer.getLocation(), leftover));
+    }
+
+    private static boolean isEditorItem(ItemStack stack) {
+        return stack.getPersistentDataContainer().has(EDITOR_ITEM);
+    }
+
+    private static ItemStack stripped(ItemStack stack) {
+        if (!stack.getPersistentDataContainer().has(COUNTS_AS)) return stack;
+        var copy = stack.clone();
+        copy.editPersistentDataContainer(pdc -> pdc.remove(COUNTS_AS));
+        return copy;
     }
 
     // ---- saving ----
+
+    private Ingredient[] ingredients() {
+        var grid = new Ingredient[9];
+        for (int i = 0; i < 9; i++) grid[i] = ingredientAt(i);
+        return grid;
+    }
 
     private GardensRecipe build() {
         var recipe = new GardensRecipe(id, type);
@@ -368,19 +495,26 @@ public class RecipeEditorMenu extends Menu {
         recipe.setCopyContents(copyContents);
         recipe.setCategory(category);
         switch (type) {
-            case SHAPED -> recipe.setGrid(ingredients.clone(), 3);
+            case SHAPED -> recipe.setGrid(ingredients(), 3);
             case SHAPELESS -> {
-                for (var ingredient : ingredients) if (ingredient != null) recipe.getIngredients().add(ingredient);
+                for (var ingredient : ingredients()) if (ingredient != null) recipe.getIngredients().add(ingredient);
             }
             default -> {
-                if (ingredients[4] == null) throw new IllegalArgumentException("put the input in the grid's middle slot");
-                recipe.setInput(ingredients[4]);
+                Ingredient input = null;
+                for (var ingredient : ingredients()) {
+                    if (ingredient == null) continue;
+                    if (input != null) throw new IllegalArgumentException(type.configName() + " takes one item: leave just one in the grid");
+                    input = ingredient;
+                }
+                if (input == null) throw new IllegalArgumentException("put the item it takes in the grid");
+                recipe.setInput(input);
             }
         }
         if (type == RecipeType.FUEL) {
             recipe.setBurnTime(burnTime);
         } else {
-            if (result == null) throw new IllegalArgumentException("set a result");
+            var result = storage.getItem(RESULT_SLOT);
+            if (ItemUtil.isEmpty(result)) throw new IllegalArgumentException("put what it makes in the result slot");
             recipe.setResult(refOf(result));
             recipe.setAmount(amount);
         }
@@ -411,6 +545,7 @@ public class RecipeEditorMenu extends Menu {
         } else {
             viewer.sendMessage(MM.deserialize("<green>Saved " + id + " to recipes/" + recipe.getFile()));
         }
+        returnItems();
         new RecipeEditorMenu(viewer, recipe).open();
     }
 }
