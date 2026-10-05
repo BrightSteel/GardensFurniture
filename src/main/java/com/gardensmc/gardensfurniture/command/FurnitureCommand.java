@@ -5,6 +5,7 @@ import com.gardensmc.gardensfurniture.dye.DyeColorGroups;
 import com.gardensmc.gardensfurniture.loader.ChunkFurnitureLoader;
 import com.gardensmc.gardensfurniture.menu.FurnitureMenu;
 import com.gardensmc.gardensfurniture.permission.Permissions;
+import com.gardensmc.gardensfurniture.recipe.RecipeManager;
 import com.gardensmc.gardensfurniture.structure.StructureHandler;
 import com.gardensmc.gardensfurniture.util.CommandSenderUtil;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
@@ -42,6 +43,7 @@ public class FurnitureCommand implements TabExecutor {
                 case "INFO" -> executeInfo(commandSender);
                 case "LOAD_SPAWN" -> loadSpawnFurniture(commandSender);
                 case "CLEANUP" -> executeCleanup(commandSender, args);
+                case "RECIPE", "RECIPES" -> RecipeCommand.execute(commandSender, args);
             }
         } else if (commandSender instanceof Player player) {
             new FurnitureMenu(player).open();
@@ -75,6 +77,7 @@ public class FurnitureCommand implements TabExecutor {
             ConfigUtil.loadConfigs();
             GardensFurniture.dyeColorGroups = new DyeColorGroups(ConfigUtil.dyeColors);
             GardensFurniture.itemRegistry.reload();
+            RecipeManager.INSTANCE.reload();
             CommandSenderUtil.sendSuccess(commandSender, "Reloaded Gardens Furniture!");
         }
     }
@@ -238,6 +241,7 @@ public class FurnitureCommand implements TabExecutor {
         if (arguments.length > 0) {
             switch (arguments[0].toUpperCase()) {
                 case "GET" -> suggestions = GardensFurniture.itemRegistry.getItemIdentifiers();
+                case "RECIPE", "RECIPES" -> suggestions = RecipeCommand.tabComplete(arguments);
                 case "CLEANUP" -> suggestions = arguments.length == 2 ? List.of("16", "32", "64") : arguments.length == 3 ? List.of("confirm") : List.of();
             }
         }

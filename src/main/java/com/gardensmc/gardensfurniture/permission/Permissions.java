@@ -11,4 +11,6 @@ public class Permissions {
     public static String CLEANUP = "gardens.furniture.cleanup";
     // /paint opens the dye menu anywhere; everyone else uses a paint bench
     public static String PAINT = "gardens.furniture.paint";
+    // /furniture recipe: the recipe editor, reload and the CustomCrafting import
+    public static String RECIPES = "gardens.furniture.recipes";
 }

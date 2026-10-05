@@ -11,6 +11,8 @@ import com.gardensmc.gardensfurniture.hook.PrismHook;
 import com.gardensmc.gardensfurniture.listener.ListenerHandler;
 import com.gardensmc.gardensfurniture.loader.ChunkFurnitureLoader;
 import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
+import com.gardensmc.gardensfurniture.recipe.CustomFuelHandler;
+import com.gardensmc.gardensfurniture.recipe.RecipeManager;
 import com.gardensmc.gardensfurniture.register.ItemRegistry;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -76,6 +78,8 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
         itemRegistry = new ItemRegistry();
         itemRegistry.assembleItems();
         ChunkFurnitureLoader.INSTANCE.validateMappings();
+        // after the items: recipes are checked against them
+        RecipeManager.INSTANCE.reload();
 
         // register handlers
         CommandHandler.registerCommands();
@@ -100,6 +104,7 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
 
         Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, ChunkFurnitureLoader.INSTANCE::tickChunkFurnitureLoader, 0, 1);
         Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, ChunkFurnitureLoader.INSTANCE::tickChunkStats, 0, 100);
+        Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, CustomFuelHandler.INSTANCE::tick, 0, 1);
 
         hookIntoGriefPrevention();
         hookIntoCosmetics();

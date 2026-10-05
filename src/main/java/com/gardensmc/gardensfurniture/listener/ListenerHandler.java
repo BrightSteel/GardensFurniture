@@ -3,6 +3,9 @@ package com.gardensmc.gardensfurniture.listener;
 import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener;
+import com.gardensmc.gardensfurniture.menu.ChatPrompt;
+import com.gardensmc.gardensfurniture.recipe.CustomFuelHandler;
+import com.gardensmc.gardensfurniture.recipe.RecipeListener;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Listener;
 
@@ -32,6 +35,9 @@ public class ListenerHandler {
                 new VanillaBlockSoundListener(),
                 new AnvilListener(),
                 new CraftListener(),
+                new RecipeListener(),
+                CustomFuelHandler.INSTANCE,
+                ChatPrompt.INSTANCE,
                 new BlockBreakingListener(),
                 new EnderStepListener(),
                 MapleTapHandler.INSTANCE

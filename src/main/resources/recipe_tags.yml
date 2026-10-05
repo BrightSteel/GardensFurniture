@@ -1,0 +1,11 @@
+# Your own item tags for recipes. A recipe uses one as "#gardens:<name>", the same way it uses a
+# vanilla tag like "#minecraft:planks" (any plank) or "#minecraft:logs" (any log).
+#
+# A tag lists vanilla items (minecraft:oak_log), GardensFurniture items (gardens:maple_log) and
+# other tags (#minecraft:logs, #gardens:something_else).
+#
+# Example, then use "#gardens:any_log" in a recipe:
+# any_log:
+#   - "#minecraft:logs"
+#   - gardens:maple_log
+#   - gardens:ebony_log

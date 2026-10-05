@@ -1,0 +1,3 @@
+recipes:
+  disabled_recipes:
+  - customcrafting:gardens/acacia_lantern_craft

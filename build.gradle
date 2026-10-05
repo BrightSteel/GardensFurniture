@@ -55,6 +55,8 @@ dependencies {
     paperweight.paperDevBundle("26.1.2.build.+")
     // loaded at runtime by Paper via plugin.yml libraries, not shaded
     compileOnly("com.fasterxml.jackson.core:jackson-databind:2.20.0")
+    // reads CustomCrafting's .conf recipes for /furniture recipe import; also a plugin.yml library
+    compileOnly("com.typesafe:config:1.4.3")
 
     compileOnly("de.tr7zw:item-nbt-api-plugin:2.15.7")
     compileOnly("com.github.Gecolay.GSit:core:3.1.1")
@@ -83,6 +85,7 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("io.papermc.paper:paper-api:26.1.2.build.+")
     testImplementation("de.tr7zw:item-nbt-api-plugin:2.15.7")
+    testImplementation("com.typesafe:config:1.4.3")
 }
 
 def targetJavaVersion = 25
