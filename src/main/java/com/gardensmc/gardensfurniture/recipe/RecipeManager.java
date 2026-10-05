@@ -198,9 +198,8 @@ public class RecipeManager {
 
     private int register(Collection<GardensRecipe> all) {
         // out with the old
-        for (var key : registeredKeys) {
-            Bukkit.removeRecipe(key, false);
-        }
+        // one by one through Bukkit, every add and remove rebuilds the server's recipes: see ServerRecipes
+        ServerRecipes.remove(registeredKeys);
         registeredKeys.clear();
         bookKeys.clear();
         looseKeys.clear();
@@ -246,16 +245,9 @@ public class RecipeManager {
             }
         }
 
-        for (var recipe : toAdd) {
-            var key = ((Keyed) recipe).getKey();
-            // still there after a plugin reload, when registeredKeys started out empty
-            Bukkit.removeRecipe(key, false);
-            if (Bukkit.addRecipe(recipe, false)) {
-                registeredKeys.add(key);
-                if (key.getKey().startsWith(LOOSE_PREFIX)) looseKeys.add(key);
-            } else {
-                log().warning("Server refused recipe " + key);
-            }
+        for (var key : ServerRecipes.add(toAdd, (key, e) -> log().warning("Server refused recipe %s: %s".formatted(key, e)))) {
+            registeredKeys.add(key);
+            if (key.getKey().startsWith(LOOSE_PREFIX)) looseKeys.add(key);
         }
         for (var compiled : byId.values()) {
             if (!registeredKeys.contains(compiled.bookKey())) continue;
@@ -277,7 +269,6 @@ public class RecipeManager {
         this.customFuels = Map.copyOf(fuelsCustom);
         this.vanillaFuels = Map.copyOf(fuelsVanilla);
 
-        Bukkit.updateRecipes();
         Bukkit.getOnlinePlayers().forEach(this::updateRecipeBook);
         return failed;
     }
