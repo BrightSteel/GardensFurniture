@@ -92,11 +92,24 @@ public class FurnitureCommand implements TabExecutor {
         } else {
             String itemName = arguments[1];
             ItemStack itemStack = GardensFurniture.itemRegistry.buildItem(itemName);
+            int amount = 1;
+            if (arguments.length > 2) {
+                try {
+                    amount = Integer.parseInt(arguments[2]);
+                } catch (NumberFormatException e) {
+                    amount = 0;
+                }
+            }
             if (itemStack == null) {
                 PlayerUtil.sendError(player, "No item named " + itemName);
+            } else if (amount < 1 || amount > 2304) {
+                PlayerUtil.sendError(player, "Amount must be 1-2304 (a full inventory of 64s)");
             } else {
-                player.getInventory().addItem(itemStack);
-                PlayerUtil.sendSuccess(player, "Received " + itemName);
+                itemStack.setAmount(amount);
+                // addItem splits it into stacks the item allows; what doesn't fit lands at your feet
+                player.getInventory().addItem(itemStack).values()
+                        .forEach(leftover -> player.getWorld().dropItemNaturally(player.getLocation(), leftover));
+                PlayerUtil.sendSuccess(player, "Received " + amount + " " + itemName);
             }
         }
     }
@@ -266,7 +279,7 @@ public class FurnitureCommand implements TabExecutor {
         }
         var last = arguments[arguments.length - 1];
         List<String> options = switch (sub) {
-            case "get" -> arguments.length == 2 ? itemIds() : List.of();
+            case "get" -> arguments.length == 2 ? itemIds() : arguments.length == 3 ? List.of("1", "16", "64") : List.of();
             case "give" -> switch (arguments.length) {
                 case 2 -> Bukkit.getOnlinePlayers().stream().map(org.bukkit.entity.Player::getName).toList();
                 case 3 -> itemIds();
