@@ -58,6 +58,10 @@ public class CustomItem implements Comparable<CustomItem> {
     private final List<String> basedOn;
     @Getter
     private final String cosmeticId;
+    /** The EnderWardrobe slot the item is worn in ("backpack", "balloon"), or null when it isn't worn. */
+    @Getter
+    @Nullable
+    private final String wardrobeSlot;
     @Getter
     private final boolean isGenerateModel;
     @Getter
@@ -98,6 +102,7 @@ public class CustomItem implements Comparable<CustomItem> {
         this.template = itemSection.getBoolean("template");
         this.basedOn = itemSection.getStringList("basedOn");
         this.cosmeticId = itemSection.getString("cosmetic_id");
+        this.wardrobeSlot = itemSection.getString("wardrobe_slot");
         this.isGenerateModel = itemSection.getBoolean("generate_model", true);
         this.bedrockItem = itemSection.getBoolean("bedrock");
         var bedrockSection = itemSection.getConfigurationSection("bedrock");

@@ -39,9 +39,6 @@ repositories {
         name "groupez"
         url "https://repo.groupez.dev/releases"
     }
-    maven {
-        url "https://repo.hibiscusmc.com/releases"
-    }
 //    maven {
 //        url "https://repo.nightexpressdev.com/releases"
 //    }
@@ -71,7 +68,6 @@ dependencies {
     // FAWE: keeps store-backed furniture through //copy, //cut, //paste and schematics (hook/WorldEditHook)
     compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core:2.15.0") { transitive = false }
     compileOnly("org.enginehub.lin-bus:lin-bus-tree:0.2.0")
-    compileOnly("com.hibiscusmc:HMCCosmetics:2.8.0-f56d5c90")
     compileOnly("com.github.GriefPrevention:GriefPrevention:16.18.4")
     // Prism (prism-mc.org) rollback/restore integration — custom actions API.
     compileOnly("org.prism_mc.prism:prism-paper-api:4.4")

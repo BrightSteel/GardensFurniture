@@ -16,12 +16,11 @@ commands:
   paint:
     description: Open paint menu
     usage: /<command>
-depend: [GSit, NBTAPI, ProtocolLib, packetevents, HibiscusCommons, Geyser-Spigot]
+depend: [GSit, NBTAPI, ProtocolLib, packetevents, Geyser-Spigot]
 softdepend:
   - packetevents
   - ProtocolLib
   - GriefPrevention
   - Prism
   - FastAsyncWorldEdit
-  - HMCCosmetics
   - ModelEngine

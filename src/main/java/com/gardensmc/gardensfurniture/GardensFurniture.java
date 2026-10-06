@@ -6,7 +6,6 @@ import com.comphenix.protocol.ProtocolManager;
 import com.gardensmc.gardensfurniture.command.CommandHandler;
 import com.gardensmc.gardensfurniture.custom.item.mechanics.AirborneBreakPenaltyHandler;
 import com.gardensmc.gardensfurniture.dye.DyeColorGroups;
-import com.gardensmc.gardensfurniture.hook.HookGardensFurniture;
 import com.gardensmc.gardensfurniture.hook.PrismHook;
 import com.gardensmc.gardensfurniture.hook.WorldEditHook;
 import com.gardensmc.gardensfurniture.listener.ListenerHandler;
@@ -18,9 +17,7 @@ import com.gardensmc.gardensfurniture.register.ItemRegistry;
 import com.gardensmc.gardensfurniture.util.ConfigUtil;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.settings.PacketEventsSettings;
-import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
-import me.lojosho.hibiscuscommons.hooks.Hooks;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -48,7 +45,6 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
 
     public static ProtocolManager protocolManager;
     public static boolean isGriefPreventionHooked;
-    public static boolean isCosmeticsHooked;
 
     @Override
     public void onLoad() {
@@ -93,13 +89,6 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
         MapleTapHandler.INSTANCE.trackLoadedTaps();
         Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, MapleTapHandler.INSTANCE::tick, 0, 20);
 
-        // hook into hmc cosmetics
-        // this is kind of hacky...
-        var hook = new HookGardensFurniture();
-        hook.setDetected(true);
-        hook.setActive(true);
-        Hooks.addHook(hook);
-
         // toggles the airborne block-break-speed buff for items with the disable_airborn_break_penalty mechanic
         Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, AirborneBreakPenaltyHandler.INSTANCE::tick, 0, 1);
 
@@ -108,7 +97,6 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
         Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, CustomFuelHandler.INSTANCE::tick, 0, 1);
 
         hookIntoGriefPrevention();
-        hookIntoCosmetics();
         hookIntoPrism();
         hookIntoWorldEdit();
     }
@@ -230,11 +218,4 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
         }
     }
 
-    private void hookIntoCosmetics() {
-        if (Bukkit.getPluginManager().getPlugin("HMCCosmetics") != null) {
-            isCosmeticsHooked = true;
-            // reload cosmetics now that our items are registered
-            HMCCosmeticsPlugin.setup();
-        }
-    }
 }
