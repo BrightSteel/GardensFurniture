@@ -2,6 +2,8 @@ package com.gardensmc.gardensfurniture.custom.item;
 
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
+import com.gardensmc.gardensfurniture.custom.block.ReplaceInteraction;
+import lombok.Getter;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -21,6 +23,9 @@ public abstract class CustomPlaceableItem extends CustomItem {
     private final List<String> placeTargets;
     private final List<Tag<Material>> placeTags;
     private final List<String> placeDirections;
+    // block.interactions: right-click with an item to swap it for other furniture; see ReplaceInteraction
+    @Getter
+    private final List<ReplaceInteraction> interactions;
 
     public CustomPlaceableItem(String identifier, ConfigurationSection itemSection) {
         super(identifier, itemSection);
@@ -40,6 +45,12 @@ public abstract class CustomPlaceableItem extends CustomItem {
         if (placeDirections.contains("SIDES")) {
             placeDirections.addAll(List.of("NORTH", "SOUTH", "EAST", "WEST"));
         }
+        this.interactions = ReplaceInteraction.parse(blockSection, identifier);
+    }
+
+    /** The first of its interactions that {@code heldItem} sets off, if any. */
+    public java.util.Optional<ReplaceInteraction> getInteraction(ItemStack heldItem) {
+        return interactions.stream().filter(i -> i.matches(heldItem)).findFirst();
     }
 
     // used by GardensCrops (planters, sprinklers): unused here, but part of the API other plugins call

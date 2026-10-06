@@ -3,6 +3,7 @@ package com.gardensmc.gardensfurniture.hook;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.custom.CustomBlockManager;
 import com.gardensmc.gardensfurniture.custom.block.CustomBlock;
+import com.gardensmc.gardensfurniture.custom.block.CustomDisplayBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomSaplingBlock;
 import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
@@ -17,6 +18,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.ItemDisplay;
@@ -71,8 +73,10 @@ import java.util.logging.Level;
  * <p>When an admin runs {@code /pr rollback|restore}, Prism invokes our handler synchronously for
  * the affected furniture activities and we own the world mutation: rebuild or tear down.</p>
  *
- * <p>DISPLAY rebuilds replay {@code placeBlock} with no player, using the display's yaw recorded in
- * the descriptor's facing slot so rotation and barrier vectors match the original.</p>
+ * <p>DISPLAY rebuilds replay {@code placeBlock} with no player, using the display's yaw and mount face
+ * recorded in the descriptor's facing slot so rotation, wall/ceiling mounting and barrier cells match
+ * the original. BLOCK rebuilds pass the recorded facing and multiplier, which placement honours when
+ * no player is placing.</p>
  *
  * <p><b>Needs live-server validation:</b> multi-block waxed doors and barrier-vector furniture, and
  * that Prism's item-action rollback defers entirely to our handler.</p>
@@ -82,7 +86,9 @@ public class PrismHook implements Listener {
     public static final String PLACE_ACTION_KEY = "gardens-furniture-place";
     public static final String BREAK_ACTION_KEY = "gardens-furniture-break";
 
-    private static final String DESCRIPTOR_VERSION = "gf1";
+    // gf2 is plain text (readable in /pr lookup); gf1 records base64'd each field
+    private static final String DESCRIPTOR_VERSION = "gf2";
+    private static final String DESCRIPTOR_VERSION_BASE64 = "gf1";
 
     private enum Kind { BLOCK, DISPLAY, HYBRID }
 
@@ -171,8 +177,10 @@ public class PrismHook implements Listener {
         Block block = baseBlock(display, interaction);
         // Hybrid furniture (sapling) is recorded via the store path; don't double-record here.
         if (FurnitureStoreHandler.INSTANCE.getFurnitureStore(block) != null) return;
-        // display furniture has no facing: store its yaw in that slot so a rebuild faces the same way
-        String descriptor = encode(Kind.DISPLAY, customItem.getIdentifier(), Float.toString(display.getLocation().getYaw()), 0, "");
+        // display furniture has no facing: store its yaw and the face it's mounted on in that slot, so a
+        // rebuild faces and mounts the same way
+        String placement = display.getLocation().getYaw() + ";" + CustomDisplayBlock.mountFace(display).name();
+        String descriptor = encode(Kind.DISPLAY, customItem.getIdentifier(), placement, 0, "");
         record(type, block.getLocation(), display.getItemStack(), descriptor, cause);
     }
 
@@ -266,7 +274,7 @@ public class PrismHook implements Listener {
         try {
             switch (spec.kind) {
                 case BLOCK -> rebuildBlock(block, loc, placeable, spec, item);
-                case DISPLAY -> placeable.placeBlock(null, item, loc, displayOptions(spec), null);
+                case DISPLAY -> rebuildDisplay(loc, placeable, spec, item);
                 case HYBRID -> {
                     // Set the sapling's base block, then let the sapling re-add its store + display model.
                     if (spec.blockData != null && !spec.blockData.isEmpty()) {
@@ -312,16 +320,33 @@ public class PrismHook implements Listener {
         return options;
     }
 
-    private static PlaceOptions displayOptions(Spec spec) {
-        var options = new PlaceOptions().setForce(true);
+    private static void rebuildDisplay(Location loc, CustomPlaceableItem placeable, Spec spec, ItemStack item) {
+        // facing slot: "<display yaw>;<mount face>" (just the yaw in older records)
+        Float yaw = null;
+        BlockFace face = BlockFace.UP;
         if (spec.facing != null) {
+            String[] parts = spec.facing.split(";", 2);
             try {
-                options.setYaw(Float.parseFloat(spec.facing));
-            } catch (NumberFormatException ignored) {
+                yaw = Float.parseFloat(parts[0]);
+                if (parts.length > 1) face = BlockFace.valueOf(parts[1]);
+            } catch (IllegalArgumentException ignored) {
                 // recorded before yaw was stored - keep the default rotation
             }
         }
-        return options;
+        var options = new PlaceOptions().setForce(true).setBlockFace(face);
+        if (yaw != null) {
+            // placement turns face_player furniture back towards the given (player) yaw, so hand it the
+            // opposite of the display's
+            options.setYaw(yaw + 180);
+        }
+        if (!placeable.placeBlock(null, item, loc, options, null) || yaw == null) return;
+        // rotatable furniture may have been turned after placement, possibly by 45 degrees
+        if (placeable.getCustomBlock() instanceof CustomDisplayBlock displayBlock) {
+            var display = CustomBlockManager.getDisplayEntity(loc, true);
+            if (display != null) {
+                displayBlock.turnTo(display, yaw);
+            }
+        }
     }
 
     private static void removeLight(Location loc, CustomItem customItem) {
@@ -377,36 +402,40 @@ public class PrismHook implements Listener {
         return null;
     }
 
-    // Descriptor codec: "gf1|<kind>|b64(id)|b64(facing)|<multiplier>|b64(blockdata)".
+    // Descriptor codec: "gf2|<kind>|<id>|<facing>|<multiplier>|<blockdata>" - no field contains a '|'.
+    // Prism keeps 255 characters, so plain text also leaves more room than gf1's base64 did.
     private static String encode(Kind kind, String identifier, String facing, int multiplier, String blockData) {
         return String.join("|",
                 DESCRIPTOR_VERSION,
                 kind.name(),
-                b64(identifier),
-                b64(facing),
+                identifier,
+                facing == null ? "" : facing,
                 Integer.toString(multiplier),
-                b64(blockData));
+                blockData == null ? "" : blockData);
     }
 
     private static Spec decode(String descriptor) {
         if (descriptor == null) return null;
         String[] p = descriptor.split("\\|", -1);
-        if (p.length != 6 || !DESCRIPTOR_VERSION.equals(p[0])) return null;
+        if (p.length != 6) return null;
+        boolean base64 = DESCRIPTOR_VERSION_BASE64.equals(p[0]);
+        if (!base64 && !DESCRIPTOR_VERSION.equals(p[0])) return null;
         try {
             var spec = new Spec();
             spec.kind = Kind.valueOf(p[1]);
-            spec.identifier = unb64(p[2]);
-            spec.facing = unb64(p[3]);
+            spec.identifier = field(p[2], base64);
+            spec.facing = field(p[3], base64);
             spec.multiplier = Integer.parseInt(p[4]);
-            spec.blockData = unb64(p[5]);
-            return spec;
+            spec.blockData = field(p[5], base64);
+            return spec.identifier == null ? null : spec;
         } catch (Exception ex) {
             return null;
         }
     }
 
-    private static String b64(String s) {
-        return s == null ? "" : Base64.getEncoder().encodeToString(s.getBytes(StandardCharsets.UTF_8));
+    private static String field(String value, boolean base64) {
+        if (base64) return unb64(value);
+        return value.isEmpty() ? null : value;
     }
 
     private static String unb64(String s) {

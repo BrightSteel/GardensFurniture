@@ -211,6 +211,19 @@ public class PlayerListener implements Listener {
                     return;
                 }
 
+                // block.interactions (carving a pumpkin with shears, lighting it): once, on the main hand, and
+                // instead of the held item's own use - flint and steel would otherwise light a fire
+                if (customItem instanceof CustomPlaceableItem placeable && !placeable.getInteractions().isEmpty()) {
+                    var mainHand = e.getPlayer().getInventory().getItemInMainHand();
+                    var interaction = placeable.getInteraction(mainHand);
+                    if (interaction.isPresent()) {
+                        if (e.getHand() == EquipmentSlot.HAND) {
+                            CustomBlockManager.replaceCustomBlock(e.getPlayer(), mainHand, e.getClickedBlock(), e.getBlockFace(), placeable, interaction.get());
+                        }
+                        return;
+                    }
+                }
+
                 // if player is holding an item with an action, lets place it
                 if (e.getHand() != null) {
                     ItemStack stack = e.getPlayer().getInventory().getItem(e.getHand());

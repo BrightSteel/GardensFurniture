@@ -249,6 +249,11 @@ public class BlockPacketListener {
             if (store != null && store.getFacing() != null) {
                 return (CustomNoteBlock) customDirectionalItem.getCustomBlock(BlockFace.valueOf(store.getFacing()));
             }
+        } else if (customPlaceableItem instanceof CustomFacingItem customFacingItem) {
+            var store = getStoreFromPos(world, x, y, z);
+            if (store != null && store.getFacing() != null) {
+                return (CustomNoteBlock) customFacingItem.getCustomBlock(store.getFacing());
+            }
         }
         return (CustomNoteBlock) customPlaceableItem.getCustomBlock();
     }

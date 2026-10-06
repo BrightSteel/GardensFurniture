@@ -8,6 +8,7 @@ import de.tr7zw.nbtapi.NBTChunk;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -80,6 +81,12 @@ public class FurnitureCache {
             return;
         }
         furnitureCache.refresh(chunkKey);
+    }
+
+    // the stores of a chunk if it's cached, without ever loading it (safe from any thread)
+    @Nullable
+    public Map<BlockKey, FurnitureStore> getCachedChunkFurniture(ChunkKey chunkKey) {
+        return furnitureCache.getIfPresent(chunkKey);
     }
 
     // keep a cached chunk in step with a single store write, without re-reading the whole chunk PDC

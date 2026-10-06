@@ -8,6 +8,7 @@ import com.gardensmc.gardensfurniture.custom.item.mechanics.AirborneBreakPenalty
 import com.gardensmc.gardensfurniture.dye.DyeColorGroups;
 import com.gardensmc.gardensfurniture.hook.HookGardensFurniture;
 import com.gardensmc.gardensfurniture.hook.PrismHook;
+import com.gardensmc.gardensfurniture.hook.WorldEditHook;
 import com.gardensmc.gardensfurniture.listener.ListenerHandler;
 import com.gardensmc.gardensfurniture.loader.ChunkFurnitureLoader;
 import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
@@ -109,6 +110,17 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
         hookIntoGriefPrevention();
         hookIntoCosmetics();
         hookIntoPrism();
+        hookIntoWorldEdit();
+    }
+
+    private void hookIntoWorldEdit() {
+        // Guard here so the FAWE classes the hook references never load when FAWE is absent. The hook is
+        // built on FAWE's API (queues, chunk processors), so plain WorldEdit isn't covered.
+        if (getServer().getPluginManager().getPlugin("FastAsyncWorldEdit") == null) {
+            getLogger().info("FastAsyncWorldEdit not found - furniture blocks won't survive WorldEdit copy/paste.");
+            return;
+        }
+        new WorldEditHook().register();
     }
 
     private void hookIntoPrism() {

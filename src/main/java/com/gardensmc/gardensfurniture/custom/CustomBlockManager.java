@@ -5,12 +5,15 @@ import com.gardensmc.gardensfurniture.custom.block.Barriers;
 import com.gardensmc.gardensfurniture.custom.block.CustomDisplayBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomTripwireBlock;
 import com.gardensmc.gardensfurniture.custom.block.CustomWaxedBlock;
+import com.gardensmc.gardensfurniture.custom.block.ReplaceInteraction;
 import com.gardensmc.gardensfurniture.custom.item.*;
+import com.gardensmc.gardensfurniture.custom.type.Facing;
 import com.gardensmc.gardensfurniture.events.Furniture;
 import com.gardensmc.gardensfurniture.events.FurnitureBreakEvent;
 import com.gardensmc.gardensfurniture.events.FurnitureInteractEvent;
 import com.gardensmc.gardensfurniture.itementity.DisplayItemEntity;
 import com.gardensmc.gardensfurniture.itementity.ItemEntity;
+import com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener;
 import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
@@ -192,19 +195,20 @@ public class CustomBlockManager {
         // Expose the breaking player as the furniture lifecycle cause (for Prism attribution).
         FurnitureStoreHandler.currentActor.set(player);
         try {
-            breakFurnitureInternal(player, location, isBreakingSystem);
+            breakFurnitureInternal(player, location, isBreakingSystem, true);
         } finally {
             FurnitureStoreHandler.currentActor.remove();
         }
     }
 
-    private static void breakFurnitureInternal(Player player, Location location, boolean isBreakingSystem) {
+    // whether the furniture was removed; drop: whether a survival player gets its item
+    private static boolean breakFurnitureInternal(Player player, Location location, boolean isBreakingSystem, boolean drop) {
         ItemEntity itemEntity = getFurnitureEntity(location);
-        if (itemEntity == null) return;
+        if (itemEntity == null) return false;
 
         CustomItem customItem = GardensFurniture.itemRegistry.getCustomItem(itemEntity.getItem());
         if (!(customItem instanceof CustomPlaceableItem placeable)) {
-            return; // not our furniture - never remove another plugin's entity
+            return false; // not our furniture - never remove another plugin's entity
         }
         // TODO temp disabled since breaking system is disabled
 //        if (player != null && player.getGameMode() != GameMode.CREATIVE && !isBreakingSystem && location.getBlock().getType() == Material.BARRIER && placeable != null && placeable.getCustomBlock().getMaterialTraits() != null) {
@@ -213,7 +217,17 @@ public class CustomBlockManager {
         FurnitureBreakEvent e = new FurnitureBreakEvent(player, (CustomPlaceableItem) customItem, itemEntity);
         Bukkit.getPluginManager().callEvent(e);
         if (e.isCancelled()) {
-            return;
+            return false;
+        }
+
+        // its break sound (sounds / material_traits), looked up while the hitbox is still there; not for
+        // swaps (carving) or removals nobody broke (rollbacks, the destroy stick)
+        if (drop && player != null) {
+            var sound = VanillaBlockSoundListener.getSoundToPlay(location.getBlock(), "break");
+            if (sound != null) {
+                location.getWorld().playSound(location.toBlockLocation().add(0.5, 0.5, 0.5), sound, SoundCategory.BLOCKS,
+                        VanillaBlockSoundListener.VANILLA_BREAK_VOLUME, VanillaBlockSoundListener.VANILLA_BREAK_PITCH);
+            }
         }
 
         // remove furniture entities / hitbox
@@ -236,9 +250,10 @@ public class CustomBlockManager {
         }
 
         ItemStack itemStack = getDrop(itemEntity, placeable);
-        if (player != null && player.getGameMode() != GameMode.CREATIVE && itemStack != null) {
+        if (drop && player != null && player.getGameMode() != GameMode.CREATIVE && itemStack != null) {
             location.getWorld().dropItemNaturally(location.add(0.5, 0.1, 0.5), itemStack);
         }
+        return true;
     }
 
     @Nullable
@@ -298,6 +313,10 @@ public class CustomBlockManager {
 
     public static boolean isStoreBacked(Material material) {
         return STORE_BACKED_TYPES.contains(material);
+    }
+
+    public static Set<Material> storeBackedTypes() {
+        return STORE_BACKED_TYPES;
     }
 
     @Nullable
@@ -366,6 +385,11 @@ public class CustomBlockManager {
                     && displayBlock.rotate((ItemDisplay) itemEntity.getEntity(), player)) {
                 location.getWorld().playSound(location, Sound.BLOCK_WOOD_HIT, 0.6f, 1.2f);
             }
+        } else if (customBlockItem.getCustomBlock() instanceof CustomDisplayBlock displayBlock
+                && customBlockItem.getInteraction(heldItem).isPresent()) {
+            // once, on the main hand, like light switches
+            if (hand != EquipmentSlot.HAND || !canBuild) return;
+            replaceFurniture(player, heldItem, (ItemDisplay) itemEntity.getEntity(), customBlockItem, displayBlock, customBlockItem.getInteraction(heldItem).get());
         } else if (heldItem.getType().toString().toUpperCase().endsWith("DYE") && customItem.isDyeable() && itemEntity.getItem().getItemMeta() instanceof LeatherArmorMeta leatherMeta) {
             if (!canBuild) return;
             leatherMeta.setColor(getColorFromDye(heldItem.getType()));
@@ -376,7 +400,23 @@ public class CustomBlockManager {
         } else if (customBlockItem.getCustomBlock() instanceof CustomDisplayBlock displayBlock && displayBlock.isLightToggleable()) {
             // interact fires once per hand, only toggle on the main hand
             if (hand == EquipmentSlot.HAND) {
-                displayBlock.toggleLight((ItemDisplay) itemEntity.getEntity());
+                var display = (ItemDisplay) itemEntity.getEntity();
+                var needed = displayBlock.getToggleOnItem();
+                if (needed != null && !displayBlock.isLightOn(display)) {
+                    if (heldItem.getType() != needed) return;
+                    if (player.getGameMode() != GameMode.CREATIVE) {
+                        // flint and steel wears down, a fire charge (or anything else) is used up
+                        if (needed.getMaxDurability() > 0) {
+                            player.damageItemStack(EquipmentSlot.HAND, 1);
+                        } else {
+                            heldItem.setAmount(heldItem.getAmount() - 1);
+                        }
+                    }
+                    if (needed == Material.FLINT_AND_STEEL) {
+                        location.getWorld().playSound(location, Sound.ITEM_FLINTANDSTEEL_USE, SoundCategory.BLOCKS, 1f, 1f);
+                    }
+                }
+                displayBlock.toggleLight(display);
             }
         } else if (customBlockItem.getCustomBlock().isSeated()) {
             double offset = customBlockItem.getCustomBlock().getSeatOffset();
@@ -397,6 +437,144 @@ public class CustomBlockManager {
             } else {
                 player.getInventory().setItem(hand, mapleSyrup);
             }
+        }
+    }
+
+    /**
+     * Swaps placed furniture for a piece picked by {@code interaction}, in the same spot, facing and mounted
+     * the same way, keeping its dye colour and whether its light was on. Checks the new piece fits (free,
+     * buildable, nobody standing there) before taking the old one away, so nothing is left half done.
+     */
+    private static void replaceFurniture(Player player, ItemStack heldItem, ItemDisplay display, CustomPlaceableItem current,
+                                         CustomDisplayBlock currentBlock, ReplaceInteraction interaction) {
+        var targetId = interaction.pick(current.getIdentifier());
+        if (targetId == null) return;
+        if (!(GardensFurniture.itemRegistry.getItem(targetId) instanceof CustomPlaceableItem target)
+                || !(target.getCustomBlock() instanceof CustomDisplayBlock targetBlock)) {
+            GardensFurniture.plugin.getLogger().warning(current.getIdentifier() + ": interaction replace_with '" + targetId + "' isn't display furniture");
+            return;
+        }
+        // center_left moves the display off the block it was placed in, so it can't be put back from it
+        if (currentBlock.isCenterLeft() || targetBlock.isCenterLeft()) return;
+
+        var anchor = display.getLocation().clone().subtract(0, 0.5, 0).toBlockLocation();
+        float yaw = display.getYaw();
+        var face = CustomDisplayBlock.mountFace(display);
+        if (interaction.faceClicked() && (face == BlockFace.UP || face == BlockFace.DOWN)) {
+            // a display facing a way shows its front on that side; the top or bottom keeps the way it faces
+            var side = clickedSide(player, anchor);
+            if (side != null) yaw = side.getYaw();
+        }
+        List<org.bukkit.util.Vector> oldCells = new ArrayList<>(Barriers.read(display));
+        oldCells.add(new org.bukkit.util.Vector()); // its own cell
+        for (var cell : targetBlock.barrierCells(yaw + 180, face)) {
+            if (oldCells.contains(cell)) continue;
+            var at = anchor.clone().add(cell);
+            if (!isPlaceableMaterial(at.getBlock().getType()) || !ProtectionUtil.canBuild(at, player) || entityBlocking(at)) return;
+        }
+
+        var item = GardensFurniture.itemRegistry.buildItem(targetId);
+        if (item == null) return;
+        if (display.getItemStack().getItemMeta() instanceof LeatherArmorMeta oldMeta && target.isDyeable()
+                && item.getItemMeta() instanceof LeatherArmorMeta newMeta) {
+            newMeta.setColor(oldMeta.getColor());
+            item.setItemMeta(newMeta);
+        }
+        boolean wasLit = currentBlock.isLightToggleable() && currentBlock.isLightOn(display);
+        var oldItem = display.getItemStack().clone();
+
+        FurnitureStoreHandler.currentActor.set(player);
+        try {
+            if (!breakFurnitureInternal(player, anchor.clone(), false, false)) return;
+            var placed = targetBlock.placeFacing(target, item, player, yaw, anchor, face);
+            if (placed == null) {
+                // the fit was checked above, so this shouldn't happen - put the old piece back rather than lose it
+                GardensFurniture.plugin.getLogger().warning("Couldn't swap " + current.getIdentifier() + " for " + targetId + " at " + anchor.toVector() + ", restoring it");
+                var restored = currentBlock.placeFacing(current, oldItem, null, yaw, anchor, face);
+                if (restored != null && wasLit) currentBlock.toggleLight(restored);
+                return;
+            }
+            if (wasLit && targetBlock.isLightToggleable()) {
+                targetBlock.toggleLight(placed);
+            }
+        } finally {
+            FurnitureStoreHandler.currentActor.remove();
+        }
+        afterReplace(player, heldItem, interaction, anchor, null);
+    }
+
+    /**
+     * The block-backed side of {@link #replaceFurniture}: swaps the custom block (a note block, say) at
+     * {@code block} for a piece picked by {@code interaction}, keeping its facing - or, with face_clicked,
+     * facing {@code clickedFace}. Same cell, so nothing else has to fit.
+     */
+    public static void replaceCustomBlock(Player player, ItemStack heldItem, Block block, BlockFace clickedFace,
+                                          CustomPlaceableItem current, ReplaceInteraction interaction) {
+        var targetId = interaction.pick(current.getIdentifier());
+        if (targetId == null) return;
+        if (!(GardensFurniture.itemRegistry.getItem(targetId) instanceof CustomPlaceableItem target)
+                || target.getCustomBlock() instanceof CustomDisplayBlock) {
+            GardensFurniture.plugin.getLogger().warning(current.getIdentifier() + ": interaction replace_with '" + targetId + "' isn't block furniture");
+            return;
+        }
+        var item = GardensFurniture.itemRegistry.buildItem(targetId);
+        if (item == null) return;
+        var store = FurnitureStoreHandler.INSTANCE.getFurnitureStore(block);
+        String facing = store == null ? null : store.getFacing();
+        // the side that was clicked; the top or bottom keeps the way it faces
+        if (interaction.faceClicked() && clickedFace != BlockFace.UP && clickedFace != BlockFace.DOWN) {
+            facing = clickedFace.name();
+        }
+        var options = new PlaceOptions().setForce(true);
+        if (facing != null) options.setFacing(facing);
+
+        FurnitureStoreHandler.currentActor.set(player);
+        try {
+            removeCustomBlock(block);
+            if (!target.placeBlock(null, item, block.getLocation(), options, null)) {
+                GardensFurniture.plugin.getLogger().warning("Couldn't swap " + current.getIdentifier() + " for " + targetId + " at " + block.getLocation().toVector());
+                return;
+            }
+        } finally {
+            FurnitureStoreHandler.currentActor.remove();
+        }
+        afterReplace(player, heldItem, interaction, block.getLocation(), clickedFace);
+    }
+
+    // wear down or use up what was held (not in creative), play the interaction's sound and drop its drop
+    // (out of the clicked side, like vanilla's pumpkin seeds)
+    private static void afterReplace(Player player, ItemStack heldItem, ReplaceInteraction interaction, Location at, @Nullable BlockFace clickedFace) {
+        var center = at.clone().toBlockLocation().add(0.5, 0.5, 0.5);
+        if (player.getGameMode() != GameMode.CREATIVE) {
+            if (interaction.damageHeld() > 0) {
+                player.damageItemStack(EquipmentSlot.HAND, interaction.damageHeld());
+            }
+            if (interaction.consume() > 0) {
+                heldItem.setAmount(heldItem.getAmount() - interaction.consume());
+            }
+        }
+        if (interaction.sound() != null) {
+            at.getWorld().playSound(center, interaction.sound(), SoundCategory.BLOCKS, 1f, interaction.rollPitch());
+        }
+        var drop = interaction.buildDrop();
+        if (drop != null) {
+            var face = clickedFace != null && clickedFace.isCartesian() ? clickedFace : BlockFace.UP;
+            var from = center.clone().add(face.getDirection().multiply(0.65));
+            var dropped = at.getWorld().dropItem(from, drop);
+            dropped.setVelocity(face.getDirection().multiply(0.05).add(new org.bukkit.util.Vector(0, 0.05, 0)));
+        }
+    }
+
+    // the side of the block at anchor the player is looking at; null for the top or bottom
+    @Nullable
+    private static Facing clickedSide(Player player, Location anchor) {
+        var eye = player.getEyeLocation();
+        var hit = org.bukkit.util.BoundingBox.of(anchor.getBlock()).rayTrace(eye.toVector(), eye.getDirection(), 8);
+        if (hit == null || hit.getHitBlockFace() == null) return null;
+        try {
+            return Facing.fromBlockFace(hit.getHitBlockFace());
+        } catch (IllegalArgumentException ignored) {
+            return null; // top or bottom
         }
     }
 

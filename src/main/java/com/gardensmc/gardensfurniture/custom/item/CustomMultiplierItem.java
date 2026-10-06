@@ -37,7 +37,10 @@ public class CustomMultiplierItem extends CustomPlaceableItem {
             return false;
         }
         // only supports leaf / trip wire blocks right now
-        var multiplier = getBlockMultiplier(clickedBlock, player);
+        // no player and a recorded multiplier: a rollback rebuilding it as it was
+        var multiplier = player == null && placeOptions.getMultiplier() > 0
+                ? Math.min(placeOptions.getMultiplier(), blocks.size())
+                : getBlockMultiplier(clickedBlock, player);
         if (multiplier == -1) {
             return false;
         }

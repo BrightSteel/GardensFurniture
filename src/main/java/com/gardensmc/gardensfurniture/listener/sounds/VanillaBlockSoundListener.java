@@ -60,7 +60,8 @@ public class VanillaBlockSoundListener implements Listener {
     public static String getSoundToPlay(Block block, String suffix) {
         var customItem = CustomBlockManager.getCustomItemFromBlock(block);
         if (customItem instanceof CustomPlaceableItem placeable) {
-            var materialTraits = placeable.getCustomBlock().getMaterialTraits();
+            var customBlock = placeable.getCustomBlock();
+            var materialTraits = customBlock.getSoundMaterial() != null ? customBlock.getSoundMaterial() : customBlock.getMaterialTraits();
             if (materialTraits != null) {
                 var soundGroup = materialTraits.createBlockData().getSoundGroup();
                 var soundOverride = getSoundOverride(soundGroup, suffix);
@@ -94,6 +95,9 @@ public class VanillaBlockSoundListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onBlockBreak(BlockBreakEvent e) {
         var block = e.getBlock();
+        // barriers are furniture hitboxes: the furniture is gone by now (left-clicking breaks it first) and
+        // played its own sound, so this would only add the barrier's stone one
+        if (block.getType() == Material.BARRIER) return;
         var sound = getSoundToPlay(block, "break");
         if (sound != null) {
             block.getWorld().playSound(block.getLocation(), sound, SoundCategory.BLOCKS, VANILLA_BREAK_VOLUME, VANILLA_BREAK_PITCH);

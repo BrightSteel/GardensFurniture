@@ -32,7 +32,10 @@ public class CustomFacingItem extends CustomPlaceableItem {
     @Override
     public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions, Block clickedBlock) {
         if (!super.placeBlock(player, heldItem, location, placeOptions, clickedBlock)) return false;
-        BlockFace facing = getFaceForPlacement(player, location);
+        // no player and a recorded facing: a rollback rebuilding it as it was
+        BlockFace facing = player == null && placeOptions.getFacing() != null
+                ? BlockFace.valueOf(placeOptions.getFacing())
+                : getFaceForPlacement(player, location);
        return getCustomBlock(facing.name()).placeBlock(
                player,
                heldItem,

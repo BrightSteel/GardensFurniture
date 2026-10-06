@@ -34,6 +34,10 @@ public abstract class CustomBlock {
     private final String drop_override;
     @Getter
     private final Material materialTraits;
+    // sounds: the vanilla block whose sounds it makes, without material_traits' break speed (which turns
+    // barrier furniture's insta-break into a timed one). Falls back to material_traits, then the hitbox block
+    @Getter
+    private final Material soundMaterial;
     @Getter
     private final BedrockBlock bedrock;
     @Getter
@@ -48,6 +52,8 @@ public abstract class CustomBlock {
         this.drop_override = blockSection.getString("drop_override");
         var materialTraitsStr = blockSection.getString("material_traits");
         this.materialTraits = materialTraitsStr == null ? null : Material.valueOf(materialTraitsStr.toUpperCase());
+        var soundsStr = blockSection.getString("sounds");
+        this.soundMaterial = soundsStr == null ? null : Material.valueOf(soundsStr.toUpperCase());
         var bedrockSection = blockSection.getConfigurationSection("bedrock");
         this.bedrock = bedrockSection == null ? null : new BedrockBlock(bedrockSection, identifier);
         this.blockId = identifier;

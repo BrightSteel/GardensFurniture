@@ -22,5 +22,6 @@ softdepend:
   - ProtocolLib
   - GriefPrevention
   - Prism
+  - FastAsyncWorldEdit
   - HMCCosmetics
   - ModelEngine

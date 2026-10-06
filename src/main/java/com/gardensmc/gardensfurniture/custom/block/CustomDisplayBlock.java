@@ -52,6 +52,11 @@ public class CustomDisplayBlock extends CustomBlock {
     private final boolean lightToggleable;
     @Getter
     private String litModel;
+    // toggle_on_item: what has to be held to switch the light on (flint and steel lights jack o'lanterns);
+    // null when anything will do. Switching off never needs it
+    @Getter
+    @Nullable
+    private final Material toggleOnItem;
     // sneak + right-click with an empty hand turns it by rotationStep degrees (display_data: rotatable,
     // rotation_step 90 or 45); see rotate
     @Getter
@@ -63,6 +68,8 @@ public class CustomDisplayBlock extends CustomBlock {
     private ItemDisplay.ItemDisplayTransform displayTransform = ItemDisplay.ItemDisplayTransform.NONE;
 
     public static final String LIGHT_ON_KEY = "FurnitureLightOn";
+    // the block face it was placed against, so a rollback can mount it the same way
+    public static final String MOUNT_FACE_KEY = "FurnitureMountFace";
 
     public CustomDisplayBlock(ConfigurationSection blockSection, String identifier, String blockId) {
         super(blockSection, blockId);
@@ -72,6 +79,11 @@ public class CustomDisplayBlock extends CustomBlock {
             // brightens the model, so on its own it leaves nothing to switch
             GardensFurniture.plugin.getLogger().warning(("'%s' is toggleable but has no block light - set block.light "
                     + "(display_data.light only sets model brightness)").formatted(identifier));
+        }
+        var toggleOnItemName = blockSection.getString("toggle_on_item");
+        this.toggleOnItem = toggleOnItemName == null ? null : Material.matchMaterial(toggleOnItemName);
+        if (toggleOnItemName != null && toggleOnItem == null) {
+            GardensFurniture.plugin.getLogger().warning(identifier + ": unknown toggle_on_item " + toggleOnItemName + ", anything will switch it on");
         }
         this.itemIdentifier = identifier;
         ConfigurationSection displaySection = blockSection.getConfigurationSection("display_data");
@@ -178,6 +190,70 @@ public class CustomDisplayBlock extends CustomBlock {
         }
         display.setRotation(newYaw, display.getPitch());
         return true;
+    }
+
+    /** The face it was placed against: saved since placement, else read off its pitch (walls) or the floor. */
+    public static BlockFace mountFace(ItemDisplay display) {
+        String saved = NBT.getPersistentData(display, nbt -> nbt.getString(MOUNT_FACE_KEY));
+        if (saved != null && !saved.isEmpty()) {
+            try {
+                return BlockFace.valueOf(saved);
+            } catch (IllegalArgumentException ignored) {
+                // fall through
+            }
+        }
+        if (display.getPitch() == -90) {
+            // wall mounts face out from the wall: the inverse of Rotation.fromBlockFace
+            return switch (Facing.fromYaw(display.getYaw())) {
+                case NORTH -> BlockFace.SOUTH;
+                case SOUTH -> BlockFace.NORTH;
+                case EAST -> BlockFace.WEST;
+                case WEST -> BlockFace.EAST;
+            };
+        }
+        return BlockFace.UP;
+    }
+
+    /** Turns rotatable furniture step by step until it faces {@code yaw}, barrier cells with it. */
+    public void turnTo(ItemDisplay display, float yaw) {
+        if (!rotatable) return;
+        for (int step = 0; step < 360 / rotationStep; step++) {
+            if (Math.abs(Location.normalizeYaw(display.getYaw() - yaw)) < 1) return;
+            if (!rotate(display, null)) return;
+        }
+    }
+
+    /**
+     * The barrier cells this furniture takes when placed facing {@code yaw} (a placing player's yaw)
+     * against {@code blockFace}, relative to the block it's placed in. Empty for interaction hitboxes.
+     */
+    public List<Vector> barrierCells(float yaw, BlockFace blockFace) {
+        if (hitbox != Hitbox.BARRIER) return Collections.emptyList();
+        if (barriers.isEmpty()) return List.of(new Vector());
+        var rotation = facePlayer ? Rotation.fromPlayerFacing(yaw) : Rotation.fromBlockFace(blockFace);
+        return barriers.stream().map(v -> Barriers.rotate(v, rotation)).toList();
+    }
+
+    public boolean isCenterLeft() {
+        return centerLeft;
+    }
+
+    /**
+     * Places this furniture in {@code location} facing the way a display at {@code displayYaw} does (turned
+     * all the way for rotatable pieces), mounted against {@code blockFace}. Unlike player placement it
+     * doesn't play a sound or check the clicked face. The new display, or null if it didn't fit.
+     */
+    @Nullable
+    public ItemDisplay placeFacing(CustomPlaceableItem customItem, ItemStack item, @Nullable Player player, float displayYaw, Location location, BlockFace blockFace) {
+        // placement turns face_player furniture back towards the given (player) yaw, so hand it the opposite
+        if (!placeDisplay(customItem, getItemToDisplay(item), player, displayYaw + 180, location, blockFace)) {
+            return null;
+        }
+        var display = CustomBlockManager.getDisplayEntity(location, true);
+        if (display != null) {
+            turnTo(display, displayYaw);
+        }
+        return display;
     }
 
     @Override
@@ -340,6 +416,9 @@ public class CustomDisplayBlock extends CustomBlock {
 
         // hitbox data
         Barriers.write(display, barrierVectors);
+        if (blockFace != null) {
+            NBT.modifyPersistentData(display, nbt -> { nbt.setString(MOUNT_FACE_KEY, blockFace.name()); });
+        }
 
         spawnHitbox(locationOffset, barrierVectors);
         if (!lightToggleable) {

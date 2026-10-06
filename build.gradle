@@ -25,6 +25,10 @@ repositories {
         url = "https://jitpack.io/"
     }
     maven {
+        // lin-bus (FAWE's NBT library)
+        url = "https://maven.enginehub.org/repo/"
+    }
+    maven {
         url = "https://repo.dmulloy2.net/repository/public/"
     }
     maven {
@@ -64,6 +68,9 @@ dependencies {
      implementation("de.themoep:inventorygui:1.6.4-SNAPSHOT")
     compileOnly("com.github.retrooper:packetevents-spigot:2.12.2")
     compileOnly 'com.ticxo.modelengine:ModelEngine:R4.0.7'
+    // FAWE: keeps store-backed furniture through //copy, //cut, //paste and schematics (hook/WorldEditHook)
+    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core:2.15.0") { transitive = false }
+    compileOnly("org.enginehub.lin-bus:lin-bus-tree:0.2.0")
     compileOnly("com.hibiscusmc:HMCCosmetics:2.8.0-f56d5c90")
     compileOnly("com.github.GriefPrevention:GriefPrevention:16.18.4")
     // Prism (prism-mc.org) rollback/restore integration — custom actions API.
