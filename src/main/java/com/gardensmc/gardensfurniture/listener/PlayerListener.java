@@ -11,6 +11,7 @@ import com.gardensmc.gardensfurniture.events.CustomBlockInteractEvent;
 import com.gardensmc.gardensfurniture.menu.DyeMenu;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import com.gardensmc.gardensfurniture.structure.StructureHandler;
+import com.gardensmc.gardensfurniture.util.CustomDropUtil;
 import com.gardensmc.gardensfurniture.util.ProbabilityUtil;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import com.gardensmc.gardensfurniture.util.SpecialItems;
@@ -336,7 +337,7 @@ public class PlayerListener implements Listener {
         if (plantedHeldItem == null) return;
 
         plantedItem.remove();
-        e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), plantedHeldItem);
+        CustomDropUtil.dropFor(e.getPlayer(), e.getBlock().getLocation(), plantedHeldItem);
     }
 
     @EventHandler(ignoreCancelled = true)

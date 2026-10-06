@@ -32,7 +32,7 @@ public class LeafListener implements Listener {
             if (!(customItem instanceof CustomPlaceableItem placeable)) return;
             if (!preventDecay(leafBlock, leaf)) {
                 CustomBlockManager.removeCustomBlock(leafBlock);
-                Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> CustomDropUtil.leafDrop(leafBlock.getLocation().add(0.5, 0.1, 0.5), (CustomLeavesBlock) placeable.getCustomBlock()), 1);
+                Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> CustomDropUtil.leafDrop(null, leafBlock.getLocation().add(0.5, 0.1, 0.5), (CustomLeavesBlock) placeable.getCustomBlock()), 1);
             }
             e.setCancelled(true);
         }

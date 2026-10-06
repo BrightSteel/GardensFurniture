@@ -16,6 +16,7 @@ import com.gardensmc.gardensfurniture.itementity.ItemEntity;
 import com.gardensmc.gardensfurniture.listener.sounds.VanillaBlockSoundListener;
 import com.gardensmc.gardensfurniture.mapletap.MapleTapHandler;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
+import com.gardensmc.gardensfurniture.util.CustomDropUtil;
 import com.gardensmc.gardensfurniture.util.ProtectionUtil;
 import com.gardensmc.gardensfurniture.util.SpecialItems;
 import de.tr7zw.nbtapi.NBT;
@@ -250,8 +251,8 @@ public class CustomBlockManager {
         }
 
         ItemStack itemStack = getDrop(itemEntity, placeable);
-        if (drop && player != null && player.getGameMode() != GameMode.CREATIVE && itemStack != null) {
-            location.getWorld().dropItemNaturally(location.add(0.5, 0.1, 0.5), itemStack);
+        if (drop && player != null && player.getGameMode() != GameMode.CREATIVE) {
+            CustomDropUtil.dropFor(player, location.add(0.5, 0.1, 0.5), itemStack);
         }
         return true;
     }

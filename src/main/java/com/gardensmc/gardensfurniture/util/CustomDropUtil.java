@@ -8,6 +8,7 @@ import com.gardensmc.gardensfurniture.custom.item.CustomItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomMultiplierItem;
 import com.gardensmc.gardensfurniture.custom.item.CustomPlaceableItem;
 import com.gardensmc.gardensfurniture.events.CustomBlockBreakEvent;
+import com.gardensmc.gardensfurniture.events.CustomDropItemEvent;
 import com.gardensmc.gardensfurniture.store.FurnitureStoreHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -17,8 +18,13 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.Leaves;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class CustomDropUtil {
 
@@ -35,9 +41,7 @@ public class CustomDropUtil {
                 // drop item
                 ItemStack drop = GardensFurniture.itemRegistry.buildItem(tripItem);
                 bottom.setType(Material.AIR);
-                if (drop != null) {
-                    e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), drop);
-                }
+                dropFor(e.getPlayer(), e.getBlock().getLocation(), drop);
                 // remove bottom from store
                 FurnitureStoreHandler.INSTANCE.removeFurnitureStore(bottom);
             }
@@ -59,7 +63,7 @@ public class CustomDropUtil {
             }
             if (drop != null) {
                 drop.setAmount(amountToDrop);
-                e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), drop);
+                dropFor(e.getPlayer(), e.getBlock().getLocation(), drop);
             }
             // remove bottom from store
             FurnitureStoreHandler.INSTANCE.removeFurnitureStore(e.getBlock());
@@ -85,11 +89,11 @@ public class CustomDropUtil {
                     }
                     if (drop) {
                         // drop after block is removed to avoid it colliding and gaining velocity
-                        Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation().add(0.5, 0.1, 0.5), itemStack), 1);
+                        Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> dropFor(e.getPlayer(), e.getBlock().getLocation().add(0.5, 0.1, 0.5), itemStack), 1);
                     }
                     else if (e.getBlock().getBlockData() instanceof Leaves leaves1 && customBlockItem.getCustomBlock() instanceof CustomLeavesBlock customLeavesBlock) {
                         if (!leaves1.isPersistent()) { // need 2 be non-persistent server-side to drop sapling
-                            Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> leafDrop(e.getBlock().getLocation().add(0.5, 0.1, 0.5), customLeavesBlock), 1);
+                            Bukkit.getScheduler().runTaskLater(GardensFurniture.plugin, () -> leafDrop(e.getPlayer(), e.getBlock().getLocation().add(0.5, 0.1, 0.5), customLeavesBlock), 1);
                         }
                     }
                 }
@@ -115,21 +119,44 @@ public class CustomDropUtil {
         }
     }
 
-    public static void leafDrop(Location location, CustomLeavesBlock customLeavesBlock) {
+    // player: who broke the leaves, or null when they decayed
+    public static void leafDrop(@Nullable Player player, Location location, CustomLeavesBlock customLeavesBlock) {
         if (ProbabilityUtil.roll(5)) {
             String saplingId = customLeavesBlock.getSapling();
             if (saplingId != null) {
                 CustomItem saplingItem = GardensFurniture.itemRegistry.getItem(saplingId);
                 if (saplingItem != null) {
-                    ItemStack sapling = GardensFurniture.itemRegistry.buildItem(saplingItem);
-                    if (sapling != null) {
-                        location.getWorld().dropItemNaturally(location, sapling);
-                    }
+                    dropFor(player, location, GardensFurniture.itemRegistry.buildItem(saplingItem));
                 }
             }
         }
         if (ProbabilityUtil.roll(2)) {
-            location.getWorld().dropItem(location, new ItemStack(Material.STICK));
+            dropFor(player, location, new ItemStack(Material.STICK));
         }
+    }
+
+    /**
+     * Drops what a player gets from breaking a custom block or furniture, first letting other plugins
+     * change or take the items through {@link CustomDropItemEvent} (vanilla blocks do this through
+     * BlockDropItemEvent, which custom blocks don't fire). Without a player, the items just drop.
+     */
+    public static void dropFor(@Nullable Player player, Location location, @Nullable ItemStack... items) {
+        List<ItemStack> drops = new ArrayList<>();
+        for (ItemStack item : items) {
+            if (item != null && !item.isEmpty()) {
+                drops.add(item);
+            }
+        }
+        if (drops.isEmpty()) {
+            return;
+        }
+        if (player != null) {
+            var event = new CustomDropItemEvent(player, location, drops);
+            Bukkit.getPluginManager().callEvent(event);
+            if (event.isCancelled()) {
+                return;
+            }
+        }
+        drops.forEach(drop -> location.getWorld().dropItemNaturally(location, drop));
     }
 }
