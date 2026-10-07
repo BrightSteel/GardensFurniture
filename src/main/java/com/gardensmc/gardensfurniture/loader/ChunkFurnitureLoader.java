@@ -33,34 +33,63 @@ public class ChunkFurnitureLoader {
     private static final int BLOCKS_PER_TICK = 10000;
     // stop placing once this much of the tick is used, however many blocks are left
     private static final long TICK_BUDGET_NANOS = 5_000_000;
-    private final Map<String, List<FurnitureReplacement>> deferredByChunk = new HashMap<>();
+    private final Map<String, List<FurnitureReplacement>> deferredByChunk = new ConcurrentHashMap<>();
+    // chunk scans started but not finished, by world: their blocks aren't queued yet
+    private final Map<String, java.util.concurrent.atomic.AtomicInteger> scansInFlight = new ConcurrentHashMap<>();
 
-    // generated note blocks can sit anywhere in the world's height (e.g. icicles on peaks above y=230)
+    /** A new chunk's scan is about to run off the main thread (see {@link #processSnapshot}). */
+    public void scanStarted(String world) {
+        scansInFlight.computeIfAbsent(world, w -> new java.util.concurrent.atomic.AtomicInteger()).incrementAndGet();
+    }
+
+    public void scanFinished(String world) {
+        var count = scansInFlight.get(world);
+        if (count != null) count.decrementAndGet();
+    }
+
+    /**
+     * How much world-gen furniture is still to be placed in a world: chunks still being scanned, blocks queued, and
+     * blocks waiting for their chunk to load. Zero once every generated chunk so far has its furniture. Other plugins
+     * wait for this before unloading a world they've pregenerated (GardensPlayers' resource worlds), since anything
+     * left for an unloaded world is dropped.
+     */
+    public int pending(String world) {
+        var scans = scansInFlight.get(world);
+        int count = scans == null ? 0 : scans.get();
+        for (var replacement : furnitureReplacementQueue) {
+            if (replacement.world().equals(world)) count++;
+        }
+        var prefix = world + ",";
+        for (var entry : deferredByChunk.entrySet()) {
+            if (entry.getKey().startsWith(prefix)) count += entry.getValue().size();
+        }
+        return count;
+    }
+
+    // generated note blocks can sit anywhere in the world's height (e.g. icicles on peaks above y=230). Air-only
+    // sections are skipped, and a block's type is checked before building its BlockData, which most blocks never need
     public void processSnapshot(ChunkSnapshot chunkSnapshot, int minY, int maxY) {
-        for (int x = 0; x < 16; x++) {
-            for (int y = maxY - 1; y >= minY; y--) {
-                for (int z = 0; z < 16; z++) {
-                    BlockData blockData = chunkSnapshot.getBlockData(x, y, z);
-                    if (blockData instanceof NoteBlock noteBlock) {
-                        String key = String.format(
-                                "[%s, %s, %s]",
-                                noteBlock.getNote().getId(),
-                                noteBlock.getInstrument().toString().toLowerCase(),
-                                noteBlock.isPowered()
-
-                        );
-                        int finalX = x;
-                        int finalY = y;
-                        int finalZ = z;
-                        String mapping = ConfigUtil.generationMappings.getString(key);
-                        if (mapping != null) {
-                            furnitureReplacementQueue.add(new FurnitureReplacement(chunkSnapshot.getWorldName(), chunkSnapshot.getX(), chunkSnapshot.getZ(), finalX, finalY, finalZ, mapping));
-                        } else if (reportedMissingMappings.add(key)) {
-                            GardensFurniture.plugin.getLogger().severe("Could not find mapping with key: " + key);
-                        }
+        for (int sectionY = maxY - 16; sectionY >= minY; sectionY -= 16) {
+            if (chunkSnapshot.isSectionEmpty((sectionY - minY) >> 4)) continue;
+            for (int y = sectionY + 15; y >= sectionY; y--) {
+                for (int x = 0; x < 16; x++) {
+                    for (int z = 0; z < 16; z++) {
+                        if (chunkSnapshot.getBlockType(x, y, z) != Material.NOTE_BLOCK) continue;
+                        processNoteBlock(chunkSnapshot, x, y, z);
                     }
                 }
             }
+        }
+    }
+
+    private void processNoteBlock(ChunkSnapshot chunkSnapshot, int x, int y, int z) {
+        if (!(chunkSnapshot.getBlockData(x, y, z) instanceof NoteBlock noteBlock)) return;
+        String key = "[" + noteBlock.getNote().getId() + ", " + noteBlock.getInstrument().toString().toLowerCase() + ", " + noteBlock.isPowered() + "]";
+        String mapping = ConfigUtil.generationMappings.getString(key);
+        if (mapping != null) {
+            furnitureReplacementQueue.add(new FurnitureReplacement(chunkSnapshot.getWorldName(), chunkSnapshot.getX(), chunkSnapshot.getZ(), x, y, z, mapping));
+        } else if (reportedMissingMappings.add(key)) {
+            GardensFurniture.plugin.getLogger().severe("Could not find mapping with key: " + key);
         }
     }
 
@@ -105,26 +134,36 @@ public class ChunkFurnitureLoader {
         affectedChunks.forEach(chunk -> FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(chunk)));
     }
 
-    // The chunk unloaded before we got to it: load it in the background and queue its blocks again,
-    // instead of loading it synchronously on the main thread.
+    // The chunk unloaded before we got to it: load it in the background, instead of synchronously on the main thread,
+    // and place its blocks as soon as it's in. Placed right there, not queued again: a chunk loaded this way holds
+    // no ticket, so it could unload again before the queue came round, and the blocks would go round forever.
     private void deferUntilLoaded(World world, FurnitureReplacement replacement) {
         var key = world.getName() + "," + replacement.chunkX + "," + replacement.chunkZ;
         var waiting = deferredByChunk.computeIfAbsent(key, k -> new ArrayList<>());
         waiting.add(replacement);
         if (waiting.size() == 1) {
-            world.getChunkAtAsync(replacement.chunkX, replacement.chunkZ).thenAccept(chunk -> {
+            world.getChunkAtAsync(replacement.chunkX, replacement.chunkZ).whenComplete((chunk, error) -> {
                 var ready = deferredByChunk.remove(key);
-                if (ready != null) {
-                    furnitureReplacementQueue.addAll(ready);
+                if (ready == null) return;
+                if (error != null || chunk == null) {
+                    GardensFurniture.plugin.getLogger().log(Level.WARNING, "Couldn't load chunk " + key + " to place " + ready.size() + " world-gen furniture blocks", error);
+                    return;
                 }
+                ready.forEach(this::placeFurnitureBlock);
+                FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(chunk));
             });
         }
     }
 
+    private int lastReported;
+
+    // a line when the backlog changes, not every 5 seconds while it sits there
     public void tickChunkStats() {
-        if (!furnitureReplacementQueue.isEmpty()) {
-            System.out.println("Replacing furniture with %s blocks in queue...".formatted(furnitureReplacementQueue.size()));
+        int queued = furnitureReplacementQueue.size();
+        if (queued != lastReported && (queued > 0 || lastReported > 0)) {
+            GardensFurniture.plugin.getLogger().info(queued == 0 ? "World-gen furniture placed" : "Placing world-gen furniture: " + queued + " blocks queued");
         }
+        lastReported = queued;
     }
 
     public Chunk placeFurnitureBlock(FurnitureReplacement furnitureReplacement) {

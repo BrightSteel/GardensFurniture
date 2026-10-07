@@ -19,10 +19,16 @@ public class ChunkListener implements Listener {
             if (e.isNewChunk()) {
                 var snapshot = e.getChunk().getChunkSnapshot();
                 int minY = e.getWorld().getMinHeight(), maxY = e.getWorld().getMaxHeight();
-                Bukkit.getScheduler().runTaskAsynchronously(
-                        GardensFurniture.plugin,
-                        () -> ChunkFurnitureLoader.INSTANCE.processSnapshot(snapshot, minY, maxY)
-                );
+                var world = e.getWorld().getName();
+                // counted until its blocks are queued, so ChunkFurnitureLoader.pending sees work not yet queued
+                ChunkFurnitureLoader.INSTANCE.scanStarted(world);
+                Bukkit.getScheduler().runTaskAsynchronously(GardensFurniture.plugin, () -> {
+                    try {
+                        ChunkFurnitureLoader.INSTANCE.processSnapshot(snapshot, minY, maxY);
+                    } finally {
+                        ChunkFurnitureLoader.INSTANCE.scanFinished(world);
+                    }
+                });
             }
         }
     }
