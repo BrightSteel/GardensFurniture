@@ -35,9 +35,7 @@ public class ChunkFurnitureLoader {
      * aren't world-gen markers: left as generated, never logged, and refused as keys in generation_mappings.yml.
      */
     static final Set<String> VANILLA_KEYS = Set.of("[0, chime, false]");
-    private static final int BLOCKS_PER_TICK = 10000;
-    // stop placing once this much of the tick is used, however many blocks are left
-    private static final long TICK_BUDGET_NANOS = 5_000_000;
+    private static final int BLOCKS_PER_TICK = 1_000_000;
     private final Map<String, List<FurnitureReplacement>> deferredByChunk = new ConcurrentHashMap<>();
     // chunk scans started but not finished, by world: their blocks aren't queued yet
     private final Map<String, java.util.concurrent.atomic.AtomicInteger> scansInFlight = new ConcurrentHashMap<>();
@@ -115,8 +113,17 @@ public class ChunkFurnitureLoader {
         }
     }
 
+    /**
+     * Places queued world-gen furniture for a slice of each tick (config.yml {@code world_gen_furniture}): a little on
+     * a live server, much more with nobody online, so a server pregenerating worlds keeps up with Chunky.
+     */
     public void tickChunkFurnitureLoader() {
-        tickChunkFurnitureLoader(BLOCKS_PER_TICK, TICK_BUDGET_NANOS, false);
+        if (furnitureReplacementQueue.isEmpty()) return;
+        var config = GardensFurniture.plugin.getConfig();
+        double millis = Bukkit.getOnlinePlayers().isEmpty()
+                ? config.getDouble("world_gen_furniture.tick_budget_ms_empty", 40)
+                : config.getDouble("world_gen_furniture.tick_budget_ms", 5);
+        tickChunkFurnitureLoader(BLOCKS_PER_TICK, (long) (Math.max(0.5, Math.min(48, millis)) * 1_000_000), false);
     }
 
     // admin command: drain everything now, loading chunks as needed
