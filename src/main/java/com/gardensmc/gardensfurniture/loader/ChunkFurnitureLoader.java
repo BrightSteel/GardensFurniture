@@ -30,6 +30,11 @@ public class ChunkFurnitureLoader {
     public static final Queue<FurnitureReplacement> furnitureReplacementQueue = new ConcurrentLinkedQueue<>();
     public static ChunkFurnitureLoader INSTANCE = new ChunkFurnitureLoader();
     private final Set<String> reportedMissingMappings = ConcurrentHashMap.newKeySet();
+    /**
+     * Note block states vanilla generation places itself (a chime note block shows up in vanilla structures), so they
+     * aren't world-gen markers: left as generated, never logged, and refused as keys in generation_mappings.yml.
+     */
+    static final Set<String> VANILLA_KEYS = Set.of("[0, chime, false]");
     private static final int BLOCKS_PER_TICK = 10000;
     // stop placing once this much of the tick is used, however many blocks are left
     private static final long TICK_BUDGET_NANOS = 5_000_000;
@@ -85,6 +90,7 @@ public class ChunkFurnitureLoader {
     private void processNoteBlock(ChunkSnapshot chunkSnapshot, int x, int y, int z) {
         if (!(chunkSnapshot.getBlockData(x, y, z) instanceof NoteBlock noteBlock)) return;
         String key = "[" + noteBlock.getNote().getId() + ", " + noteBlock.getInstrument().toString().toLowerCase() + ", " + noteBlock.isPowered() + "]";
+        if (VANILLA_KEYS.contains(key)) return;
         String mapping = ConfigUtil.generationMappings.getString(key);
         if (mapping != null) {
             furnitureReplacementQueue.add(new FurnitureReplacement(chunkSnapshot.getWorldName(), chunkSnapshot.getX(), chunkSnapshot.getZ(), x, y, z, mapping));
@@ -96,6 +102,11 @@ public class ChunkFurnitureLoader {
     // report mappings that point at nothing once at startup instead of once per generated block
     public void validateMappings() {
         for (String key : ConfigUtil.generationMappings.getKeys(false)) {
+            if (VANILLA_KEYS.contains(key)) {
+                GardensFurniture.plugin.getLogger().severe("generation_mappings.yml: " + key + " is a note block vanilla generates itself, so it's ignored"
+                        + " - pick another note or instrument for " + ConfigUtil.generationMappings.getString(key));
+                continue;
+            }
             var mapping = ConfigUtil.generationMappings.getString(key);
             if (mapping != null && !(GardensFurniture.itemRegistry.getItem(mapping) instanceof CustomPlaceableItem)
                     && !StructureHandler.INSTANCE.hasStructure(mapping) && reportedMissingMappings.add(mapping)) {
