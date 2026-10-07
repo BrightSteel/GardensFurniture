@@ -27,7 +27,7 @@ class PluginYmlTest {
     void commandsAreDeclared() {
         var commands = pluginYml.getConfigurationSection("commands");
         assertNotNull(commands);
-        assertTrue(commands.getKeys(false).containsAll(java.util.List.of("furniture", "unwrap", "paint")));
+        assertTrue(commands.getKeys(false).containsAll(java.util.List.of("furniture", "paint")));
     }
 
     // Jackson is loaded by Paper from plugin.yml libraries, not shaded into the jar

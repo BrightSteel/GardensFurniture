@@ -2,7 +2,6 @@ package com.gardensmc.gardensfurniture.recipe;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.util.ItemUtil;
-import com.gardensmc.gardensfurniture.wrap.WrapHandler;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
@@ -68,7 +67,7 @@ public class FurnaceInputRefresher implements Listener {
         var key = RecipeManager.keyOf(stack);
         if (key == null || !key.isCustom() || !RecipeManager.INSTANCE.isCookingInput(key.customId())) return null;
         if (stack.hasData(DataComponentTypes.CONTAINER) || stack.hasData(DataComponentTypes.DYED_COLOR)
-                || new WrapHandler(stack).getWrapFromItem() != null) {
+                || ItemUtil.isSkinned(stack)) {
             return null;
         }
         var fresh = GardensFurniture.itemRegistry.buildItem(key.customId());

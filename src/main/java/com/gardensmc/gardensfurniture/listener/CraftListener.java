@@ -1,8 +1,8 @@
 package com.gardensmc.gardensfurniture.listener;
 
 import com.gardensmc.gardensfurniture.GardensFurniture;
+import com.gardensmc.gardensfurniture.util.ItemUtil;
 import com.gardensmc.gardensfurniture.custom.item.CustomBackpackItem;
-import com.gardensmc.gardensfurniture.wrap.WrapHandler;
 import com.gardensmc.gardensfurniture.util.SpecialItems;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import org.bukkit.Material;
@@ -42,8 +42,8 @@ public class CraftListener implements Listener {
         if (dye == null || backpack == null) {
             return;
         }
-        if (new WrapHandler(currResult).getWrapFromItem() != null) {
-            return; // ignore wrapped backpacks
+        if (ItemUtil.isSkinned(backpack)) {
+            return; // a skinned backpack is just dyed: its look is the skin's
         }
         // modify item model
         var backpackClone = backpack.clone();

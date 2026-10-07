@@ -10,9 +10,6 @@ commands:
   furniture:
     description: Furniture command
     usage: /<command>
-  unwrap:
-    description: Unwrap held item
-    usage: /<command>
   paint:
     description: Open paint menu
     usage: /<command>

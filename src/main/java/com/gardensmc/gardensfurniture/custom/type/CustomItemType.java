@@ -8,6 +8,5 @@ public enum CustomItemType {
     MULTIPLIER_BLOCK,
     BLOCK_FACING,
     POTION,
-    BACKPACK,
-    WRAP
+    BACKPACK
 }
