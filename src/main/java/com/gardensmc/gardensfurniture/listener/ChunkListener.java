@@ -15,7 +15,7 @@ public class ChunkListener implements Listener {
     @EventHandler
     public void onLoadChunk(ChunkLoadEvent e) {
         var environment = e.getWorld().getEnvironment();
-        if (environment != World.Environment.NETHER) {
+        if (environment != World.Environment.NETHER && GardensFurniture.plugin.getConfig().getBoolean("world_gen_furniture.enabled", true)) {
             if (e.isNewChunk()) {
                 var snapshot = e.getChunk().getChunkSnapshot();
                 int minY = e.getWorld().getMinHeight(), maxY = e.getWorld().getMaxHeight();

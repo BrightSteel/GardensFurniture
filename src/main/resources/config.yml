@@ -22,6 +22,8 @@ special_items:
 # for a slice of each tick (milliseconds, of a tick's 50). Too little and a fast pregeneration (Chunky) queues more
 # than gets placed; too much and players feel the lag.
 world_gen_furniture:
+  # turn world-gen furniture off entirely: marker note blocks in new chunks are left as they are
+  enabled: true
   # with players online
   tick_budget_ms: 5
   # with nobody online, e.g. a server pregenerating worlds overnight. At most 30: the server needs the rest of the tick

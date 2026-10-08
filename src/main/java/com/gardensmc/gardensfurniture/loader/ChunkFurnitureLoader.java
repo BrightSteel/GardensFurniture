@@ -36,7 +36,6 @@ public class ChunkFurnitureLoader {
      */
     static final Set<String> VANILLA_KEYS = Set.of("[0, chime, false]");
     private static final int BLOCKS_PER_TICK = 1_000_000;
-    private final Map<String, List<FurnitureReplacement>> deferredByChunk = new ConcurrentHashMap<>();
     // chunk scans started but not finished, by world: their blocks aren't queued yet
     private final Map<String, java.util.concurrent.atomic.AtomicInteger> scansInFlight = new ConcurrentHashMap<>();
 
@@ -62,9 +61,8 @@ public class ChunkFurnitureLoader {
         for (var replacement : furnitureReplacementQueue) {
             if (replacement.world().equals(world)) count++;
         }
-        var prefix = world + ",";
-        for (var entry : deferredByChunk.entrySet()) {
-            if (entry.getKey().startsWith(prefix)) count += entry.getValue().size();
+        for (var entry : byChunk.entrySet()) {
+            if (entry.getKey().world().equals(world)) count += entry.getValue().size();
         }
         return count;
     }
@@ -118,59 +116,116 @@ public class ChunkFurnitureLoader {
      * a live server, much more with nobody online, so a server pregenerating worlds keeps up with Chunky.
      */
     public void tickChunkFurnitureLoader() {
-        if (furnitureReplacementQueue.isEmpty()) return;
+        intake();
+        if (order.isEmpty()) return;
         var config = GardensFurniture.plugin.getConfig();
         double millis = Bukkit.getOnlinePlayers().isEmpty()
                 ? config.getDouble("world_gen_furniture.tick_budget_ms_empty", 20)
                 : config.getDouble("world_gen_furniture.tick_budget_ms", 5);
-        tickChunkFurnitureLoader(BLOCKS_PER_TICK, (long) (Math.max(0.5, Math.min(30, millis)) * 1_000_000), false);
+        placeRound((long) (Math.max(0.5, Math.min(30, millis)) * 1_000_000));
     }
 
     // admin command: drain everything now, loading chunks as needed
     public void loadAllQueuedFurniture() {
-        tickChunkFurnitureLoader(Integer.MAX_VALUE, Long.MAX_VALUE, true);
-    }
-
-    private void tickChunkFurnitureLoader(int bps, long budgetNanos, boolean loadChunksSync) {
-        var affectedChunks = new HashSet<Chunk>();
-        long start = System.nanoTime();
-        for (int i = 0; i < bps && System.nanoTime() - start < budgetNanos; i++) {
-            var furnitureReplacement = furnitureReplacementQueue.poll();
-            if (furnitureReplacement == null) {
-                break;
+        intake();
+        var affected = new HashSet<Chunk>();
+        for (var entry : byChunk.entrySet()) {
+            for (var replacement : entry.getValue()) {
+                if (Bukkit.getWorld(replacement.world) != null) affected.add(placeFurnitureBlock(replacement));
             }
-            var world = Bukkit.getWorld(furnitureReplacement.world);
-            if (world == null) {
-                continue;
-            }
-            if (!loadChunksSync && !world.isChunkLoaded(furnitureReplacement.chunkX, furnitureReplacement.chunkZ)) {
-                deferUntilLoaded(world, furnitureReplacement);
-                continue;
-            }
-            affectedChunks.add(placeFurnitureBlock(furnitureReplacement));
         }
-        affectedChunks.forEach(chunk -> FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(chunk)));
+        byChunk.keySet().forEach(this::release);
+        byChunk.clear();
+        order.clear();
+        affected.forEach(chunk -> FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(chunk)));
     }
 
-    // The chunk unloaded before we got to it: load it in the background, instead of synchronously on the main thread,
-    // and place its blocks as soon as it's in. Placed right there, not queued again: a chunk loaded this way holds
-    // no ticket, so it could unload again before the queue came round, and the blocks would go round forever.
-    private void deferUntilLoaded(World world, FurnitureReplacement replacement) {
-        var key = world.getName() + "," + replacement.chunkX + "," + replacement.chunkZ;
-        var waiting = deferredByChunk.computeIfAbsent(key, k -> new ArrayList<>());
-        waiting.add(replacement);
-        if (waiting.size() == 1) {
-            world.getChunkAtAsync(replacement.chunkX, replacement.chunkZ).whenComplete((chunk, error) -> {
-                var ready = deferredByChunk.remove(key);
-                if (ready == null) return;
-                if (error != null || chunk == null) {
-                    GardensFurniture.plugin.getLogger().log(Level.WARNING, "Couldn't load chunk " + key + " to place " + ready.size() + " world-gen furniture blocks", error);
-                    return;
+    // Blocks waiting per chunk (main thread only), and the chunks in the order they're served. The scans' queue
+    // (furnitureReplacementQueue) is moved in here each tick.
+    private final Map<FurnitureCache.ChunkKey, java.util.ArrayDeque<FurnitureReplacement>> byChunk = new java.util.LinkedHashMap<>();
+    private final java.util.ArrayDeque<FurnitureCache.ChunkKey> order = new java.util.ArrayDeque<>();
+    // chunks being loaded for us, and chunks we hold loaded (with a plugin ticket) until their blocks are placed
+    private final Set<FurnitureCache.ChunkKey> loading = new HashSet<>();
+    private final Set<FurnitureCache.ChunkKey> held = new HashSet<>();
+
+    private void intake() {
+        for (var replacement = furnitureReplacementQueue.poll(); replacement != null; replacement = furnitureReplacementQueue.poll()) {
+            var key = new FurnitureCache.ChunkKey(replacement.world, replacement.chunkX, replacement.chunkZ);
+            byChunk.computeIfAbsent(key, k -> {
+                order.add(k);
+                // hold it loaded until its blocks are in, rather than let it unload and load it again for its turn
+                var world = Bukkit.getWorld(k.world());
+                if (world != null && world.isChunkLoaded(k.x(), k.z()) && world.addPluginChunkTicket(k.x(), k.z(), GardensFurniture.plugin)) {
+                    held.add(k);
                 }
-                ready.forEach(this::placeFurnitureBlock);
-                FurnitureCache.INSTANCE.refreshChunk(new FurnitureCache.ChunkKey(chunk));
-            });
+                return new java.util.ArrayDeque<>();
+            }).add(replacement);
         }
+    }
+
+    /**
+     * One round over the chunks waiting: at most one block per chunk per tick, never two in a row into the same one.
+     * Each block placed sets off a light update that Paper works out on another thread while it reads the chunk;
+     * writing the chunk's next block at that moment can crash that light update ("Palette index out of bounds"),
+     * after which Paper never releases the chunk's load ticket, and every such chunk leaks ~460 chunks of memory.
+     * A tick apart, the light update is long done. With many chunks waiting (pregeneration) this still places
+     * thousands of blocks a tick.
+     */
+    private void placeRound(long budgetNanos) {
+        long start = System.nanoTime();
+        int chunks = order.size();
+        for (int i = 0; i < chunks && System.nanoTime() - start < budgetNanos; i++) {
+            var key = order.poll();
+            var waiting = byChunk.get(key);
+            if (waiting == null || waiting.isEmpty()) {
+                byChunk.remove(key);
+                release(key);
+                continue;
+            }
+            var world = Bukkit.getWorld(key.world());
+            if (world == null) {
+                byChunk.remove(key);
+                held.remove(key);
+                loading.remove(key);
+                continue;
+            }
+            if (!world.isChunkLoaded(key.x(), key.z())) {
+                load(world, key);
+                order.add(key);
+                continue;
+            }
+            // placing keeps the furniture cache in step itself (world gen places without a held item, so the store
+            // is put straight into the cached chunk): re-reading the chunk's whole store per block made this crawl
+            placeFurnitureBlock(waiting.poll());
+            if (waiting.isEmpty()) {
+                byChunk.remove(key);
+                release(key);
+            } else {
+                order.add(key);
+            }
+        }
+    }
+
+    // The chunk unloaded before its turn: load it in the background (not synchronously on the main thread) and hold
+    // it loaded with a plugin ticket until its blocks are placed, so it can't unload again in between.
+    private void load(World world, FurnitureCache.ChunkKey key) {
+        if (held.contains(key) || !loading.add(key)) return;
+        world.getChunkAtAsync(key.x(), key.z()).whenComplete((chunk, error) -> {
+            loading.remove(key);
+            if (error != null || chunk == null) {
+                var dropped = byChunk.remove(key);
+                GardensFurniture.plugin.getLogger().log(Level.WARNING, "Couldn't load chunk " + key + " to place "
+                        + (dropped == null ? 0 : dropped.size()) + " world-gen furniture blocks", error);
+                return;
+            }
+            if (byChunk.containsKey(key) && chunk.addPluginChunkTicket(GardensFurniture.plugin)) held.add(key);
+        });
+    }
+
+    private void release(FurnitureCache.ChunkKey key) {
+        if (!held.remove(key)) return;
+        var world = Bukkit.getWorld(key.world());
+        if (world != null) world.removePluginChunkTicket(key.x(), key.z(), GardensFurniture.plugin);
     }
 
     private int lastReported;
@@ -178,6 +233,7 @@ public class ChunkFurnitureLoader {
     // a line when the backlog changes, not every 5 seconds while it sits there
     public void tickChunkStats() {
         int queued = furnitureReplacementQueue.size();
+        for (var waiting : byChunk.values()) queued += waiting.size();
         if (queued != lastReported && (queued > 0 || lastReported > 0)) {
             GardensFurniture.plugin.getLogger().info(queued == 0 ? "World-gen furniture placed" : "Placing world-gen furniture: " + queued + " blocks queued");
         }
