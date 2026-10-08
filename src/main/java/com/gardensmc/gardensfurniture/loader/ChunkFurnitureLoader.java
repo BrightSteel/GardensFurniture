@@ -147,6 +147,11 @@ public class ChunkFurnitureLoader {
     // chunks being loaded for us, and chunks we hold loaded (with a plugin ticket) until their blocks are placed
     private final Set<FurnitureCache.ChunkKey> loading = new HashSet<>();
     private final Set<FurnitureCache.ChunkKey> held = new HashSet<>();
+    /**
+     * At most this many chunks are held loaded for their blocks; past it, a chunk unloads as usual and is loaded again
+     * for its turn. (Holding every chunk with blocks waiting kept 40,000 End chunks in memory during pregeneration.)
+     */
+    private static final int MAX_HELD = 2000;
 
     private void intake() {
         for (var replacement = furnitureReplacementQueue.poll(); replacement != null; replacement = furnitureReplacementQueue.poll()) {
@@ -155,7 +160,8 @@ public class ChunkFurnitureLoader {
                 order.add(k);
                 // hold it loaded until its blocks are in, rather than let it unload and load it again for its turn
                 var world = Bukkit.getWorld(k.world());
-                if (world != null && world.isChunkLoaded(k.x(), k.z()) && world.addPluginChunkTicket(k.x(), k.z(), GardensFurniture.plugin)) {
+                if (held.size() < MAX_HELD && world != null && world.isChunkLoaded(k.x(), k.z())
+                        && world.addPluginChunkTicket(k.x(), k.z(), GardensFurniture.plugin)) {
                     held.add(k);
                 }
                 return new java.util.ArrayDeque<>();
@@ -218,7 +224,7 @@ public class ChunkFurnitureLoader {
                         + (dropped == null ? 0 : dropped.size()) + " world-gen furniture blocks", error);
                 return;
             }
-            if (byChunk.containsKey(key) && chunk.addPluginChunkTicket(GardensFurniture.plugin)) held.add(key);
+            if (byChunk.containsKey(key) && held.size() < MAX_HELD && chunk.addPluginChunkTicket(GardensFurniture.plugin)) held.add(key);
         });
     }
 
