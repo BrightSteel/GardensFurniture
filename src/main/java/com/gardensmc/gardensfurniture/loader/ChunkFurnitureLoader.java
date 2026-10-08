@@ -202,8 +202,15 @@ public class ChunkFurnitureLoader {
             }
             // placing keeps the furniture cache in step itself (world gen places without a held item, so the store
             // is put straight into the cached chunk): re-reading the chunk's whole store per block made this crawl
-            placeFurnitureBlock(waiting.poll());
+            com.gardensmc.gardensfurniture.store.FurnitureStoreHandler.buffering = true;
+            Chunk placed;
+            try {
+                placed = placeFurnitureBlock(waiting.poll());
+            } finally {
+                com.gardensmc.gardensfurniture.store.FurnitureStoreHandler.buffering = false;
+            }
             if (waiting.isEmpty()) {
+                com.gardensmc.gardensfurniture.store.FurnitureStoreHandler.INSTANCE.flush(placed);
                 byChunk.remove(key);
                 release(key);
             } else {

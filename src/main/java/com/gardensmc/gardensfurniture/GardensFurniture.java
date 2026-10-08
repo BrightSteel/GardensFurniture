@@ -63,6 +63,12 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
     }
 
     @Override
+    public void onDisable() {
+        // world-gen furniture stores still buffered go into their chunks before the worlds are saved for shutdown
+        com.gardensmc.gardensfurniture.store.FurnitureStoreHandler.INSTANCE.flushAll(null);
+    }
+
+    @Override
     public void onEnable() {
         plugin = this;
         protocolManager = ProtocolLibrary.getProtocolManager();

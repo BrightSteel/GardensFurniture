@@ -1,5 +1,9 @@
 package com.gardensmc.gardensfurniture.store;
 
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.HashMap;
+import de.tr7zw.nbtapi.NBTContainer;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import de.tr7zw.nbtapi.NBTChunk;
 import org.bukkit.Bukkit;
@@ -47,7 +51,23 @@ public class FurnitureStoreHandler {
      */
     public static final ThreadLocal<String> removedBlockData = new ThreadLocal<>();
 
+    /**
+     * World-gen placement buffers its stores here, per chunk, instead of writing each to the chunk's data as it's
+     * placed: every write through NBT-API re-encodes the chunk's whole store, so a chunk of 140 End blocks cost ~140²
+     * of them. {@link #flush} writes a chunk's buffered stores in one go; it runs when the chunk's last block is
+     * placed, when the chunk unloads, and before anything reads the chunk's stores. Main thread only.
+     */
+    public static boolean buffering;
+    private final Map<FurnitureCache.ChunkKey, Map<String, FurnitureStore>> buffered = new HashMap<>();
+
     public void addFurnitureStore(Block block, FurnitureStore furnitureStore, boolean refresh) {
+        if (buffering && !refresh) {
+            var chunkKey = new FurnitureCache.ChunkKey(block.getChunk());
+            buffered.computeIfAbsent(chunkKey, k -> new LinkedHashMap<>()).put(getBlockKey(block), furnitureStore);
+            FurnitureCache.INSTANCE.putCached(chunkKey, blockKey(block), furnitureStore);
+            notifyLifecycle(block, true);
+            return;
+        }
         var nbtChunk = new NBTChunk(block.getChunk()).getPersistentDataContainer().getOrCreateCompound("GardensFurniture");
         var chunkBlockCompound = nbtChunk.getOrCreateCompound(getBlockKey(block));
 
@@ -67,7 +87,37 @@ public class FurnitureStoreHandler {
         notifyLifecycle(block, true);
     }
 
+    /** Writes a chunk's buffered stores (see {@link #buffering}) to its data, in one write. */
+    public void flush(Chunk chunk) {
+        var stores = buffered.remove(new FurnitureCache.ChunkKey(chunk));
+        if (stores == null || stores.isEmpty()) return;
+        var batch = new NBTContainer();
+        stores.forEach((key, store) -> {
+            var compound = batch.addCompound(key);
+            compound.setString(IDENTIFIER_KEY, store.getItemIdentifier());
+            var blockData = compound.addCompound(BLOCK_DATA_KEY);
+            if (store.getFacing() != null) blockData.setString("facing", store.getFacing());
+            if (store.getMultiplier() != 0) blockData.setInteger("multiplier", store.getMultiplier());
+        });
+        new NBTChunk(chunk).getPersistentDataContainer().getOrCreateCompound("GardensFurniture").mergeCompound(batch);
+    }
+
+    /** Flushes every buffered chunk of a world (all worlds for null): at world saves and shutdown. */
+    public void flushAll(org.bukkit.World only) {
+        for (var key : java.util.List.copyOf(buffered.keySet())) {
+            var world = org.bukkit.Bukkit.getWorld(key.world());
+            if (world == null || (only != null && !only.equals(world))) continue;
+            flush(world.getChunkAt(key.x(), key.z()));
+        }
+    }
+
+    public boolean hasBuffered(FurnitureCache.ChunkKey chunkKey) {
+        return buffered.containsKey(chunkKey);
+    }
+
     public void removeFurnitureStore(Block block) {
+        // a store still buffered for this chunk goes first, so it can't be written back after its removal
+        flush(block.getChunk());
         // Notify before the store is gone so listeners can still read the furniture spec.
         notifyLifecycle(block, false);
         var nbtChunk = new NBTChunk(block.getChunk()).getPersistentDataContainer().getOrCreateCompound("GardensFurniture");

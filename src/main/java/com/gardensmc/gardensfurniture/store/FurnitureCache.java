@@ -126,6 +126,8 @@ public class FurnitureCache {
     public record BlockKey(int x, int y, int z) {}
 
     private Map<BlockKey, FurnitureStore> loadChunkFurniture(Chunk chunk) {
+        // buffered world-gen stores go into the chunk's data first, or reading it would lose them
+        if (Bukkit.isPrimaryThread()) FurnitureStoreHandler.INSTANCE.flush(chunk);
         var nbt = new NBTChunk(chunk).getPersistentDataContainer();
         var compound = nbt.getCompound("GardensFurniture");
         // concurrent + mutable: written in place on the main thread while packet threads read it

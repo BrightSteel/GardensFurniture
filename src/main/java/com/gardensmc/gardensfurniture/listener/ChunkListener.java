@@ -39,8 +39,16 @@ public class ChunkListener implements Listener {
         FurnitureCache.INSTANCE.loadChunk(new FurnitureCache.ChunkKey(e.getChunk()));
     }
 
+    // an autosave writes chunks without unloading them: buffered world-gen stores go in first
+    @EventHandler
+    public void flushOnSave(org.bukkit.event.world.WorldSaveEvent e) {
+        com.gardensmc.gardensfurniture.store.FurnitureStoreHandler.INSTANCE.flushAll(e.getWorld());
+    }
+
     @EventHandler
     public void uncacheChunkFurniture(ChunkUnloadEvent e) {
+        // before it's saved: buffered world-gen stores into its data
+        com.gardensmc.gardensfurniture.store.FurnitureStoreHandler.INSTANCE.flush(e.getChunk());
         FurnitureCache.INSTANCE.invalidateChunk(new FurnitureCache.ChunkKey(e.getChunk()));
     }
 }
