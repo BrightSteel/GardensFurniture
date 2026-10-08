@@ -24,5 +24,6 @@ special_items:
 world_gen_furniture:
   # with players online
   tick_budget_ms: 5
-  # with nobody online, e.g. a server pregenerating worlds overnight
-  tick_budget_ms_empty: 40
+  # with nobody online, e.g. a server pregenerating worlds overnight. At most 30: the server needs the rest of the tick
+  # to save and unload the chunks being generated, or they pile up until memory runs out
+  tick_budget_ms_empty: 20

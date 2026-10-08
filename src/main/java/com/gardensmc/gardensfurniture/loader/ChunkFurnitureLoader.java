@@ -121,9 +121,9 @@ public class ChunkFurnitureLoader {
         if (furnitureReplacementQueue.isEmpty()) return;
         var config = GardensFurniture.plugin.getConfig();
         double millis = Bukkit.getOnlinePlayers().isEmpty()
-                ? config.getDouble("world_gen_furniture.tick_budget_ms_empty", 40)
+                ? config.getDouble("world_gen_furniture.tick_budget_ms_empty", 20)
                 : config.getDouble("world_gen_furniture.tick_budget_ms", 5);
-        tickChunkFurnitureLoader(BLOCKS_PER_TICK, (long) (Math.max(0.5, Math.min(48, millis)) * 1_000_000), false);
+        tickChunkFurnitureLoader(BLOCKS_PER_TICK, (long) (Math.max(0.5, Math.min(30, millis)) * 1_000_000), false);
     }
 
     // admin command: drain everything now, loading chunks as needed
