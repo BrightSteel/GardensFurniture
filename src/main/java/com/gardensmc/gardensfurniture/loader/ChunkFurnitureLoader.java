@@ -275,7 +275,11 @@ public class ChunkFurnitureLoader {
             }
             return chunk;
         }
-        block.setType(Material.AIR);
+        // a note-block-based block (most world-gen ones) sets the note block itself, straight over the marker: one write
+        // instead of air then the block, each of which sets off its own light and neighbor updates
+        if (!(customItem instanceof CustomPlaceableItem placeable && placeable.getCustomBlock() instanceof com.gardensmc.gardensfurniture.custom.block.CustomNoteBlock)) {
+            block.setType(Material.AIR);
+        }
         // World-gen furniture is deterministic and regenerable; never record it as player activity.
         FurnitureStoreHandler.suppressLifecycle.set(true);
         try {
