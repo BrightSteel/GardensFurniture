@@ -501,7 +501,7 @@ public class CustomBlockManager {
         } finally {
             FurnitureStoreHandler.currentActor.remove();
         }
-        afterReplace(player, heldItem, interaction, anchor, null);
+        afterReplace(player, heldItem, interaction, anchor, null, current.getIdentifier(), targetId);
     }
 
     /**
@@ -539,12 +539,13 @@ public class CustomBlockManager {
         } finally {
             FurnitureStoreHandler.currentActor.remove();
         }
-        afterReplace(player, heldItem, interaction, block.getLocation(), clickedFace);
+        afterReplace(player, heldItem, interaction, block.getLocation(), clickedFace, current.getIdentifier(), targetId);
     }
 
     // wear down or use up what was held (not in creative), play the interaction's sound and drop its drop
-    // (out of the clicked side, like vanilla's pumpkin seeds)
-    private static void afterReplace(Player player, ItemStack heldItem, ReplaceInteraction interaction, Location at, @Nullable BlockFace clickedFace) {
+    // (out of the clicked side, like vanilla's pumpkin seeds), then tell other plugins the swap is done
+    private static void afterReplace(Player player, ItemStack heldItem, ReplaceInteraction interaction, Location at, @Nullable BlockFace clickedFace,
+                                     String fromId, String toId) {
         var center = at.clone().toBlockLocation().add(0.5, 0.5, 0.5);
         if (player.getGameMode() != GameMode.CREATIVE) {
             if (interaction.damageHeld() > 0) {
@@ -566,6 +567,7 @@ public class CustomBlockManager {
             var dropped = at.getWorld().dropItem(from, drop);
             dropped.setVelocity(face.getDirection().multiply(0.05).add(new org.bukkit.util.Vector(0, 0.05, 0)));
         }
+        Bukkit.getPluginManager().callEvent(new com.gardensmc.gardensfurniture.events.FurnitureReplaceEvent(player, EquipmentSlot.HAND, fromId, toId));
     }
 
     // as a bucket fills: the item takes the held one's place when that was the last of it (already used up by
