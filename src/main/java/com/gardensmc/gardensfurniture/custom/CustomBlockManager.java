@@ -349,7 +349,15 @@ public class CustomBlockManager {
         }
         var override = block.getDropOverride();
         if (override != null) {
-            return GardensFurniture.itemRegistry.buildItem(override);
+            // the piece it stands in for (a filled statue's dry one) keeps its dye
+            var dropped = GardensFurniture.itemRegistry.buildItem(override);
+            if (dropped != null && itemEntity.getItem().getItemMeta() instanceof LeatherArmorMeta oldMeta
+                    && GardensFurniture.itemRegistry.getItem(override) instanceof CustomItem target && target.isDyeable()
+                    && dropped.getItemMeta() instanceof LeatherArmorMeta newMeta) {
+                newMeta.setColor(oldMeta.getColor());
+                dropped.setItemMeta(newMeta);
+            }
+            return dropped;
         }
         var item = itemEntity.getItem();
         if (block instanceof CustomDisplayBlock displayBlock && (displayBlock.getModel_override() != null || displayBlock.isLightToggleable())) {
