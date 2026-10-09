@@ -580,19 +580,26 @@ public class CustomBlockManager {
     // as a bucket fills: the item takes the held one's place when that was the last of it (already used up by
     // consume, or a lone one), otherwise it goes in the inventory, or at the player's feet when that's full; in
     // creative, where nothing held is used up, only when the inventory doesn't already have one
+    // - a tick later, so the click that did it can't go on to use what's given (pour a bucket it just filled)
     private static void giveInPlaceOfHeld(Player player, ItemStack heldItem, ItemStack item) {
-        var inventory = player.getInventory();
-        if (player.getGameMode() == GameMode.CREATIVE) {
-            if (!inventory.containsAtLeast(item, 1)) inventory.addItem(item);
-            return;
-        }
-        if (heldItem.getAmount() <= 0) {
-            inventory.setItemInMainHand(item);
-            return;
-        }
-        for (var left : inventory.addItem(item).values()) {
-            player.getWorld().dropItem(player.getLocation(), left);
-        }
+        boolean lastOne = heldItem.getAmount() <= 0;
+        int slot = player.getInventory().getHeldItemSlot();
+        Bukkit.getScheduler().runTask(GardensFurniture.plugin, () -> {
+            if (!player.isOnline()) return;
+            var inventory = player.getInventory();
+            if (player.getGameMode() == GameMode.CREATIVE) {
+                if (!inventory.containsAtLeast(item, 1)) inventory.addItem(item);
+                return;
+            }
+            var there = inventory.getItem(slot);
+            if (lastOne && (there == null || there.isEmpty())) {
+                inventory.setItem(slot, item);
+                return;
+            }
+            for (var left : inventory.addItem(item).values()) {
+                player.getWorld().dropItem(player.getLocation(), left);
+            }
+        });
     }
 
     // the side of the block at anchor the player is looking at; null for the top or bottom
