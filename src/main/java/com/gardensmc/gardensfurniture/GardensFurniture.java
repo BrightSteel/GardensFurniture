@@ -105,6 +105,13 @@ public class GardensFurniture extends JavaPlugin implements EventRegistrar {
         hookIntoGriefPrevention();
         hookIntoPrism();
         hookIntoWorldEdit();
+        hookIntoWardrobe();
+    }
+
+    private void hookIntoWardrobe() {
+        // Guard here so EnderWardrobe's API classes are never loaded when it's absent.
+        if (getServer().getPluginManager().getPlugin("EnderWardrobe") == null) return;
+        com.gardensmc.gardensfurniture.hook.WardrobeHook.register();
     }
 
     private void hookIntoWorldEdit() {

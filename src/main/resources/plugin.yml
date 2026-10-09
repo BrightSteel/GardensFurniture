@@ -15,6 +15,7 @@ commands:
     usage: /<command>
 depend: [GSit, NBTAPI, ProtocolLib, packetevents, Geyser-Spigot]
 softdepend:
+  - EnderWardrobe
   - packetevents
   - ProtocolLib
   - GriefPrevention

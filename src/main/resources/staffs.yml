@@ -1,0 +1,33 @@
+# Staffs made from GardensFurniture's materials. EnderWardrobe makes them (they're its offhand items): recipes, skins,
+# wear and staff enchantments work as on its own staffs. Same shape as EnderWardrobe's items.yml offhand section;
+# recipe ingredients can be our items as gardens:<id>. Read again on /wardrobe reload.
+staffs:
+  enderite_staff:
+    name: "<white>Enderite Staff"
+    lore:
+      - "<gray>Walk up blocks without jumping"
+      - "<gray>and reach further while you hold it"
+    material: LEATHER_HORSE_ARMOR
+    item-model: gardens:staff/enderite
+    # its own pack definition (it switches to the in-hand model when held), as the other staffs have
+    generate-model: false
+    # step height as every staff, and the reach enderite tools have
+    attributes:
+      step_height:
+        amount: 0.4
+      block_interaction_range:
+        amount: 2.5
+      entity_interaction_range:
+        amount: 2.0
+    # as much as enderite's tools (diamond's)
+    durability:
+      max: 1561
+      blocks-walked: 25
+    recipe:
+      shape:
+        - " MM"
+        - " SM"
+        - "S  "
+      ingredients:
+        M: gardens:enderite
+        S: stick
