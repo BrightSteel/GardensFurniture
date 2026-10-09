@@ -3,7 +3,6 @@ package com.gardensmc.gardensfurniture.recipe;
 import com.gardensmc.gardensfurniture.GardensFurniture;
 import com.gardensmc.gardensfurniture.register.ItemRegistry;
 import com.gardensmc.gardensfurniture.util.ItemUtil;
-import com.gardensmc.gardensfurniture.util.SpecialItems;
 import de.tr7zw.nbtapi.NBT;
 import lombok.Getter;
 import org.bukkit.*;
@@ -99,7 +98,6 @@ public class RecipeManager {
         int failed = 0;
         var dir = recipesDir();
         dir.mkdirs();
-        writeDefaultBackpackRecipes(dir);
         for (var file : recipeFiles(dir)) {
             var relative = dir.toPath().relativize(file.toPath()).toString().replace(File.separatorChar, '/');
             var config = YamlConfiguration.loadConfiguration(file);
@@ -129,46 +127,6 @@ public class RecipeManager {
             log().info("%d vanilla recipe(s) also take GardensFurniture items through their tags".formatted(copies.size()));
         }
         log().info("Loaded %d recipe(s)%s".formatted(loaded.size() - failed, failed > 0 ? ", %d failed (see above)".formatted(failed) : ""));
-    }
-
-    /**
-     * recipes/backpacks.yml, written when it's missing: leather around a shulker box makes the backpack
-     * of the box's color (the plain one when that color has none), carrying the box's items over.
-     */
-    private void writeDefaultBackpackRecipes(File dir) {
-        var file = new File(dir, "backpacks.yml");
-        var plain = SpecialItems.BACKPACK_PREFIX;
-        if (file.exists() || GardensFurniture.itemRegistry.getItem(plain) == null) return;
-        var config = new YamlConfiguration();
-        config.options().setHeader(List.of(
-                "Backpacks: leather around a shulker box, keeping what's inside the box.",
-                "Edit these like any recipe. Turn one off with enabled: false; delete this whole",
-                "file and it's written again on the next start or reload."));
-        var shulkers = new LinkedHashMap<String, Material>();
-        shulkers.put("", Material.SHULKER_BOX);
-        for (var color : DyeColor.values()) {
-            var name = color.name().toLowerCase(Locale.ROOT);
-            var material = Material.matchMaterial(name + "_shulker_box");
-            if (material != null) shulkers.put("_" + name, material);
-        }
-        shulkers.forEach((suffix, shulker) -> {
-            var result = GardensFurniture.itemRegistry.getItem(plain + suffix) != null ? plain + suffix : plain;
-            var recipe = new GardensRecipe(plain + suffix, RecipeType.SHAPED);
-            recipe.setGroup(plain);
-            recipe.setShape(new ArrayList<>(List.of(" L ", "LSL", " L ")));
-            recipe.getKey().put('L', Ingredient.of(ItemRef.material(Material.LEATHER)));
-            recipe.getKey().put('S', Ingredient.of(ItemRef.material(shulker)));
-            recipe.setResult(ItemRef.custom(result));
-            recipe.setCopyContents(true);
-            recipe.setCategory("equipment");
-            recipe.writeTo(config.createSection(recipe.getId()));
-        });
-        try {
-            config.save(file);
-            log().info("Wrote the default backpack recipes to recipes/backpacks.yml");
-        } catch (IOException e) {
-            log().severe("Couldn't write recipes/backpacks.yml: " + e.getMessage());
-        }
     }
 
     private static List<File> recipeFiles(File dir) {

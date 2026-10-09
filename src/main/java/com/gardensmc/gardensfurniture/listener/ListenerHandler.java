@@ -34,7 +34,6 @@ public class ListenerHandler {
                 new PlayerListener(),
                 new CustomBlockBreakListener(),
                 new VanillaBlockSoundListener(),
-                new CraftListener(),
                 new RecipeListener(),
                 CustomFuelHandler.INSTANCE,
                 new FurnaceInputRefresher(),

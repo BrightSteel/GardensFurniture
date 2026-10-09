@@ -16,7 +16,6 @@ special_items:
   # hidden block placed on top of tall tripwire furniture
   tripwire_top: tripwire_top
   # <prefix> and <prefix>_<color> are crafted from (dyed) shulker boxes
-  backpack_prefix: backpack
 
 # World-gen furniture: marker note blocks in newly generated chunks are swapped for furniture on the main thread,
 # for a slice of each tick (milliseconds, of a tick's 50). Too little and a fast pregeneration (Chunky) queues more

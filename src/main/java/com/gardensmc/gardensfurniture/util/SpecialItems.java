@@ -18,7 +18,6 @@ public final class SpecialItems {
     public static String MAPLE_TAP_PREFIX = "maple_tap";
     public static String MAPLE_SYRUP = "maple_syrup";
     public static String TRIPWIRE_TOP = "tripwire_top";
-    public static String BACKPACK_PREFIX = "backpack";
 
     private SpecialItems() {
     }
@@ -32,7 +31,6 @@ public final class SpecialItems {
         MAPLE_TAP_PREFIX = section.getString("maple_tap_prefix", MAPLE_TAP_PREFIX);
         MAPLE_SYRUP = section.getString("maple_syrup", MAPLE_SYRUP);
         TRIPWIRE_TOP = section.getString("tripwire_top", TRIPWIRE_TOP);
-        BACKPACK_PREFIX = section.getString("backpack_prefix", BACKPACK_PREFIX);
     }
 
     public static boolean is(@Nullable CustomItem item, String id) {
