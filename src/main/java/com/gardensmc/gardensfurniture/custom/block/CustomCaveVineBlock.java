@@ -24,6 +24,8 @@ public class CustomCaveVineBlock extends CustomBlock {
 
     public CustomCaveVineBlock(ConfigurationSection blockSection, String customBlockName, String blockId) {
         super(blockSection, blockId);
+        // walked through on Java, so on Bedrock too
+        if (getBedrock() != null) getBedrock().setPassable(true);
         ConfigurationSection caveVineSection = getConfigSectionOrThrow(blockSection, "cave_vine_data", customBlockName);
         this.age = caveVineSection.getInt("age");
         this.growBerries = blockSection.getBoolean("grow_berries", false);

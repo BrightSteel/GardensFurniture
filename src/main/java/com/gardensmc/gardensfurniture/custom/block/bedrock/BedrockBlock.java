@@ -16,6 +16,12 @@ public class BedrockBlock {
     private final List<Integer> rotation; // size of 3
     private final BoundingBox collisionBox;
     private final BoundingBox selectionBox;
+    /**
+     * Walked through on Java (tripwire foliage, cave vines): with no collision_box of its own, Bedrock gets none either,
+     * instead of the full block Bedrock gives a custom block by default.
+     */
+    @lombok.Setter
+    private boolean passable;
     // Whether the inventory item renders as this custom block (true) or falls back to its flat item
     // icon (false, e.g. doors). Defaults to true.
     private final boolean sendBlockAsItem;
@@ -61,6 +67,8 @@ public class BedrockBlock {
             var origin = collisionBox.getOrigin();
             var size = collisionBox.getSize();
             componentBuilder.collisionBox(new BoxComponent(origin.get(0), origin.get(1), origin.get(2), size.get(0), size.get(1), size.get(2)));
+        } else if (passable) {
+            componentBuilder.collisionBox(BoxComponent.emptyBox());
         }
         var selectionBox = getSelectionBox();
         if (selectionBox != null) {

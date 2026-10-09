@@ -29,6 +29,8 @@ public class CustomTripwireBlock extends CustomBlock {
 
     public CustomTripwireBlock(ConfigurationSection blockSection, String customBlockName, String blockId) {
         super(blockSection, blockId);
+        // walked through on Java, so on Bedrock too
+        if (getBedrock() != null) getBedrock().setPassable(true);
         ConfigurationSection tripWireSection = getConfigSectionOrThrow(blockSection, "tripwire_data", customBlockName);
         this.north = tripWireSection.getBoolean("north");
         this.south = tripWireSection.getBoolean("south");
