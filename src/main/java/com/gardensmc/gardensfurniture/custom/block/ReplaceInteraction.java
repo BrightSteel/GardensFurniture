@@ -27,10 +27,12 @@ import java.util.concurrent.ThreadLocalRandom;
  *     face_clicked: true # turn the new piece's front to the side that was clicked
  *     drop: PUMPKIN_SEEDS # a vanilla material or custom item id, dropped from the clicked side
  *     drop_amount: 4
+ *     give: true         # the drop goes to the player in place of one held item, as a bucket fills,
+ *                        # rather than out of the clicked side
  * </pre>
  */
 public record ReplaceInteraction(String held, List<String> replaceWith, int damageHeld, int consume, @Nullable String sound,
-                                 double soundPitchVariance, boolean faceClicked, @Nullable String drop, int dropAmount) {
+                                 double soundPitchVariance, boolean faceClicked, @Nullable String drop, int dropAmount, boolean give) {
 
     public static List<ReplaceInteraction> parse(ConfigurationSection blockSection, String identifier) {
         List<ReplaceInteraction> interactions = new ArrayList<>();
@@ -53,7 +55,8 @@ public record ReplaceInteraction(String held, List<String> replaceWith, int dama
                     map.get("sound_pitch_variance") instanceof Number variance ? variance.doubleValue() : 0,
                     Boolean.TRUE.equals(map.get("face_clicked")),
                     map.get("drop") == null ? null : String.valueOf(map.get("drop")),
-                    map.get("drop_amount") instanceof Number amount ? amount.intValue() : 1));
+                    map.get("drop_amount") instanceof Number amount ? amount.intValue() : 1,
+                    Boolean.TRUE.equals(map.get("give"))));
         }
         return interactions;
     }

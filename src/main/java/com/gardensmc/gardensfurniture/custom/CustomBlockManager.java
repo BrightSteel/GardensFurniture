@@ -558,11 +558,31 @@ public class CustomBlockManager {
             at.getWorld().playSound(center, interaction.sound(), SoundCategory.BLOCKS, 1f, interaction.rollPitch());
         }
         var drop = interaction.buildDrop();
-        if (drop != null) {
+        if (drop != null && interaction.give()) {
+            giveInPlaceOfHeld(player, heldItem, drop);
+        } else if (drop != null) {
             var face = clickedFace != null && clickedFace.isCartesian() ? clickedFace : BlockFace.UP;
             var from = center.clone().add(face.getDirection().multiply(0.65));
             var dropped = at.getWorld().dropItem(from, drop);
             dropped.setVelocity(face.getDirection().multiply(0.05).add(new org.bukkit.util.Vector(0, 0.05, 0)));
+        }
+    }
+
+    // as a bucket fills: the item takes the held one's place when that was the last of it (already used up by
+    // consume, or a lone one), otherwise it goes in the inventory, or at the player's feet when that's full; in
+    // creative, where nothing held is used up, only when the inventory doesn't already have one
+    private static void giveInPlaceOfHeld(Player player, ItemStack heldItem, ItemStack item) {
+        var inventory = player.getInventory();
+        if (player.getGameMode() == GameMode.CREATIVE) {
+            if (!inventory.containsAtLeast(item, 1)) inventory.addItem(item);
+            return;
+        }
+        if (heldItem.getAmount() <= 0) {
+            inventory.setItemInMainHand(item);
+            return;
+        }
+        for (var left : inventory.addItem(item).values()) {
+            player.getWorld().dropItem(player.getLocation(), left);
         }
     }
 
