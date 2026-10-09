@@ -351,11 +351,10 @@ public class CustomBlockManager {
         if (override != null) {
             // the piece it stands in for (a filled statue's dry one) keeps its dye
             var dropped = GardensFurniture.itemRegistry.buildItem(override);
-            if (dropped != null && itemEntity.getItem().getItemMeta() instanceof LeatherArmorMeta oldMeta
-                    && GardensFurniture.itemRegistry.getItem(override) instanceof CustomItem target && target.isDyeable()
-                    && dropped.getItemMeta() instanceof LeatherArmorMeta newMeta) {
-                newMeta.setColor(oldMeta.getColor());
-                dropped.setItemMeta(newMeta);
+            var dyed = itemEntity.getItem().getData(io.papermc.paper.datacomponent.DataComponentTypes.DYED_COLOR);
+            if (dropped != null && dyed != null
+                    && GardensFurniture.itemRegistry.getItem(override) instanceof CustomItem target && target.isDyeable()) {
+                dropped.setData(io.papermc.paper.datacomponent.DataComponentTypes.DYED_COLOR, dyed);
             }
             return dropped;
         }
@@ -484,10 +483,10 @@ public class CustomBlockManager {
 
         var item = GardensFurniture.itemRegistry.buildItem(targetId);
         if (item == null) return;
-        if (display.getItemStack().getItemMeta() instanceof LeatherArmorMeta oldMeta && target.isDyeable()
-                && item.getItemMeta() instanceof LeatherArmorMeta newMeta) {
-            newMeta.setColor(oldMeta.getColor());
-            item.setItemMeta(newMeta);
+        // only a colour it was given: an undyed piece reads as leather's default brown
+        var dyed = display.getItemStack().getData(io.papermc.paper.datacomponent.DataComponentTypes.DYED_COLOR);
+        if (dyed != null && target.isDyeable()) {
+            item.setData(io.papermc.paper.datacomponent.DataComponentTypes.DYED_COLOR, dyed);
         }
         boolean wasLit = currentBlock.isLightToggleable() && currentBlock.isLightOn(display);
         var oldItem = display.getItemStack().clone();
