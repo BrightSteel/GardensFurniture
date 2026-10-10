@@ -20,8 +20,7 @@ class SpecialItemsTest {
             "ender_pad_prefix", "ender_pad",
             "maple_tap_prefix", "maple_tap",
             "maple_syrup", "maple_syrup",
-            "tripwire_top", "tripwire_top",
-            "backpack_prefix", "backpack"
+            "tripwire_top", "tripwire_top"
     );
 
     // SpecialItems is static state: put the defaults back for other tests
