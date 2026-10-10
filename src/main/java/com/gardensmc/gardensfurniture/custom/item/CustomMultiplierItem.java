@@ -33,7 +33,11 @@ public class CustomMultiplierItem extends CustomPlaceableItem {
 
     @Override
     public boolean placeBlock(Player player, ItemStack heldItem, Location location, PlaceOptions placeOptions, Block clickedBlock) {
-        if (!super.placeBlock(player, heldItem, location, placeOptions, clickedBlock)) {
+        // adding to one already placed (a second clover on a clover) goes where that one is, which passed the place
+        // rules when it went down; checked as a new one, the block under the spot above it is this block itself,
+        // which no place_tags allow (so clovers and pebbles never multiplied)
+        boolean adding = player != null && clickedBlock != null && isThis(clickedBlock);
+        if (!adding && !super.placeBlock(player, heldItem, location, placeOptions, clickedBlock)) {
             return false;
         }
         // only supports leaf / trip wire blocks right now
@@ -53,6 +57,11 @@ public class CustomMultiplierItem extends CustomPlaceableItem {
                 placeOptions.setMultiplier(multiplier),
                 clickedBlock
         );
+    }
+
+    private boolean isThis(Block block) {
+        var store = FurnitureStoreHandler.INSTANCE.getFurnitureStore(block);
+        return store != null && store.getItemIdentifier().equals(getIdentifier());
     }
 
     // returns -1 if at max already, otherwise 1 through blocks.size() inclusive
