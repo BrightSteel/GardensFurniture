@@ -68,6 +68,11 @@ dependencies {
     // FAWE: keeps store-backed furniture through //copy, //cut, //paste and schematics (hook/WorldEditHook)
     compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core:2.15.0") { transitive = false }
     compileOnly("org.enginehub.lin-bus:lin-bus-tree:0.2.0")
+    // WorldGuard (hook/WorldGuardHook): its build check, alongside GriefPrevention's, for placing furniture
+    compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.15") { transitive = false }
+    compileOnly("com.sk89q.worldguard:worldguard-core:7.0.15") { transitive = false }
+    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.15") { transitive = false }
+    compileOnly("com.sk89q.worldedit:worldedit-core:7.3.15") { transitive = false }
     compileOnly("com.github.GriefPrevention:GriefPrevention:16.18.4")
     // Prism (prism-mc.org) rollback/restore integration — custom actions API.
     compileOnly("org.prism_mc.prism:prism-paper-api:4.4")

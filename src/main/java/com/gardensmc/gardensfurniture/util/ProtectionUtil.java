@@ -13,11 +13,27 @@ import java.util.Objects;
 
 public class ProtectionUtil {
 
+    /**
+     * Whether the player may build at the location: GriefPrevention's claims and WorldGuard's regions both have to
+     * allow it (either one missing counts as allowing). Our own placements (adding to a clover, swapping a block)
+     * never go through vanilla, so neither plugin would stop them otherwise.
+     */
     public static boolean canBuild(Location location, Player player) {
+        if (player != null && worldGuardHooked() && !com.gardensmc.gardensfurniture.hook.WorldGuardHook.canBuild(player, location)) {
+            return false;
+        }
         if (!GardensFurniture.isGriefPreventionHooked) {
             return true;
         }
         return GriefPrevention.instance.allowBuild(player, location) == null;
+    }
+
+    // checked before WorldGuardHook is touched, so its classes never load without WorldGuard
+    private static Boolean worldGuard;
+
+    private static boolean worldGuardHooked() {
+        if (worldGuard == null) worldGuard = org.bukkit.Bukkit.getPluginManager().isPluginEnabled("WorldGuard");
+        return worldGuard;
     }
 
     @Nullable

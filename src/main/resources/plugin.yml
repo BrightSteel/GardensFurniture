@@ -16,6 +16,7 @@ commands:
 depend: [GSit, NBTAPI, ProtocolLib, packetevents, Geyser-Spigot]
 softdepend:
   - EnderWardrobe
+  - WorldGuard
   - packetevents
   - ProtocolLib
   - GriefPrevention
