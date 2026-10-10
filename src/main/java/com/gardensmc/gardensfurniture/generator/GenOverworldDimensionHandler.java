@@ -56,6 +56,30 @@ public class GenOverworldDimensionHandler {
         } catch (IOException e) {
             throw new RuntimeException("Failed to write out overworld dimension file!");
         }
+        writeNormalPreset(dimension);
+    }
+
+    /**
+     * The same overworld as the "normal" world preset (worldgen/world_preset/normal.json in the datapack), with vanilla's
+     * nether and end. Worlds plugins create (resource worlds, Multiverse) take their overworld from that preset, not
+     * from dimension/overworld.json, which only the main world uses.
+     */
+    private void writeNormalPreset(Dimension overworld) {
+        var dimensions = new java.util.LinkedHashMap<String, Object>();
+        dimensions.put("minecraft:overworld", overworld);
+        dimensions.put("minecraft:the_end", Map.of("type", "minecraft:the_end", "generator", Map.of(
+                "type", "minecraft:noise", "biome_source", Map.of("type", "minecraft:the_end"), "settings", "minecraft:end")));
+        dimensions.put("minecraft:the_nether", Map.of("type", "minecraft:the_nether", "generator", Map.of(
+                "type", "minecraft:noise",
+                "biome_source", Map.of("type", "minecraft:multi_noise", "preset", "minecraft:nether"),
+                "settings", "minecraft:nether")));
+        var output = new File(generatedDir, "datapack/world_preset/normal.json");
+        output.getParentFile().mkdirs();
+        try {
+            new ObjectMapper().writerWithDefaultPrettyPrinter().writeValue(output, Map.of("dimensions", dimensions));
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to write out the normal world preset!", e);
+        }
     }
 
     public BiomeSource parseVanillaOverworld() throws IOException {
