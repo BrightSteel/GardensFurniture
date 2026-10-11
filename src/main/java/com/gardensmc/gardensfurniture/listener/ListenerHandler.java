@@ -39,6 +39,7 @@ public class ListenerHandler {
                 new FurnaceInputRefresher(),
                 ChatPrompt.INSTANCE,
                 new BlockBreakingListener(),
+                new SuppressionToolLeakListener(),
                 new EnderStepListener(),
                 MapleTapHandler.INSTANCE
         );

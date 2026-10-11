@@ -167,6 +167,40 @@ public class BlockBreakingListener implements Listener {
         return clone;
     }
 
+    /**
+     * The item without the rule withBreakSuppressionTool adds, for when the client's patched copy reaches the server
+     * as a real item (creative mode sends its copies back): else it sticks, and the item stops stacking with copies
+     * that never had it. The item itself when it doesn't carry the rule.
+     */
+    public static ItemStack withoutBreakSuppressionTool(ItemStack item) {
+        if (item == null || item.getType() == Material.AIR || !item.isDataOverridden(DataComponentTypes.TOOL)) {
+            return item;
+        }
+        var tool = item.getData(DataComponentTypes.TOOL);
+        if (tool == null || tool.rules().stream().noneMatch(BlockBreakingListener::isSuppressionRule)) {
+            return item;
+        }
+        var clone = item.clone();
+        var rest = tool.rules().stream().filter(rule -> !isSuppressionRule(rule)).toList();
+        var prototype = new ItemStack(item.getType()).getData(DataComponentTypes.TOOL);
+        if (prototype == null ? rest.isEmpty() : prototype.rules().equals(rest)) {
+            // what the item was before the patch: its own tool, or none
+            clone.resetData(DataComponentTypes.TOOL);
+        } else {
+            clone.setData(DataComponentTypes.TOOL, Tool.tool()
+                    .defaultMiningSpeed(tool.defaultMiningSpeed())
+                    .damagePerBlock(tool.damagePerBlock())
+                    .canDestroyBlocksInCreative(tool.canDestroyBlocksInCreative())
+                    .addRules(rest)
+                    .build());
+        }
+        return clone;
+    }
+
+    private static boolean isSuppressionRule(Tool.Rule rule) {
+        return rule.speed() != null && rule.speed() == SUPPRESSED_MINING_SPEED;
+    }
+
     @EventHandler
     public void onCancelBreak(BlockDamageAbortEvent e) {
         removeBreaking(e.getPlayer(), e.getBlock());
