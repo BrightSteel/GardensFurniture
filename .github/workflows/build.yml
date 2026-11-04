@@ -12,6 +12,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # third-party and sibling plugin jars live in a private repo, since most can't be redistributed
+      - name: Fetch build dependencies
+        uses: actions/checkout@v7
+        with:
+          repository: BrightSteel/GardensDeps
+          token: ${{ secrets.DEPS_TOKEN }}
+          path: .deps
+
+      - run: cp .deps/GardensFurniture/*.jar dependencies/
+
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
