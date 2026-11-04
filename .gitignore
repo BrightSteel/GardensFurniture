@@ -14,3 +14,14 @@ build/
 .DS_Store
 .idea/
 .gradle
+
+# Never commit these
+.gradle/
+build/
+target/
+*.class
+*.iml
+.idea/
+.DS_Store
+dependencies/*.jar
+*.mcpack
